@@ -1,0 +1,36 @@
+battle_card_renderer.py:319: ws_w = _tw(draw, "⚔", w_font)
+battle_card_renderer.py:320: draw.text((wi_x + (w_sz-ws_w)//2, wi_y + 4), "⚔", font=w_font, fill=w_rc)
+cards.py:780: status_text = f"✓ Caught  •  {player_name}" if caught else "Not yet caught"
+hunt_card_renderer.py:1108: badge_text = "✨ NEW"
+hunt_card_renderer.py:1190: drop_header = "⚔️ SPECIAL DROP"
+hunt_card_renderer.py:1192: drop_header = "📦 RELIC CACHE FOUND"
+hunt_card_renderer.py:1485: stat_text = "✨"
+rpg.py:705: {"key": "cache", "name": "Void Cache", "base_souls": 500, "base_gems": 0, "emoji": "📦"},
+rpg.py:706: {"key": "relic", "name": "Eldritch Relic", "base_souls": 5000, "base_gems": 30, "emoji": "🔮"},
+rpg.py:707: {"key": "treasure", "name": "Abyssal Treasure", "base_souls": 25000, "base_gems": 150, "emoji": "👑"},
+rpg.py:711: {"name": "Cache Duo", "crate": "cache", "bundle": 2, "emoji": "📦📦", "desc": "2x Void Caches"},
+rpg.py:712: {"name": "Cache Stack", "crate": "cache", "bundle": 5, "emoji": "📦📦📦", "desc": "5x Void Caches"},
+rpg.py:713: {"name": "Relic Pair", "crate": "relic", "bundle": 2, "emoji": "🔮🔮", "desc": "2x Eldritch Relics"},
+rpg.py:714: {"name": "Relic Bundle", "crate": "relic", "bundle": 3, "emoji": "🔮🔮🔮", "desc": "3x Eldritch Relics"},
+rpg.py:715: {"name": "Treasure Hunt", "crate": "treasure", "bundle": 2, "emoji": "👑👑", "desc": "2x Abyssal Treasures"},
+rpg.py:716: {"name": "Starter Pack", "crate": "cache", "bundle": 3, "emoji": "🎁", "desc": "3x Void Caches — beginner friendly!"},
+rpg.py:717: {"name": "Hunter's Bundle", "crate": "relic", "bundle": 2, "emoji": "⚔️", "desc": "2x Eldritch Relics — for the dedicated"},
+rpg.py:718: {"name": "Void Hoard", "crate": "treasure", "bundle": 3, "emoji": "💎", "desc": "3x Abyssal Treasures — the deep rewards patience"},
+rpg.py:719: {"name": "Mixed Cache", "crate": "mixed_cache", "bundle": 1, "emoji": "🎲", "desc": "1x Cache + 1x Relic — a bit of both"},
+rpg.py:720: {"name": "Mixed Relic", "crate": "mixed_relic", "bundle": 1, "emoji": "🎰", "desc": "1x Relic + 1x Treasure — high risk, high reward"},
+rpg.py:793: "emoji": bundle.get("emoji", "🎁"),
+rpg_data.py:293: "bleed": {"name": "Rending", "desc": "Chance to inflict Bleed on hit.", "icon": "🩸"},
+rpg_data.py:294: "burn": {"name": "Infernal", "desc": "Chance to inflict Burn on hit.", "icon": "🔥"},
+rpg_data.py:295: "poison": {"name": "Virulent", "desc": "Chance to inflict Poison on hit.", "icon": "☠️"},
+rpg_data.py:296: "stun": {"name": "Stunning", "desc": "Chance to Stun on hit.", "icon": "⚡"},
+rpg_data.py:297: "shield": {"name": "Aegis", "desc": "Chance to gain Shield on hit.", "icon": "🛡️"},
+rpg_data.py:298: "heal": {"name": "Lifestream", "desc": "Chance to heal on hit.", "icon": "💚"},
+rpg_data.py:299: "crit": {"name": "Precision", "desc": "Increased critical hit chance.", "icon": "💀"},
+rpg_data.py:622: StatusEffect("bleed", "Bleed", 0xc2185b, "🩸", "Deals damage at end of turn"),
+rpg_data.py:623: StatusEffect("burn", "Burn", 0xff6f00, "🔥", "Deals damage at end of turn"),
+rpg_data.py:624: StatusEffect("poison", "Poison", 0x7b1fa2, "☠️", "Deals damage at end of turn"),
+rpg_data.py:625: StatusEffect("curse", "Curse", 0x1a237e, "👁️", "Reduces damage output"),
+rpg_data.py:626: StatusEffect("fear", "Fear", 0x424242, "😨", "Reduces accuracy and damage"),
+rpg_data.py:627: StatusEffect("shield", "Shield", 0x0277bd, "🛡️", "Reduces incoming damage"),
+rpg_data.py:628: StatusEffect("stun", "Stun", 0xfdd835, "⚡", "Skips next turn"),
+rpg_data.py:629: StatusEffect("heal", "Heal", 0x2e7d32, "💚", "Recovers health over time"),
