@@ -482,6 +482,93 @@
       }
     }
   },
+  "balancing": {
+    "buffs": {
+      "charms": {},
+      "sigils": {}
+    },
+    "economy": {
+      "crate_shop": {},
+      "quests": {}
+    },
+    "hunt": {
+      "autohunt_max_rolls": 48,
+      "autohunt_rolls_per_hour": 3,
+      "base_catch_rate": 0.6,
+      "base_cooldown_seconds": 15,
+      "base_crate_chance": 0.04,
+      "checklist_battle_crate_chance": 0.05,
+      "checklist_battle_crate_target": 3,
+      "checklist_hunt_lootbox_chance": 0.05,
+      "checklist_hunt_lootbox_target": 3,
+      "hunt_sword_duration_seconds": 1200,
+      "hunt_sword_extra_rolls": 1,
+      "level_cooldown_reduction": 0.1,
+      "luck_catch_bonus": 0.015,
+      "luck_crate_bonus": 0.002,
+      "max_catch_rate": 0.95,
+      "max_crate_chance": 0.2,
+      "min_cooldown_seconds": 10,
+      "zone_level_crate_bonus": 0.003
+    },
+    "patreon": {
+      "tier_pets": {
+        "1": [],
+        "2": [],
+        "3": [],
+        "4": []
+      },
+      "tiers": [
+        {
+          "description": "Entry supporter tier.",
+          "name": "Patron I",
+          "tier": 1
+        },
+        {
+          "description": "Supporter tier.",
+          "name": "Patron II",
+          "tier": 2
+        },
+        {
+          "description": "Premium supporter tier.",
+          "name": "Patron III",
+          "tier": 3
+        },
+        {
+          "description": "Top supporter tier.",
+          "name": "Patron IV",
+          "tier": 4
+        }
+      ]
+    },
+    "rarity": {
+      "catch_rates": {
+        "Abyssal": 0.0005,
+        "Ancient": 0.005,
+        "Common": 0.9,
+        "Divine": 0.002,
+        "Eldritch": 0.001,
+        "Epic": 0.05,
+        "Ethereal": 0.0002,
+        "Hidden": 1e-05,
+        "Legendary": 0.02,
+        "Mythic": 0.01,
+        "Prismatic": 0.0001,
+        "Rare": 0.15,
+        "Uncommon": 0.45,
+        "Void Lord": 3e-05
+      },
+      "stat_multipliers": {},
+      "weights": {}
+    },
+    "weapons": {
+      "affix_counts": [],
+      "base_attack": [],
+      "base_defense": [],
+      "passive_chance": {},
+      "quality_chances": {}
+    }
+  },
   "overrides": {
     "bosses": {},
     "buffs": {},
@@ -499,8 +586,9 @@
     "zones": {}
   },
   "settings": {
+    "auto_sync_application_emojis": true,
     "public_asset_base_url": ""
   },
-  "updated_at": 1780638755,
+  "updated_at": 1780659952,
   "version": 1
 }

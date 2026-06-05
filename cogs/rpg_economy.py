@@ -133,6 +133,46 @@ class RPGEconomy(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
+    @commands.hybrid_command(name="souls", aliases=["bsouls", "wallet", "balance"])
+    async def souls(self, ctx: commands.Context, member: discord.Member | None = None) -> None:
+        """Show your Soul and Gem balance."""
+        assert ctx.guild is not None
+        target = member or ctx.author
+        player = await ensure_player(self.bot.db, target.id, target.display_name)
+        embed = dark_embed(
+            f"{target.display_name}'s Wallet",
+            f"{currency_label('gold')} **{int(player['gold']):,}**\n{currency_label('gems')} **{int(player['gems']):,}**",
+            color=GOLD_COLOR,
+        )
+        embed.set_author(name=str(target), icon_url=target.display_avatar.url)
+        await ctx.reply(embed=embed, mention_author=False)
+
+    @commands.hybrid_command(name="give", aliases=["bgive", "givesouls", "pay"])
+    async def give_souls(self, ctx: commands.Context, member: discord.Member, amount: int) -> None:
+        """Give Souls to another player."""
+        assert ctx.guild is not None
+        if member.bot:
+            raise commands.BadArgument("You cannot give Souls to bots.")
+        if member.id == ctx.author.id:
+            raise commands.BadArgument("You cannot give Souls to yourself.")
+        if amount <= 0:
+            raise commands.BadArgument("Amount must be greater than zero.")
+        if amount > 1_000_000_000:
+            raise commands.BadArgument("That transfer amount is too large.")
+
+        sender = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        await ensure_player(self.bot.db, member.id, member.display_name)
+        if int(sender["gold"]) < amount:
+            raise commands.BadArgument(f"You only have {currency_label('gold')} **{int(sender['gold']):,}**.")
+
+        await award_currency(self.bot.db, ctx.author.id, gold=-amount)
+        await award_currency(self.bot.db, member.id, gold=amount)
+        embed = status_embed(
+            "Souls Sent",
+            f"{ctx.author.mention} gave {member.mention} {currency_label('gold')} **{amount:,}**.",
+        )
+        await ctx.reply(embed=embed, mention_author=False)
+
     async def _has_inventory(self, user_id: int, item_type: str, item_key: str, quantity: int) -> bool:
         return await get_quantity(self.bot.db, user_id, item_type, item_key) >= quantity
 

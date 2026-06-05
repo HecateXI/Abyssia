@@ -4,7 +4,6 @@ import discord
 from discord.ext import commands
 
 from core.cards import render_collection_card, render_profile_card
-from core.discord_assets import embed_asset
 from core.items import HUNT_SWORD_KEY, HUNT_SWORD_NAME
 
 from core.rpg import (
@@ -22,20 +21,14 @@ from core.rpg import (
     inventory_rows,
     mark_checklist_daily,
     now_ts,
-    progress_quest,
     refresh_player,
-    top_creatures,
     utc_day_start,
-    unlock_achievement,
     xp_for_level,
 )
-from core.rpg_data import ACHIEVEMENTS, CREATURES, MATERIALS, QUESTS, RARITY_INDEX, WEAPON_SHARD_KEY, normalize_key
+from core.rpg_data import ACHIEVEMENTS, CREATURES, QUESTS, RARITY_INDEX, WEAPON_SHARD_KEY
 from core.theme import (
     DARK_COLOR,
     GOLD_COLOR,
-    STAT_EMOJIS,
-    creature_emoji,
-    creature_line,
     consumable_label,
     crate_emoji,
     crate_label,
@@ -44,12 +37,7 @@ from core.theme import (
     equipment_label,
     material_label,
     progress_bar,
-    rarity_label,
-    rarity_level_badge,
-    rarity_rank,
     status_embed,
-    ui_label,
-    zone_label,
 )
 
 
@@ -76,6 +64,8 @@ class InventoryView(discord.ui.View):
         self.ctx = ctx
         self.has_crates = has_crates
         self.has_swords = has_swords
+        self.open_crate.disabled = not has_crates
+        self.use_sword.disabled = not has_swords
 
     @discord.ui.button(label="Open Crate", style=discord.ButtonStyle.secondary, emoji="📦", row=0)
     async def open_crate(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -255,7 +245,7 @@ class RPGProfile(commands.Cog):
             player = await refresh_player(self.bot.db, ctx.author.id)
         embed = dark_embed(
             "Hunter Contract Signed",
-            f"**{player['hunter_name']}** has entered the Abyssia ledger.\nStart with `b tutorial`, then use `b hunt` to bind your first monster.",
+            f"**{player['hunter_name']}** has entered the Abyssia ledger.\nUse `b help` for commands, then `b hunt` to bind your first monster.",
             color=GOLD_COLOR,
         )
         embed.set_author(name=str(ctx.author), icon_url=ctx.author.display_avatar.url)
@@ -319,72 +309,76 @@ class RPGProfile(commands.Cog):
         """Show a hunter's monster collection."""
         await self.bestiary.callback(self, ctx, member)
 
-    @commands.hybrid_command(name="tutorial")
-    async def tutorial(self, ctx: commands.Context) -> None:
-        """Show the built-in RPG tutorial."""
-        prefix = "b"
-        if ctx.guild is not None:
-            prefix = await self.bot.db.get_setting(ctx.guild.id, "prefix") or prefix
-        embed = dark_embed(
-            "Abyssia Tutorial",
-            "A quick route from new hunter to monster collector.",
-            color=GOLD_COLOR,
-        )
-        embed.add_field(name="1. Sign the ledger", value=f"`{prefix}start <hunter name>` creates your hunter profile.", inline=False)
-        embed.add_field(name="2. Hunt and bind monsters", value=f"`{prefix}hunt` rolls Souls, XP, lootboxes, and a chance to bind a monster.\n`{prefix}explore` shows unlockable hunting grounds.", inline=False)
-        embed.add_field(name="3. Build your bestiary", value=f"`{prefix}monsters` shows your dark collection.\n`{prefix}summon 1|5|10` spends gems for boosted monster pulls.", inline=False)
-        embed.add_field(name="4. Grow stronger", value=f"`{prefix}weapons`, `{prefix}wdex <id>`, `{prefix}wrr <id> stat`, and `{prefix}wrr <id> passive` manage weapon rolls.", inline=False)
-        embed.add_field(name="5. Fight the dark", value=f"`{prefix}team`, `{prefix}battle @user`, `{prefix}arena`, and `{prefix}boss attack` use your strongest monsters.", inline=False)
-        embed.add_field(name="Tip", value="Use `b weapons <id>` to inspect any weapon by ID. Use `b weapons` to see your vault with IDs.", inline=False)
-        await ctx.reply(embed=embed, mention_author=False)
-
     @commands.hybrid_command(name="inventory", aliases=["inv"])
     async def inventory(self, ctx: commands.Context) -> None:
         """Show your materials, crates, and items. Use buttons to open crates or use items."""
         assert ctx.guild is not None
-        await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         rows = await inventory_rows(self.bot.db, ctx.author.id)
         if not rows:
             await ctx.reply(embed=status_embed("Inventory", "Your inventory is empty."), mention_author=False)
             return
-        sections: dict[str, list[str]] = {}
+        sections: dict[str, list[tuple[str, int]]] = {}
         has_crates = False
         has_swords = False
         for row in rows:
-            key = row["item_key"]
-            if row["item_type"] == "material":
+            item_type = str(row["item_type"])
+            key = str(row["item_key"])
+            quantity = int(row["quantity"])
+            if quantity <= 0:
+                continue
+            if item_type == "equipment" and key == "rusted_sword":
+                continue
+            if item_type == "material":
                 if key != WEAPON_SHARD_KEY:
                     continue
                 name = material_label(key)
-            elif row["item_type"] == "consumable" and key == HUNT_SWORD_KEY:
+            elif item_type == "consumable" and key == HUNT_SWORD_KEY:
                 name = consumable_label(HUNT_SWORD_KEY, HUNT_SWORD_NAME)
                 has_swords = True
-            elif row["item_type"] == "consumable" and key == "cookie":
+            elif item_type == "consumable" and key == "cookie":
                 continue
-            elif row["item_type"] == "crate":
+            elif item_type == "crate":
                 from core.rpg_data import CRATE_TYPES
                 crate = CRATE_TYPES.get(key, {})
                 name = crate_label(key, str(crate.get("name", key.replace("_", " ").title())))
                 has_crates = True
-            elif row["item_type"] == "lootbox":
+            elif item_type == "lootbox":
                 name = crate_label("cache", "Lootbox")
+            elif item_type == "equipment":
+                name = equipment_label(key, key.replace("_", " ").title())
             else:
                 name = key.replace("_", " ").title()
-            sections.setdefault(row["item_type"], []).append(f"{name} x`{row['quantity']}`")
+            sections.setdefault(item_type, []).append((name, quantity))
         if not sections:
             await ctx.reply(embed=status_embed("Inventory", "Your inventory has no active items."), mention_author=False)
             return
-        embed = dark_embed("Inventory", color=discord.Color.dark_gold())
+        embed = dark_embed(
+            "Inventory",
+            f"{currency_label('gold')} **{int(player['gold']):,}**   {currency_label('gems')} **{int(player['gems']):,}**",
+            color=discord.Color.dark_gold(),
+        )
+        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
         label_map = {
-            "material": "Weapon Shards",
+            "material": "Materials",
             "lootbox": "Lootboxes",
             "consumable": "Consumables",
             "crate": "Weapon Crates",
-            "weapon": ui_label("forge", "Weapons"),
+            "equipment": "Legacy Equipment",
+            "weapon": "Weapons",
         }
-        for section, lines in sections.items():
-            if lines:
-                embed.add_field(name=label_map.get(section, section.title()), value="\n".join(lines[:15]), inline=False)
+        order = ["crate", "lootbox", "consumable", "material", "equipment", "weapon"]
+        for section in order + sorted(k for k in sections if k not in order):
+            lines = sections.get(section, [])
+            if not lines:
+                continue
+            lines.sort(key=lambda item: item[0].lower())
+            value = "\n".join(f"{name} `x{quantity:,}`" for name, quantity in lines[:12])
+            extra = len(lines) - 12
+            if extra > 0:
+                value += f"\n...and {extra} more"
+            embed.add_field(name=label_map.get(section, section.title()), value=value, inline=True)
+        embed.set_footer(text="Use the buttons below for quick item actions.")
         
         view = InventoryView(ctx, has_crates=has_crates, has_swords=has_swords)
         await ctx.reply(embed=embed, view=view, mention_author=False)

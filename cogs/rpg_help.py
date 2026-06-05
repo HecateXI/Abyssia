@@ -1,259 +1,450 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import discord
 from discord.ext import commands
 
-from core.progression import get_current_stage
-from core.rpg import ensure_player
-from core.theme import GOLD_COLOR, BLOOD_COLOR, dark_embed, status_embed, ui_label
+from core.theme import GOLD_COLOR, asset_emoji, dark_embed
 
 
-CATEGORIES = [
-    {
-        "key": "hunting",
-        "emoji": "🔍",
-        "name": "Hunting",
-        "desc": "Hunt creatures, earn XP, and progress your daily checklist",
-        "commands": [
-            ("`b hunt`", "Hunt for creatures. Your current team also gains XP"),
-            ("`b use` or `b use sword`", "Activate a Hunt Sword for +1 roll per hunt (20 min)"),
-            ("`b sigils`", "Short active hunt boosts that add extra monster rolls"),
-            ("`b charms`", "Short active hunt boosts that add monsters and improve rarity odds"),
-            ("`b autohunt`", "Check your autohunt status"),
-            ("`b autohunt start [h] [zone]`", "Start an autohunt (1, 4, 8, 12, or 24 hours)"),
-            ("`b autohunt claim`", "Claim rewards from your completed autohunt"),
-        ],
-    },
-    {
-        "key": "collection",
-        "emoji": "📚",
-        "name": "Collection",
-        "desc": "View your creatures, bestiary, and inventory",
-        "commands": [
-            ("`b profile [@user]`", "View your hunter profile and stats"),
-            ("`b monsters`", "View all your caught monsters"),
-            ("`b bestiary`", "List every species you've caught"),
-            ("`b dex [name]`", "View detailed stats for any creature"),
-            ("`b creature [id]`", "View detailed info on a specific creature you own"),
-            ("`b inventory`", "View items with buttons to open crates and use Hunt Swords"),
-            ("`b achievements`", "View unlocked achievements"),
-        ],
-    },
-    {
-        "key": "economy",
-        "emoji": "💰",
-        "name": "Economy",
-        "desc": "Earn souls, sell creatures, and trade",
-        "commands": [
-            ("`b daily`", "Claim daily reward and progress your checklist"),
-            ("`b checklist` / `b cl`", "View daily checklist progress and claim the completion reward"),
-            ("`b sell [id] [qty]`", "Sell/release a creature for souls"),
-            ("`b sellall [rarity]`", "Sell all duplicates of a rarity (keeps top 3)"),
-            ("`b release [id]`", "Sell/release a single creature for souls"),
-            ("`b market`", "Browse the player market"),
-            ("`b market sell [type] [item] [qty] [souls]`", "List an item on the market"),
-            ("`b trade @user`", "Offer a trade to another hunter"),
-            ("`b quests`", "View legacy daily quest progress"),
-            ("`b quests claim`", "Claim completed quest rewards"),
-        ],
-    },
-    {
-        "key": "weapons",
-        "emoji": "⚔️",
-        "name": "Weapons",
-        "desc": "Equip weapons and manage your armory",
-        "commands": [
-            ("`b weapons`", "View your compact weapon list with IDs, icons, names, and quality"),
-            ("`b weapons [id]`", "Inspect one weapon by ID"),
-            ("`b weaponequip [id] [creature]`", "Equip a weapon to a creature"),
-            ("`b weaponunequip [id]`", "Unequip a weapon from its creature"),
-            ("`b wrr [id] stat`", "Reroll numeric stats, mana, affix values, and passive value"),
-            ("`b wrr [id] passive`", "Reroll the passive type and passive value"),
-            ("`b salvage [id|rarity|all]`", "Dismantle one weapon, a rarity, or all unequipped weapons into Weapon Shards"),
-            ("`b shards`", "Check your Weapon Shard balance"),
-            ("`b shardcrate [cache|relic|treasure]`", "Buy and open a weapon crate with Weapon Shards"),
-            ("`b open [crate]`", "Open a crate you already own"),
-            ("`b open`", "Open the owned-crate picker dropdown"),
-            ("`b crateshop`", "Browse shard-priced weapon crates"),
-        ],
-        "extra": (
-            "**Weapon loop:** Open crates -> keep strong rolls -> salvage weak weapons -> spend Weapon Shards on rerolls or shard crates.\n"
-            "**Crate currency:** Weapon Shards only. Souls are not the weapon crate currency.\n"
-            "**Stat reroll:** Keeps the weapon and passive type, rerolls numbers.\n"
-            "**Passive reroll:** Keeps the weapon, rerolls the passive type and passive value.\n"
-            "**Weapon IDs matter:** duplicate weapon types can have different quality, wear, stats, and passives."
-        ),
-    },
-    {
-        "key": "battle",
-        "emoji": "⚡",
-        "name": "Battle & Arena",
-        "desc": "Fight other hunters and climb the ranks",
-        "commands": [
-            ("`b team`", "View your battle team"),
-            ("`b team set [slot] [creature name]`", "Assign a creature to a team slot by name"),
-            ("`b team clear`", "Remove all creatures from your team"),
-            ("`b battle`", "Enter the global matchmaking queue"),
-            ("`b revenge`", "Rematch against your last opponent"),
-            ("`b history`", "View your recent battle history"),
-            ("`b arena`", "Check your arena rating, rank, and streak"),
-            ("`b leaderboard [cat]`", "View rankings (rating, streak, wins, level, souls)"),
-        ],
-    },
-    {
-        "key": "raids",
-        "emoji": "👑",
-        "name": "Raids & Bosses",
-        "desc": "Fight server-wide bosses for big rewards",
-        "commands": [
-            ("`b raid`", "Show the active server raid"),
-            ("`b raid awaken`", "Summon a raid boss"),
-            ("`b raid attack`", "Attack the raid boss"),
-            ("`b boss`", "Show the active server boss"),
-            ("`b boss awaken`", "Summon a world boss"),
-            ("`b boss attack`", "Attack the world boss"),
-        ],
-    },
-    {
-        "key": "trading",
-        "emoji": "🤝",
-        "name": "Trading",
-        "desc": "Trade weapons, creatures, and currency with other hunters",
-        "commands": [
-            ("`b exchange @player`", "Initiate a trade with another player"),
-            ("Add weapons, creatures, souls, or gems", "Both players confirm to complete the trade"),
-        ],
-    },
-    {
-        "key": "buffs",
-        "emoji": "💎",
-        "name": "Sigils & Charms",
-        "desc": "Activate temporary hunting buffs for extra monsters and better odds",
-        "commands": [
-            ("`b sigils`", "View and activate Blood Sigils (extra monsters per hunt)"),
-            ("`b sigil [key]`", "Activate a specific sigil"),
-            ("`b charms`", "View and activate Void Charms (+2 to +8 monsters and improved rarity odds)"),
-            ("`b charm [key]`", "Activate a specific charm"),
-            ("`b buffs`", "View all active sigils and charms"),
-        ],
-    },
-    {
-        "key": "server",
-        "emoji": "⚙️",
-        "name": "Server & Moderation",
-        "desc": "Server config, moderation, and utility",
-        "commands": [
-            ("`b config`", "View server configuration"),
-            ("`b config prefix [prefix]`", "Change the bot's prefix"),
-            ("`b config modlog [#channel]`", "Set the mod log channel"),
-            ("`b config welcome [#channel]`", "Set the welcome message channel"),
-            ("`b config booster-base [role]`", "Set the base booster role"),
-            ("`b config setup-emojis [true]`", "Upload generated Application Emojis, including every creature icon"),
-            ("`b config reload-emojis`", "Refresh cached Application Emoji IDs after portal uploads"),
-            ("`b kick @user [reason]`", "Kick a member"),
-            ("`b ban @user [reason]`", "Ban a member"),
-            ("`b timeout @user [minutes] [reason]`", "Timeout a member"),
-            ("`b purge [count]`", "Bulk delete messages"),
-            ("`b slowmode [seconds]`", "Set channel slowmode"),
-            ("`b booster create [name] [#color]`", "Create a custom booster role"),
-            ("`b ping`", "Check bot latency"),
-        ],
-    },
+HOME_VALUE = "__home__"
+PAGE_SIZE = 25
+
+CATEGORY_LABELS: dict[str, str] = {
+    "RPGHunting": "Hunting",
+    "RPGProfile": "Profile & Inventory",
+    "RPGBestiary": "Bestiary",
+    "RPGEconomy": "Economy & Market",
+    "RPGShop": "Crates & Selling",
+    "RPGEquipment": "Weapons",
+    "RPGBattle": "Battle & Raids",
+    "RPGSummoning": "Summoning",
+    "RPGTrade": "Trading",
+    "Buffs": "Sigils & Charms",
+    "Admin": "Server Config",
+    "Moderation": "Moderation",
+    "Boosters": "Booster Roles",
+    "Utility": "Utility",
+    "HelpGuide": "Help",
+}
+
+CATEGORY_ORDER = [
+    "Hunting",
+    "Profile & Inventory",
+    "Bestiary",
+    "Economy & Market",
+    "Crates & Selling",
+    "Weapons",
+    "Battle & Raids",
+    "Summoning",
+    "Trading",
+    "Sigils & Charms",
+    "Server Config",
+    "Moderation",
+    "Booster Roles",
+    "Utility",
+    "Help",
+    "Other",
 ]
 
+CATEGORY_STYLES: dict[str, dict[str, object]] = {
+    "Hunting": {
+        "emoji": "🩸",
+        "asset": ("ui", "hunt"),
+        "summary": "Hunt, explore zones, and run autohunts.",
+        "featured": ["hunt", "explore", "zones", "autohunt", "use"],
+    },
+    "Profile & Inventory": {
+        "emoji": "🎒",
+        "asset": ("ui", "inventory"),
+        "summary": "Profile, inventory, quests, daily rewards, and achievements.",
+        "featured": ["profile", "inventory", "daily", "checklist", "quests", "bestiary"],
+    },
+    "Bestiary": {
+        "emoji": "📖",
+        "asset": ("ui", "profile"),
+        "summary": "Inspect creature details and rarity data.",
+        "featured": ["dex"],
+    },
+    "Economy & Market": {
+        "emoji": "💰",
+        "asset": ("currency", "souls"),
+        "summary": "Souls, shops, selling, market listings, and player payments.",
+        "featured": ["souls", "give", "shop", "shop buy", "sell", "market", "trade"],
+    },
+    "Crates & Selling": {
+        "emoji": "📦",
+        "asset": ("crate", "cache"),
+        "summary": "Open crates, buy shard crates, salvage, and release extras.",
+        "featured": ["open", "crateshop", "shardcrate", "salvage", "sellall", "release"],
+    },
+    "Weapons": {
+        "emoji": "⚔️",
+        "asset": ("weapons", "sword"),
+        "summary": "Inspect, equip, reroll, and manage creature weapons.",
+        "featured": ["weapons", "weaponequip", "weaponunequip", "weaponreroll", "weaponshards", "wdex"],
+    },
+    "Battle & Raids": {
+        "emoji": "🔥",
+        "asset": ("ui", "battle"),
+        "summary": "Teams, arena battles, revenge fights, bosses, and raids.",
+        "featured": ["team", "team set", "battle", "arena", "leaderboard", "raid", "boss"],
+    },
+    "Summoning": {
+        "emoji": "✨",
+        "asset": ("ui", "crafting"),
+        "summary": "Summon special creatures and ritual rewards.",
+        "featured": ["summon"],
+    },
+    "Trading": {
+        "emoji": "🤝",
+        "asset": ("ui", "marketplace"),
+        "summary": "Exchange items and player-to-player trade tools.",
+        "featured": ["exchange"],
+    },
+    "Sigils & Charms": {
+        "emoji": "🔮",
+        "asset": ("buffs", "lesser_void"),
+        "summary": "Activate temporary sigils and charms, then check buffs.",
+        "featured": ["sigils", "sigil", "charms", "charm", "buffs"],
+    },
+    "Server Config": {
+        "emoji": "⚙️",
+        "asset": ("ui", "settings"),
+        "summary": "Prefix, modlog, welcome, emoji setup, and server settings.",
+        "featured": ["config", "config prefix", "config setup-emojis", "config reload-emojis", "config modlog"],
+    },
+    "Moderation": {
+        "emoji": "🛡️",
+        "asset": ("ui", "settings"),
+        "summary": "Kick, ban, timeout, purge, and channel moderation.",
+        "featured": ["kick", "ban", "timeout", "purge", "slowmode"],
+    },
+    "Booster Roles": {
+        "emoji": "💎",
+        "asset": ("currency", "gems"),
+        "summary": "Manage custom booster role rewards.",
+        "featured": ["booster", "booster create", "booster color", "booster sync"],
+    },
+    "Utility": {
+        "emoji": "📡",
+        "asset": ("ui", "leaderboard"),
+        "summary": "Small bot utility commands.",
+        "featured": ["ping"],
+    },
+    "Help": {
+        "emoji": "❔",
+        "asset": ("ui", "quest"),
+        "summary": "Browse commands and open detailed command pages.",
+        "featured": ["help", "commands"],
+    },
+    "Other": {
+        "emoji": "❔",
+        "asset": None,
+        "summary": "Miscellaneous loaded commands.",
+        "featured": [],
+    },
+}
 
-def _cat_title(cat: dict) -> str:
-    icon_key = {
-        "hunting": "hunt",
-        "collection": "profile",
-        "economy": "marketplace",
-        "weapons": "battle",
-        "battle": "battle",
-        "raids": "boss_raid",
-        "trading": "marketplace",
-        "buffs": "inventory",
-        "server": "crafting",
-    }.get(str(cat["key"]), "profile")
-    return ui_label(icon_key, str(cat["name"]))
+
+@dataclass(frozen=True)
+class CommandEntry:
+    category: str
+    command: commands.Command
+
+    @property
+    def name(self) -> str:
+        return self.command.qualified_name
+
+    def usage(self, prefix: str) -> str:
+        signature = (self.command.signature or "").strip()
+        return f"{prefix}{self.name} {signature}".strip()
+
+    @property
+    def short_description(self) -> str:
+        text = self.command.short_doc or self.command.help or "No description available."
+        return " ".join(text.split())[:100]
 
 
-class HelpView(discord.ui.View):
+def _category_for(command: commands.Command) -> str:
+    cog_name = command.cog.qualified_name if command.cog else "Other"
+    return CATEGORY_LABELS.get(cog_name, cog_name or "Other")
+
+
+def _all_entries(bot: commands.Bot) -> list[CommandEntry]:
+    entries: list[CommandEntry] = []
+    seen: set[str] = set()
+    for command in bot.walk_commands():
+        if command.hidden or not command.enabled:
+            continue
+        if command.qualified_name in seen:
+            continue
+        seen.add(command.qualified_name)
+        entries.append(CommandEntry(_category_for(command), command))
+    return sorted(entries, key=lambda entry: (CATEGORY_ORDER.index(entry.category) if entry.category in CATEGORY_ORDER else 999, entry.name))
+
+
+def _grouped_entries(bot: commands.Bot) -> dict[str, list[CommandEntry]]:
+    grouped: dict[str, list[CommandEntry]] = {}
+    for entry in _all_entries(bot):
+        grouped.setdefault(entry.category, []).append(entry)
+    return grouped
+
+
+def _category_sort_key(category: str) -> tuple[int, str]:
+    return (CATEGORY_ORDER.index(category) if category in CATEGORY_ORDER else 999, category)
+
+
+def _clip(value: str, limit: int) -> str:
+    value = " ".join(str(value).split())
+    if len(value) <= limit:
+        return value
+    return value[: max(0, limit - 3)].rstrip() + "..."
+
+
+def _category_style(category: str) -> dict[str, object]:
+    return CATEGORY_STYLES.get(category, CATEGORY_STYLES["Other"])
+
+
+def _category_emoji(category: str, *, custom: bool = True) -> str:
+    style = _category_style(category)
+    if custom:
+        asset = style.get("asset")
+        if isinstance(asset, tuple) and len(asset) == 2:
+            emoji = asset_emoji(str(asset[0]), str(asset[1]))
+            if emoji:
+                return emoji
+    return str(style.get("emoji") or "❔")
+
+
+def _category_name(category: str) -> str:
+    return f"{_category_emoji(category)} {category}"
+
+
+def _featured_entries(category: str, entries: list[CommandEntry]) -> list[CommandEntry]:
+    by_name = {entry.name: entry for entry in entries}
+    ordered: list[CommandEntry] = []
+    seen: set[str] = set()
+    for name in _category_style(category).get("featured", []):
+        if not isinstance(name, str):
+            continue
+        entry = by_name.get(name)
+        if entry and entry.name not in seen:
+            ordered.append(entry)
+            seen.add(entry.name)
+    for entry in entries:
+        if entry.name not in seen:
+            ordered.append(entry)
+            seen.add(entry.name)
+        if len(ordered) >= 6:
+            break
+    return ordered[:6]
+
+
+def _display_prefix(ctx: commands.Context) -> str:
+    prefix = str(getattr(ctx, "clean_prefix", None) or getattr(ctx, "prefix", None) or "b")
+    if prefix.lower() == "b":
+        return "b "
+    return prefix
+
+
+def _command_query_variants(value: str) -> list[str]:
+    query = " ".join(value.lower().strip().split())
+    if not query:
+        return []
+    variants = [query]
+    if query.startswith("b "):
+        variants.append(query[2:].strip())
+    if query.startswith("b") and " " not in query and len(query) > 1:
+        variants.append(query[1:])
+    return list(dict.fromkeys(v for v in variants if v))
+
+
+def _command_alias_usages(command: commands.Command, prefix: str) -> list[str]:
+    parent = f"{command.parent.qualified_name} " if command.parent else ""
+    return [f"{prefix}{parent}{alias}" for alias in command.aliases]
+
+
+def _command_by_name(bot: commands.Bot, qualified_name: str) -> commands.Command | None:
+    for query in _command_query_variants(qualified_name):
+        command = bot.get_command(query)
+        if command and not command.hidden and command.enabled:
+            return command
+
+    for command in bot.walk_commands():
+        if command.hidden or not command.enabled:
+            continue
+        names = {command.qualified_name.lower(), command.name.lower()}
+        if command.parent:
+            names.update(f"{command.parent.qualified_name.lower()} {alias.lower()}" for alias in command.aliases)
+        else:
+            names.update(alias.lower() for alias in command.aliases)
+        if any(query in names for query in _command_query_variants(qualified_name)):
+            return command
+    return None
+
+
+class DynamicHelpView(discord.ui.View):
     def __init__(self, ctx: commands.Context) -> None:
         super().__init__(timeout=180)
         self.ctx = ctx
-        self._update_placeholder("home")
+        self.prefix = _display_prefix(ctx)
+        self.grouped = _grouped_entries(ctx.bot)
+        self.category: str | None = None
+        self.page = 0
+        self.message: discord.Message | None = None
+        self._sync_controls()
 
-    def _update_placeholder(self, current: str) -> None:
-        if current == "home":
-            self.category_select.placeholder = "Select a category..."
+    def _categories(self) -> list[str]:
+        return sorted(self.grouped, key=_category_sort_key)
+
+    def _entries(self) -> list[CommandEntry]:
+        if not self.category:
+            return []
+        return self.grouped.get(self.category, [])
+
+    def _page_count(self) -> int:
+        total = len(self._entries())
+        return max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+
+    def _page_entries(self) -> list[CommandEntry]:
+        start = self.page * PAGE_SIZE
+        return self._entries()[start:start + PAGE_SIZE]
+
+    def _sync_controls(self) -> None:
+        category_options = [
+            discord.SelectOption(label="Home", value=HOME_VALUE, description="Command category overview", emoji="🏠"),
+        ]
+        category_options.extend(
+            discord.SelectOption(
+                label=_clip(category, 100),
+                value=category,
+                description=f"{len(self.grouped[category])} command(s)",
+                emoji=_category_emoji(category, custom=False),
+            )
+            for category in self._categories()
+        )
+        self.category_select.options = category_options[:25]
+        self.category_select.placeholder = self.category or "Choose a command category"
+
+        page_entries = self._page_entries()
+        if page_entries:
+            self.command_select.disabled = False
+            self.command_select.placeholder = f"Choose a command ({self.page + 1}/{self._page_count()})"
+            self.command_select.options = [
+                discord.SelectOption(
+                    label=_clip(entry.name, 100),
+                    value=entry.name,
+                    description=_clip(entry.short_description, 100),
+                )
+                for entry in page_entries
+            ]
         else:
-            cat = next(c for c in CATEGORIES if c["key"] == current)
-            self.category_select.placeholder = str(cat["name"])
+            self.command_select.disabled = True
+            self.command_select.placeholder = "Choose a category first"
+            self.command_select.options = [discord.SelectOption(label="No command selected", value="noop")]
 
-    def _build_page(self, key: str) -> discord.Embed:
-        if key == "home":
-            return self._home_page()
-        cat = next(c for c in CATEGORIES if c["key"] == key)
-        return self._category_page(cat)
+        self.prev_page.disabled = not self.category or self.page <= 0
+        self.next_page.disabled = not self.category or self.page >= self._page_count() - 1
 
-    def _home_page(self) -> discord.Embed:
-        embed = discord.Embed(
-            title="⬡ ABYSSIA COMMANDS",
-            description="Pick a category from the dropdown below.\nPrefix works as `b`, `B`, or `b `.\nUse `b guide` for your personalized progression guide.",
+    def _home_embed(self) -> discord.Embed:
+        total = sum(len(entries) for entries in self.grouped.values())
+        embed = dark_embed(
+            "Abyssia Help",
+            f"{_category_emoji('Hunting')} **Begin in the dark:** `{self.prefix}hunt`  •  `{self.prefix}profile`  •  `{self.prefix}inventory`\n"
+            f"{_category_emoji('Battle & Raids')} **Fight back:** `{self.prefix}team`  •  `{self.prefix}battle`  •  `{self.prefix}raid`\n"
+            f"{_category_emoji('Economy & Market')} **Spend wisely:** `{self.prefix}souls`  •  `{self.prefix}shop`  •  `{self.prefix}market`\n\n"
+            f"Showing **{total}** loaded command entries. Pick a category, then pick a command for full details.\n"
+            f"Text commands work as `{self.prefix}command`"
+            + (" or attached to the prefix, like `bhunt`." if self.prefix == "b " else "."),
             color=GOLD_COLOR,
         )
         embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.display_avatar.url)
-
-        half = len(CATEGORIES) // 2
-        left = CATEGORIES[:half]
-        right = CATEGORIES[half:]
-
-        for cat in left:
+        for category in self._categories():
+            entries = self.grouped[category]
+            sample_entries = _featured_entries(category, entries)
+            sample = "  ".join(f"`{self.prefix}{entry.name}`" for entry in sample_entries)
+            if len(entries) > len(sample_entries):
+                sample += f"  +{len(entries) - len(sample_entries)} more"
+            summary = str(_category_style(category).get("summary") or "Loaded commands.")
             embed.add_field(
-                name=_cat_title(cat),
-                value=f"{cat['desc']}",
-                inline=True,
+                name=f"{_category_name(category)} ({len(entries)})",
+                value=f"{summary}\n{sample or 'No commands'}",
+                inline=False,
             )
-        embed.add_field(name="", value="", inline=True)
-        for cat in right:
-            embed.add_field(
-                name=_cat_title(cat),
-                value=f"{cat['desc']}",
-                inline=True,
-            )
-
-        embed.set_footer(text="Select a category above to view commands")
-        embed.color = GOLD_COLOR
+        embed.set_footer(text="The home screen is curated; dropdowns are generated from the bot's actual loaded commands.")
         return embed
 
-    def _category_page(self, cat: dict) -> discord.Embed:
-        embed = discord.Embed(
-            title=_cat_title(cat),
-            description=cat["desc"],
+    def _category_embed(self) -> discord.Embed:
+        entries = self._entries()
+        embed = dark_embed(
+            f"{_category_name(self.category or 'Other')} Commands",
+            f"Page **{self.page + 1}/{self._page_count()}**. Pick a command from the second dropdown for separate info.",
             color=GOLD_COLOR,
         )
         embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.display_avatar.url)
-
-        for cmd, desc in cat["commands"]:
-            embed.add_field(name=cmd, value=desc, inline=False)
-
-        extra = cat.get("extra")
-        if extra:
-            embed.add_field(name="Details", value=str(extra)[:1024], inline=False)
-
-        embed.set_footer(text="Use the dropdown to switch categories")
+        lines = [f"`{entry.usage(self.prefix)}` - {entry.short_description}" for entry in self._page_entries()]
+        embed.add_field(name=f"{len(entries)} command(s)", value="\n".join(lines)[:1024] or "No commands.", inline=False)
         return embed
 
-    @discord.ui.select(
-        placeholder="Select a category...",
-        options=[
-            discord.SelectOption(label="Home", value="home", emoji="🏠", description="Back to the main menu"),
-            *[discord.SelectOption(label=cat["name"], value=cat["key"], emoji=cat["emoji"], description=cat["desc"]) for cat in CATEGORIES],
-        ],
-    )
+    def _command_embed(self, command: commands.Command) -> discord.Embed:
+        entry = CommandEntry(_category_for(command), command)
+        description = command.help or command.short_doc or "No description available."
+        embed = dark_embed(f"Command: {self.prefix}{command.qualified_name}", description, color=GOLD_COLOR)
+        embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.display_avatar.url)
+        embed.add_field(name="Usage", value=f"`{entry.usage(self.prefix)}`", inline=False)
+        if command.aliases:
+            aliases = ", ".join(f"`{alias}`" for alias in _command_alias_usages(command, self.prefix))
+            embed.add_field(name="Aliases", value=aliases[:1024], inline=False)
+        if command.parent:
+            embed.add_field(name="Parent Group", value=f"`{self.prefix}{command.parent.qualified_name}`", inline=True)
+        embed.add_field(name="Category", value=entry.category, inline=True)
+        subcommands = list(getattr(command, "commands", []) or [])
+        if subcommands:
+            value = "\n".join(f"`{self.prefix}{sub.qualified_name}` - {_clip(sub.short_doc or 'No description.', 80)}" for sub in subcommands)
+            embed.add_field(name="Subcommands", value=value[:1024], inline=False)
+        if getattr(command, "checks", None):
+            embed.set_footer(text="This command may require permissions, roles, cooldowns, or other checks.")
+        return embed
+
+    @discord.ui.select(placeholder="Choose a command category", options=[discord.SelectOption(label="Home", value=HOME_VALUE)])
     async def category_select(self, interaction: discord.Interaction, select: discord.ui.Select) -> None:
-        self._update_placeholder(select.values[0])
-        await interaction.response.edit_message(embed=self._build_page(select.values[0]), view=self)
+        value = select.values[0]
+        if value == HOME_VALUE:
+            self.category = None
+            self.page = 0
+            self._sync_controls()
+            await interaction.response.edit_message(embed=self._home_embed(), view=self)
+            return
+        self.category = value
+        self.page = 0
+        self._sync_controls()
+        await interaction.response.edit_message(embed=self._category_embed(), view=self)
+
+    @discord.ui.select(placeholder="Choose a category first", options=[discord.SelectOption(label="No command selected", value="noop")], disabled=True)
+    async def command_select(self, interaction: discord.Interaction, select: discord.ui.Select) -> None:
+        if select.values[0] == "noop":
+            await interaction.response.defer()
+            return
+        command = _command_by_name(self.ctx.bot, select.values[0])
+        if command is None:
+            await interaction.response.send_message("That command is no longer loaded.", ephemeral=True)
+            return
+        self._sync_controls()
+        await interaction.response.edit_message(embed=self._command_embed(command), view=self)
+
+    @discord.ui.button(label="Prev", style=discord.ButtonStyle.secondary, disabled=True)
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        self.page = max(0, self.page - 1)
+        self._sync_controls()
+        await interaction.response.edit_message(embed=self._category_embed(), view=self)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, disabled=True)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        self.page = min(self._page_count() - 1, self.page + 1)
+        self._sync_controls()
+        await interaction.response.edit_message(embed=self._category_embed(), view=self)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id != self.ctx.author.id:
@@ -264,113 +455,82 @@ class HelpView(discord.ui.View):
     async def on_timeout(self) -> None:
         for item in self.children:
             item.disabled = True
-        try:
-            await self.message.edit(view=self)
-        except Exception:
-            pass
+        if self.message is not None:
+            try:
+                await self.message.edit(view=self)
+            except Exception:
+                pass
 
 
 class HelpGuide(commands.Cog):
-    """Command reference and progression guide."""
+    """Dynamic command reference."""
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @commands.hybrid_command(name="help")
-    async def help_command(self, ctx: commands.Context, *, category: str | None = None) -> None:
-        """Browse all commands organized by category. Use b help <category> for details."""
+    async def help_command(self, ctx: commands.Context, *, command_or_category: str | None = None) -> None:
+        """Browse every loaded command with dropdowns and detailed command pages."""
         assert ctx.guild is not None
-        prefix = "b"
+        view = DynamicHelpView(ctx)
 
-        if category:
-            cat_lower = category.lower().strip()
-            cat = next((c for c in CATEGORIES if c["key"] == cat_lower or c["name"].lower() == cat_lower), None)
-            if not cat:
-                cats = ", ".join(c["key"] for c in CATEGORIES)
-                raise commands.BadArgument(f"Unknown category. Try: {cats}")
-            embed = discord.Embed(
-                title=_cat_title(cat),
-                description=cat["desc"],
-                color=GOLD_COLOR,
-            )
-            embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-            for cmd, desc in cat["commands"]:
-                embed.add_field(name=cmd, value=desc, inline=False)
-            extra = cat.get("extra")
-            if extra:
-                embed.add_field(name="Details", value=str(extra)[:1024], inline=False)
-            embed.set_footer(text=f"Use {prefix}help to return to the home page")
-            await ctx.reply(embed=embed, mention_author=False)
-            return
+        if command_or_category:
+            query = command_or_category.strip().lower()
+            category = next((cat for cat in view._categories() if cat.lower() == query), None)
+            command = _command_by_name(self.bot, query)
+            if category:
+                view.category = category
+                view.page = 0
+                view._sync_controls()
+                embed = view._category_embed()
+            elif command:
+                view.category = _category_for(command)
+                names = [entry.name for entry in view._entries()]
+                view.page = max(0, names.index(command.qualified_name) // PAGE_SIZE) if command.qualified_name in names else 0
+                view._sync_controls()
+                embed = view._command_embed(command)
+            else:
+                embed = view._home_embed()
+                embed.description = f"No command or category matched `{command_or_category}`.\n\n{embed.description}"
+        else:
+            embed = view._home_embed()
 
-        page_keys = ["home"] + [c["key"] for c in CATEGORIES]
-        view = HelpView(ctx)
-        embed = view._build_page("home")
-        msg = await ctx.reply(embed=embed, view=view, mention_author=False)
-        view.message = msg
+        message = await ctx.reply(embed=embed, view=view, mention_author=False)
+        view.message = message
 
     @commands.hybrid_command(name="commands", aliases=["cmd", "cmds"])
     async def commands_list(self, ctx: commands.Context) -> None:
-        """Show a compact list of all commands by category."""
+        """Show all loaded commands grouped by category."""
         assert ctx.guild is not None
-        embed = discord.Embed(
-            title="ABYSSIA COMMANDS",
-            description="Use `b help [category]` for detailed info.",
-            color=GOLD_COLOR,
-        )
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-
-        for cat in CATEGORIES:
-            cmds = [cmd for cmd, _ in cat["commands"]]
-            embed.add_field(
-                name=_cat_title(cat),
-                value=" ".join(cmds),
-                inline=False,
-            )
-
-        embed.set_footer(text="Use b help for an interactive guide!")
-        await ctx.reply(embed=embed, mention_author=False)
-
-    @commands.hybrid_command(name="guide")
-    async def progression_guide(self, ctx: commands.Context) -> None:
-        """View your personalized progression guide."""
-        assert ctx.guild is not None
-        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
-        stage = get_current_stage(player)
-
-        embed = discord.Embed(
-            title="⬡ ABYSSIA PROGRESSION GUIDE",
-            description="",
-            color=GOLD_COLOR,
-        )
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-
-        embed.add_field(
-            name="📍 Current Goal",
-            value=f"**{stage.title}**\n{stage.goal}",
-            inline=False,
-        )
-
-        steps_text = ""
-        for step_name, step_desc in stage.steps:
-            steps_text += f"✔ **{step_name}**\n   {step_desc}\n"
-        embed.add_field(name="🎯 Recommended Steps", value=steps_text, inline=False)
-
-        embed.add_field(
-            name="➜ Next Action",
-            value=f"**{stage.next_command}**",
-            inline=False,
-        )
-
-        embed.add_field(
-            name="🎁 Stage Reward",
-            value=f"+{stage.reward_souls} Souls • +{stage.reward_gems} Gems",
-            inline=False,
-        )
-
-        embed.set_footer(text="Complete steps to unlock next stage!")
-        embed.color = BLOOD_COLOR
-        await ctx.reply(embed=embed, mention_author=False)
+        grouped = _grouped_entries(self.bot)
+        prefix = _display_prefix(ctx)
+        embeds: list[discord.Embed] = []
+        current = dark_embed("Abyssia Command List", f"Use `{prefix}help` for dropdown details.", color=GOLD_COLOR)
+        field_count = 0
+        for category in sorted(grouped, key=_category_sort_key):
+            entries = grouped[category]
+            lines = [f"`{prefix}{entry.name}`" for entry in entries]
+            value = ", ".join(lines)
+            while len(value) > 1024:
+                split_at = value.rfind(",", 0, 1000)
+                if split_at <= 0:
+                    split_at = 1000
+                current.add_field(name=f"{category} (continued)", value=value[:split_at], inline=False)
+                field_count += 1
+                value = value[split_at + 1:].lstrip()
+                if field_count >= 24:
+                    embeds.append(current)
+                    current = dark_embed("Abyssia Command List", color=GOLD_COLOR)
+                    field_count = 0
+            current.add_field(name=f"{category} ({len(entries)})", value=value or "No commands", inline=False)
+            field_count += 1
+            if field_count >= 24:
+                embeds.append(current)
+                current = dark_embed("Abyssia Command List", color=GOLD_COLOR)
+                field_count = 0
+        embeds.append(current)
+        for index, embed in enumerate(embeds):
+            await ctx.reply(embed=embed, mention_author=False) if index == 0 else await ctx.send(embed=embed)
 
 
 async def setup(bot: commands.Bot) -> None:
