@@ -1,0 +1,506 @@
+{
+  "assets": {
+    "bosses": {
+      "hollow_king": {
+        "file": "bosses/hollow_king.png"
+      },
+      "mother_of_rot": {
+        "file": "bosses/mother_of_rot.png"
+      },
+      "nameless_god": {
+        "file": "bosses/nameless_god.png"
+      },
+      "void_leviathan": {
+        "file": "bosses/void_leviathan.png"
+      }
+    },
+    "buffs": {
+      "abyssal_blood": {
+        "file": "buffs/abyssal_blood.png"
+      },
+      "eldritch_void": {
+        "file": "buffs/eldritch_void.png"
+      },
+      "greater_void": {
+        "file": "buffs/greater_void.png"
+      },
+      "lesser_blood": {
+        "file": "buffs/lesser_blood.png",
+        "updated_at": 1780613187
+      },
+      "lesser_void": {
+        "file": "buffs/lesser_void.png"
+      }
+    },
+    "consumable": {},
+    "crate": {},
+    "creatures": {
+      "abyssal_godling": {
+        "file": "creatures/abyssal_godling.png"
+      },
+      "abyssal_hound": {
+        "file": "creatures/abyssal_hound.png",
+        "placeholder": true
+      },
+      "ancient_starved_dragon": {
+        "file": "creatures/ancient_starved_dragon.png"
+      },
+      "apostle_of_the_deep_door": {
+        "file": "creatures/apostle_of_the_deep_door.png"
+      },
+      "ash_imp": {
+        "updated_at": 1780503931,
+        "url": "https://media.discordapp.net/attachments/1412494533870223403/1511755858881544324/Ash_Imp.png?ex=6a219bdb&is=6a204a5b&hm=e94d488bd4e3ed9099f9e3bc2260a2c76cec0d619bbf5dd4e1a2f10208cb5a52&=&format=webp&quality=lossless&width=851&height=851"
+      },
+      "ashen_oracle_beast": {
+        "file": "creatures/ashen_oracle_beast.png"
+      },
+      "black_chalice_hydra": {
+        "updated_at": 1780509440,
+        "url": "https://www.pngarts.com/files/6/Black-Dragon-PNG-Image.png"
+      },
+      "bloodmoon_drake": {
+        "file": "creatures/bloodmoon_drake.png"
+      },
+      "bog_serpent": {
+        "file": "creatures/bog_serpent.png",
+        "placeholder": true
+      },
+      "bone_hydra": {
+        "file": "creatures/bone_hydra.png",
+        "placeholder": true
+      },
+      "bone_stalker": {
+        "file": "creatures/bone_stalker.png"
+      },
+      "briar_ghast": {
+        "file": "creatures/briar_ghast.png"
+      },
+      "carrion_oracle": {
+        "file": "creatures/carrion_oracle.png"
+      },
+      "celestial_judge": {
+        "file": "creatures/celestial_judge.png",
+        "placeholder": true
+      },
+      "choir_of_teeth": {
+        "file": "creatures/choir_of_teeth.png"
+      },
+      "choirbone_swan": {
+        "file": "creatures/choirbone_swan.png"
+      },
+      "choirmaster_below": {
+        "file": "creatures/choirmaster_below.png"
+      },
+      "cinder_pup": {
+        "file": "creatures/cinder_pup.png"
+      },
+      "coffinback_beetle": {
+        "file": "creatures/coffinback_beetle.png"
+      },
+      "crawling_hand": {
+        "file": "creatures/crawling_hand.png",
+        "placeholder": true
+      },
+      "crimson_moon_kirin": {
+        "file": "creatures/crimson_moon_kirin.png"
+      },
+      "crown_of_endless_teeth": {
+        "file": "creatures/crown_of_endless_teeth.png"
+      },
+      "crownless_sunwyrm": {
+        "file": "creatures/crownless_sunwyrm.png"
+      },
+      "crypt_skitter": {
+        "file": "creatures/crypt_skitter.png"
+      },
+      "daughter_of_no_dawn": {
+        "file": "creatures/daughter_of_no_dawn.png"
+      },
+      "dawnless_valkyr": {
+        "file": "creatures/dawnless_valkyr.png"
+      },
+      "demon_of_black_glass": {
+        "file": "creatures/demon_of_black_glass.png"
+      },
+      "doompetal_phoenix": {
+        "file": "creatures/doompetal_phoenix.png"
+      },
+      "dusk_harrier": {
+        "file": "creatures/dusk_harrier.png"
+      },
+      "eater_beneath_names": {
+        "file": "creatures/eater_beneath_names.png"
+      },
+      "ebon_antler_saint": {
+        "file": "creatures/ebon_antler_saint.png"
+      },
+      "ember_horned_stag": {
+        "file": "creatures/ember_horned_stag.png"
+      },
+      "ember_sprite": {
+        "file": "creatures/ember_sprite.png",
+        "placeholder": true
+      },
+      "fallen_star_beast": {
+        "file": "creatures/fallen_star_beast.png",
+        "placeholder": true
+      },
+      "first_grave_dragon": {
+        "file": "creatures/first_grave_dragon.png"
+      },
+      "forgotten_king": {
+        "file": "creatures/forgotten_king.png"
+      },
+      "frozen_shade": {
+        "file": "creatures/frozen_shade.png",
+        "placeholder": true
+      },
+      "gallows_gryphon": {
+        "file": "creatures/gallows_gryphon.png"
+      },
+      "giant_rat": {
+        "file": "creatures/giant_rat.png",
+        "placeholder": true
+      },
+      "gilded_wraith": {
+        "file": "creatures/gilded_wraith.png"
+      },
+      "glassbone_jackal": {
+        "file": "creatures/glassbone_jackal.png"
+      },
+      "godling_of_unlit_stars": {
+        "file": "creatures/godling_of_unlit_stars.png"
+      },
+      "grave_moth": {
+        "file": "creatures/grave_moth.png"
+      },
+      "grave_warden": {
+        "file": "creatures/grave_warden.png",
+        "placeholder": true
+      },
+      "gravetide_minnow": {
+        "file": "creatures/gravetide_minnow.png"
+      },
+      "halo_eater_moth": {
+        "file": "creatures/halo_eater_moth.png"
+      },
+      "heart_of_oblivion": {
+        "file": "creatures/heart_of_oblivion.png",
+        "placeholder": true
+      },
+      "hellroot_colossus": {
+        "file": "creatures/hellroot_colossus.png"
+      },
+      "hollow_lynx": {
+        "file": "creatures/hollow_lynx.png"
+      },
+      "infernal_warlord": {
+        "file": "creatures/infernal_warlord.png",
+        "placeholder": true
+      },
+      "ivory_void_paladin": {
+        "file": "creatures/ivory_void_paladin.png"
+      },
+      "lantern_rat": {
+        "file": "creatures/lantern_rat.png"
+      },
+      "lich_king": {
+        "file": "creatures/lich_king.png",
+        "placeholder": true
+      },
+      "lost_soul": {
+        "file": "creatures/lost_soul.png",
+        "placeholder": true
+      },
+      "lullaby_of_knives": {
+        "file": "creatures/lullaby_of_knives.png"
+      },
+      "marrow_siren": {
+        "file": "creatures/marrow_siren.png"
+      },
+      "memory_eating_hart": {
+        "file": "creatures/memory_eating_hart.png"
+      },
+      "mire_wisp": {
+        "file": "creatures/mire_wisp.png"
+      },
+      "mirror_eyed_roc": {
+        "file": "creatures/mirror_eyed_roc.png"
+      },
+      "moonless_basilisk": {
+        "file": "creatures/moonless_basilisk.png"
+      },
+      "moonlit_executioner": {
+        "file": "creatures/moonlit_executioner.png"
+      },
+      "mourning_toad": {
+        "file": "creatures/mourning_toad.png"
+      },
+      "nameless_thorn_serpent": {
+        "file": "creatures/nameless_thorn_serpent.png"
+      },
+      "nocturne_eel": {
+        "file": "creatures/nocturne_eel.png"
+      },
+      "oracle_of_the_last_door": {
+        "file": "creatures/oracle_of_the_last_door.png"
+      },
+      "plague_doctor": {
+        "file": "creatures/plague_doctor.png",
+        "placeholder": true
+      },
+      "radiant_martyr": {
+        "file": "creatures/radiant_martyr.png",
+        "placeholder": true
+      },
+      "ravenous_reliquary": {
+        "file": "creatures/ravenous_reliquary.png"
+      },
+      "ribcage_hound": {
+        "file": "creatures/ribcage_hound.png"
+      },
+      "rot_chapel_knight": {
+        "file": "creatures/rot_chapel_knight.png"
+      },
+      "rotting_crow": {
+        "file": "creatures/rotting_crow.png",
+        "placeholder": true
+      },
+      "sable_manticore": {
+        "file": "creatures/sable_manticore.png"
+      },
+      "saint_hydra_of_ash": {
+        "file": "creatures/saint_hydra_of_ash.png"
+      },
+      "saint_of_cinders": {
+        "file": "creatures/saint_of_cinders.png"
+      },
+      "sepulcher_leviathan": {
+        "file": "creatures/sepulcher_leviathan.png"
+      },
+      "seraph_of_black_rain": {
+        "file": "creatures/seraph_of_black_rain.png"
+      },
+      "silent_bell_kraken": {
+        "file": "creatures/silent_bell_kraken.png"
+      },
+      "skeleton": {
+        "file": "creatures/skeleton.png",
+        "placeholder": true
+      },
+      "slime": {
+        "file": "creatures/slime.png",
+        "placeholder": true
+      },
+      "sootscale_newt": {
+        "file": "creatures/sootscale_newt.png"
+      },
+      "soulreaper_wyvern": {
+        "file": "creatures/soulreaper_wyvern.png"
+      },
+      "spectre_knight": {
+        "file": "creatures/spectre_knight.png",
+        "placeholder": true
+      },
+      "tallow_bat": {
+        "file": "creatures/tallow_bat.png"
+      },
+      "the_crawling_chaos": {
+        "file": "creatures/the_crawling_chaos.png",
+        "placeholder": true
+      },
+      "the_eye_behind_winter": {
+        "file": "creatures/the_eye_behind_winter.png"
+      },
+      "the_grave_that_breathes": {
+        "file": "creatures/the_grave_that_breathes.png"
+      },
+      "the_last_familiar": {
+        "file": "creatures/the_last_familiar.png"
+      },
+      "the_night_that_hunts": {
+        "file": "creatures/the_night_that_hunts.png"
+      },
+      "the_old_hunger": {
+        "file": "creatures/the_old_hunger.png"
+      },
+      "the_pale_chimera": {
+        "file": "creatures/the_pale_chimera.png"
+      },
+      "thorn_queens_hound": {
+        "file": "creatures/thorn_queens_hound.png"
+      },
+      "thornbound_revenant": {
+        "file": "creatures/thornbound_revenant.png"
+      },
+      "titan_of_rust": {
+        "file": "creatures/titan_of_rust.png",
+        "placeholder": true
+      },
+      "velvet_hexcat": {
+        "file": "creatures/velvet_hexcat.png"
+      },
+      "void_emperor": {
+        "file": "creatures/void_emperor.png",
+        "placeholder": true
+      },
+      "void_thread_spider": {
+        "file": "creatures/void_thread_spider.png"
+      },
+      "voidglass_angler": {
+        "file": "creatures/voidglass_angler.png"
+      },
+      "warden_of_wax": {
+        "file": "creatures/warden_of_wax.png"
+      },
+      "whisper_beyond_stars": {
+        "file": "creatures/whisper_beyond_stars.png",
+        "placeholder": true
+      },
+      "witchfire_seraph": {
+        "file": "creatures/witchfire_seraph.png"
+      },
+      "world_serpent": {
+        "file": "creatures/world_serpent.png",
+        "placeholder": true
+      },
+      "zombie": {
+        "file": "creatures/zombie.png",
+        "placeholder": true
+      }
+    },
+    "currency": {},
+    "equipment": {
+      "abyssal_cleaver": {
+        "file": "equipment/abyssal_cleaver.png"
+      },
+      "bloodfang_greatsword": {
+        "file": "equipment/bloodfang_greatsword.png"
+      },
+      "darksteel_blade": {
+        "file": "equipment/darksteel_blade.png"
+      },
+      "demon_eye": {
+        "file": "equipment/demon_eye.png"
+      },
+      "forgotten_crown": {
+        "file": "equipment/forgotten_crown.png"
+      },
+      "hunters_sigil": {
+        "file": "equipment/hunters_sigil.png"
+      },
+      "iron_sword": {
+        "file": "equipment/iron_sword.png"
+      },
+      "lucky_charm": {
+        "file": "equipment/lucky_charm.png"
+      },
+      "rusted_sword": {
+        "file": "equipment/rusted_sword.png"
+      },
+      "soulreaper": {
+        "file": "equipment/soulreaper.png"
+      },
+      "void_talisman": {
+        "file": "equipment/void_talisman.png"
+      }
+    },
+    "materials": {
+      "abyssal_ichor": {
+        "file": "materials/abyssal_ichor.png",
+        "placeholder": true
+      },
+      "ancient_relics": {
+        "file": "materials/ancient_relics.png",
+        "placeholder": true
+      },
+      "bone_fragments": {
+        "file": "materials/bone_fragments.png",
+        "placeholder": true
+      },
+      "corrupted_essence": {
+        "file": "materials/corrupted_essence.png"
+      },
+      "demon_horns": {
+        "file": "materials/demon_horns.png",
+        "placeholder": true
+      },
+      "void_crystals": {
+        "file": "materials/void_crystals.png"
+      }
+    },
+    "passives": {},
+    "rarity": {},
+    "status": {},
+    "ui": {},
+    "weapons": {},
+    "zones": {
+      "abyssal_depths": {
+        "file": "zones/abyssal_depths.png",
+        "generated": true
+      },
+      "ashen_wastes": {
+        "file": "zones/ashen_wastes.png",
+        "generated": true
+      },
+      "black_sun_gate": {
+        "file": "zones/black_sun_gate.png",
+        "generated": true
+      },
+      "bloodmoon_forest": {
+        "file": "zones/bloodmoon_forest.png",
+        "generated": true
+      },
+      "cursed_sanctum": {
+        "file": "zones/cursed_sanctum.png",
+        "generated": true
+      },
+      "forgotten_woods": {
+        "file": "zones/forgotten_woods.png",
+        "generated": true
+      },
+      "grave_marsh": {
+        "file": "zones/grave_marsh.png",
+        "generated": true
+      },
+      "infernal_catacombs": {
+        "file": "zones/infernal_catacombs.png",
+        "generated": true
+      },
+      "starless_menagerie": {
+        "file": "zones/starless_menagerie.png",
+        "generated": true
+      },
+      "throne_of_teeth": {
+        "file": "zones/throne_of_teeth.png",
+        "generated": true
+      },
+      "void_realm": {
+        "file": "zones/void_realm.png",
+        "generated": true
+      }
+    }
+  },
+  "overrides": {
+    "bosses": {},
+    "buffs": {},
+    "consumable": {},
+    "crate": {},
+    "creatures": {},
+    "currency": {},
+    "equipment": {},
+    "materials": {},
+    "passives": {},
+    "rarity": {},
+    "status": {},
+    "ui": {},
+    "weapons": {},
+    "zones": {}
+  },
+  "settings": {
+    "public_asset_base_url": ""
+  },
+  "updated_at": 1780638755,
+  "version": 1
+}

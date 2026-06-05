@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Abyssia Admin</title>
+    <link rel="stylesheet" href="/static/styles.css" onerror="this.onerror=null;this.href='styles.css'">
+  </head>
+  <body>
+    <div id="login" class="login">
+      <form id="loginForm" class="login-panel">
+        <div class="mark">VB</div>
+        <h1>Abyssia Admin</h1>
+        <label for="password">Admin password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="admin">
+        <button type="submit"><span class="btn-icon">></span> Enter</button>
+        <p id="loginMessage" class="muted"></p>
+      </form>
+    </div>
+
+    <div id="shell" class="shell hidden" hidden>
+      <aside class="sidebar">
+          <div class="brand">
+          <div class="mark">VB</div>
+          <div>
+            <strong>Abyssia</strong>
+            <span>RPG control</span>
+          </div>
+        </div>
+        <nav id="tabs" class="tabs"></nav>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <h1 id="pageTitle">Dashboard</h1>
+            <p id="pageSubtitle">Local bot configuration</p>
+          </div>
+          <div class="top-actions">
+            <button id="reloadBtn" type="button"><span class="btn-icon">R</span> Reload</button>
+            <button id="logoutBtn" type="button" class="ghost"><span class="btn-icon">X</span> Logout</button>
+          </div>
+        </header>
+
+        <div id="notice" class="notice hidden"></div>
+        <section id="content" class="content"></section>
+      </main>
+    </div>
+
+    <script src="/static/app.js" onerror="if(!window.__adminAppLoaded){var script=document.createElement('script');script.src='app.js';document.body.appendChild(script);}"></script>
+  </body>
+</html>

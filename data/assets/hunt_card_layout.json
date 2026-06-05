@@ -1,0 +1,138 @@
+{
+  "card": {
+    "width": 1920,
+    "height": 1080
+  },
+  "background": {
+    "darken_factor": 0.60,
+    "blur_radius": 8,
+    "vignette_strength": 0.70,
+    "vignette_radius": 1.2
+  },
+  "top_section": {
+    "height": 70,
+    "y_offset": 0,
+    "title_font_size": 30,
+    "title_color": [255, 252, 245],
+    "zone_icon_size": [36, 36],
+    "separator_color": [90, 70, 110],
+    "separator_char": "="
+  },
+  "encounter_text": {
+    "y_offset": 72,
+    "font_size": 18,
+    "subtitle_font_size": 14,
+    "color": [200, 195, 185],
+    "subtitle_color": [160, 150, 140],
+    "glow_radius": 0
+  },
+  "rarity_section": {
+    "y_offset": 92,
+    "font_size": 40,
+    "icon_size": [36, 36],
+    "banner_height": 55,
+    "glow_intensity": 0,
+    "banner_glow_color": [255, 255, 255]
+  },
+  "monster_portrait": {
+    "x_center": 960,
+    "y_center": 410,
+    "size": 500,
+    "border_width": 4,
+    "glow_spread": 50,
+    "shadow_offset": 6,
+    "depth_layers": 3,
+    "nearest_scale": 4,
+    "radial_glow_layers": 2,
+    "radial_glow_radius": 200
+  },
+  "monster_info": {
+    "x": 960,
+    "y": 670,
+    "name_font_size": 56,
+    "label_font_size": 22,
+    "value_font_size": 28,
+    "line_spacing": 38
+  },
+  "stat_panel": {
+    "x_center": 960,
+    "y": 740,
+    "spacing": 160,
+    "label_font_size": 20,
+    "value_font_size": 26,
+    "panel_radius": 8
+  },
+  "collection_status": {
+    "x": 960,
+    "y": 820,
+    "font_size": 30,
+    "glow_radius": 0,
+    "celebration_rays": 10
+  },
+  "rewards_section": {
+    "x": 60,
+    "y": 120,
+    "width": 340,
+    "header_font_size": 22,
+    "item_font_size": 17,
+    "souls_font_size": 22,
+    "icon_size": [26, 26],
+    "souls_icon_size": [34, 34],
+    "line_spacing": 32,
+    "panel_padding": 14,
+    "panel_radius": 8
+  },
+  "special_drop": {
+    "x": 60,
+    "y": 480,
+    "width": 340,
+    "height": 130,
+    "header_font_size": 17,
+    "item_font_size": 22,
+    "panel_radius": 8,
+    "border_width": 2,
+    "glow_color": [250, 204, 21]
+  },
+  "player_section": {
+    "x": 60,
+    "y": 930,
+    "name_font_size": 24,
+    "rank_font_size": 17,
+    "line_spacing": 26
+  },
+  "streak_badge": {
+    "x": 430,
+    "y": 930,
+    "font_size": 20,
+    "panel_radius": 6,
+    "glow_spread": 0
+  },
+  "drop_info": {
+    "x": 1500,
+    "y": 930,
+    "width": 360,
+    "label_font_size": 15,
+    "value_font_size": 19,
+    "line_spacing": 24,
+    "panel_padding": 12,
+    "panel_radius": 8
+  },
+  "ambient_effects": {
+    "enabled": true,
+    "particle_count": 30,
+    "fog_wisps": 6,
+    "fog_opacity": 25,
+    "glow_intensity": 20
+  },
+  "ultra_rare": {
+    "vignette_strength": 0.90,
+    "vignette_radius": 1.4,
+    "distortion_amount": 4,
+    "energy_particle_count": 40,
+    "banner_y": 130,
+    "banner_height": 60,
+    "banner_font_size": 32,
+    "encounter_font_size": 20,
+    "encounter_y": 200
+  }
+}
