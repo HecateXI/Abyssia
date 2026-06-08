@@ -13,6 +13,14 @@ from core.cards import render_arena_card, render_team_card
 from core.team_display import team_slot_value
 from core.battle_rewards import creature_power, daily_reset_timer, streak_milestone_reward
 from core.battle_matchmaking import get_or_make_opponent
+from core.battle_display import (
+    battle_log_line,
+    battle_overview_embed,
+    battle_team_line,
+    emoji_prefix,
+    outcome_badge,
+    weapon_status,
+)
 from core.discord_assets import embed_asset, ensure_application_emojis
 from core.rpg import (
     add_item,
@@ -54,105 +62,36 @@ from core.rpg_data import (
 from core.theme import (
     BLOOD_COLOR,
     GOLD_COLOR,
-    asset_emoji,
     boss_label,
-    creature_emoji,
     creature_label,
-    creature_line,
     currency_label,
     crate_label,
     dark_embed,
     rarity_emoji,
     rarity_label,
-    status_effect_emoji,
     status_effect_label,
     status_embed,
     ui_label,
-    weapon_emoji,
-    weapon_label,
-    passive_emoji,
 )
 
 
 REVENGE_COOLDOWN = 10
 
 
-def _emoji_prefix(emoji: str) -> str:
-    return f"{emoji} " if emoji else ""
-
-
-def _weapon_status(creature: dict) -> str:
-    weapon = creature.get("_weapon") if isinstance(creature.get("_weapon"), dict) else None
-    if not weapon:
-        return ""
-    rarity = str(weapon.get("rarity", "Common") or "Common")
-    weapon_type = str(weapon.get("weapon_type", "sword") or "sword")
-    wep = weapon_emoji(weapon_type) or weapon_type[:1].upper()
-    passive_raw = weapon.get("passive")
-    passive = ""
-    if passive_raw:
-        try:
-            import json as _json
-            pdata = _json.loads(str(passive_raw)) if isinstance(passive_raw, str) else passive_raw
-            if isinstance(pdata, dict) and pdata.get("key"):
-                passive = f" {passive_emoji(str(pdata['key']))}" if passive_emoji(str(pdata["key"])) else ""
-        except Exception:
-            pass
-    return f"{rarity_emoji(rarity) or rarity[0].upper()}{wep}{passive}"
-
-
-def _battle_team_line(creature: dict) -> str:
-    level = int(creature.get("level", 1) or 1)
-    name = str(creature.get("name", "?") or "?")
-    rarity = str(creature.get("rarity", "Common") or "Common")
-    creature_badge = creature_emoji(name, rarity) or rarity[:1].upper()
-    weapon = _weapon_status(creature)
-    if weapon:
-        return f"L.`{level}` {creature_badge} - {weapon}"
-    return f"L.`{level}` {creature_badge} - no weapons"
 
 
 
 
 
-def _battle_overview_embed(
-    author: discord.Member | discord.User,
-    opponent_name: str,
-    left_team: list,
-    right_team: list,
-    *,
-    color: discord.Color,
-    image_filename: str,
-    footer: str | None = None,
-    log_lines: list[str] | None = None,
-) -> discord.Embed:
-    embed = dark_embed(f"{author.display_name} goes into battle!", color=color)
-    embed.set_author(name=f"{author.display_name} goes into battle!", icon_url=author.display_avatar.url)
-    team_lines = [_battle_team_line(cr) for cr in left_team]
-    enemy_lines = [_battle_team_line(cr) for cr in right_team]
-    embed.add_field(name=f"{author.display_name}'s Team", value="\n".join(team_lines) if team_lines else "None", inline=True)
-    embed.add_field(name="Enemy Team", value="\n".join(enemy_lines) if enemy_lines else "None", inline=True)
-    if log_lines:
-        log_text = "\n".join(log_lines[-12:])
-        embed.add_field(name="Turn Log", value=f"```{log_text}```", inline=False)
-    if footer:
-        embed.set_footer(text=footer)
-    embed.set_image(url=f"attachment://{image_filename}")
-    return embed
 
 
-def _battle_log_line(line: str) -> str:
-    lowered = line.lower()
-    for key in ("bleed", "burn", "poison", "stun", "shield", "heal", "fear", "curse"):
-        if key in lowered:
-            return f"{_emoji_prefix(status_effect_emoji(key))}{line}"
-    if "crit" in lowered:
-        return f"{_emoji_prefix(asset_emoji('passives', 'crit'))}{line}"
-    return f"{_emoji_prefix(asset_emoji('ui', 'battle'))}{line}"
 
 
-def _outcome_badge(won: bool) -> str:
-    return rarity_emoji("Legendary") if won else status_effect_emoji("bleed")
+
+
+
+
+
 
 
 def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30, log_enabled: bool = False) -> list[dict[str, object]]:
@@ -282,7 +221,7 @@ class RPGBattle(commands.Cog):
             image = battle_renderer.render_battle_frame(frame_data)
             filename = f"abyssia_battle_turn_{frame_index}.png"
             file = discord.File(image, filename=filename)
-            embed = _battle_overview_embed(
+            embed = battle_overview_embed(
                 ctx.author,
                 opponent_name,
                 left_team,
@@ -478,7 +417,7 @@ class RPGBattle(commands.Cog):
             footer_bits.append(streak_text)
         elif previous_streak > 0 and not tied:
             footer_bits.append(f"Streak broken: {previous_streak}")
-        embed = _battle_overview_embed(
+        embed = battle_overview_embed(
             ctx.author,
             opponent_name,
             left_team,
@@ -777,7 +716,7 @@ class RPGBattle(commands.Cog):
             won = bool(r["won"])
             wins += won
             losses += not won
-            badge = _outcome_badge(won) or ("WIN" if won else "LOSS")
+            badge = outcome_badge(won) or ("WIN" if won else "LOSS")
             npc_tag = " [NPC]" if r["is_npc"] else ""
             lines.append(f"{badge} vs **{r['opponent_name']}**{npc_tag} - rating `{r['rating_change']:+d}` -> `{r['opponent_rating']}`")
         embed = dark_embed(
