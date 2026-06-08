@@ -404,7 +404,7 @@ class RPGEconomy(commands.Cog):
                 request_type, request_key, request_quantity, status, created_at
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
             """,
-            (ctx.author.id, member.id, offer_kind, offer_key, offer_quantity, request_kind, request_key, request_quantity, now_ts()),
+            (ctx.guild.id, ctx.author.id, member.id, offer_kind, offer_key, offer_quantity, request_kind, request_key, request_quantity, now_ts()),
         )
         embed = dark_embed(
             "Trade Offer",

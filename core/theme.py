@@ -36,10 +36,13 @@ CURRENCY_NAMES = {
 }
 
 STAT_EMOJIS = {
-    "attack": "ATK",
-    "defense": "DEF",
     "hp": "HP",
-    "speed": "SPD",
+    "str_stat": "STR",
+    "pr_stat": "DEF",
+    "wp_stat": "MANA",
+    "mag_stat": "MAG",
+    "mr_stat": "RES",
+    "spd": "SPD",
     "strength": "STR",
     "dexterity": "DEX",
     "luck": "LCK",
@@ -58,7 +61,7 @@ def asset_emoji(kind: str, key: str) -> str:
 
 
 def rarity_emoji(rarity: str) -> str:
-    return asset_emoji("rarity", rarity.lower())
+    return asset_emoji("rarity", normalize_key(rarity))
 
 
 def rarity_label(rarity: str) -> str:
@@ -66,7 +69,8 @@ def rarity_label(rarity: str) -> str:
 
 
 def creature_emoji(name: str, rarity: str | None = None) -> str:
-    return asset_emoji("creatures", normalize_key(name))
+    from core.rpg_data import creature_asset_key
+    return asset_emoji("creatures", creature_asset_key(name))
 
 
 def creature_label(name: str, rarity: str | None = None) -> str:
@@ -125,14 +129,34 @@ def weapon_label(key: str, fallback: str | None = None) -> str:
     return _label_with_emoji("weapons", key.lower(), name)
 
 
+_ROLL_RARITY_TIERS: list[tuple[int, int, str]] = [
+    (0, 10, "Common"), (11, 20, "Uncommon"), (21, 30, "Rare"),
+    (31, 40, "Epic"), (41, 50, "Legendary"), (51, 60, "Mythic"),
+    (61, 70, "Ancient"), (71, 80, "Divine"), (81, 85, "Eldritch"),
+    (86, 90, "Abyssal"), (91, 120, "Prismatic"), (121, 135, "Ethereal"),
+    (136, 145, "Void Lord"), (146, 999, "Hidden"),
+]
+
+
+def _roll_rarity(roll: int) -> str:
+    for low, high, rarity in _ROLL_RARITY_TIERS:
+        if low <= roll <= high:
+            return rarity
+    return "Common"
+
+
 def passive_emoji(key: str) -> str:
     return asset_emoji("passives", key.lower())
 
 
-def passive_label(key: str, fallback: str | None = None) -> str:
+def passive_label(key: str, fallback: str | None = None, chance: int | None = None) -> str:
     data = WEAPON_PASSIVES.get(key.lower())
     name = fallback or (str(data.get("name")) if data else key.replace("_", " ").title())
-    return _label_with_emoji("passives", key.lower(), name)
+    rarity = _roll_rarity(chance) if chance is not None else (data.get("rarity") if data else None)
+    rarity_str = f"{rarity_emoji(rarity)} " if rarity else ""
+    label = _label_with_emoji("passives", key.lower(), name)
+    chance_str = f" `{chance}%`" if chance is not None else ""
+    return f"{rarity_str}{label}{chance_str}"
 
 
 def status_effect_emoji(key: str) -> str:
@@ -143,6 +167,15 @@ def status_effect_label(key: str, fallback: str | None = None) -> str:
     data = STATUS_EFFECTS_BY_KEY.get(key.lower())
     name = fallback or (data.name if data else key.replace("_", " ").title())
     return _label_with_emoji("status", key.lower(), name)
+
+
+def stat_emoji(key: str) -> str:
+    return asset_emoji("stats", key.lower())
+
+
+def stat_label(key: str, fallback: str | None = None) -> str:
+    name = fallback or key.upper()
+    return _label_with_emoji("stats", key.lower(), name)
 
 
 def crate_emoji(key: str) -> str:
@@ -207,10 +240,10 @@ def creature_line(creature, *, show_id: bool = True, show_stats: bool = False) -
     stats = ""
     if show_stats:
         stats = (
-            f" | ATK `{creature['attack']}`"
-            f" DEF `{creature['defense']}`"
+            f" | STR `{creature.get('str_stat', creature.get('attack', 0))}`"
+            f" DEF `{creature.get('pr_stat', creature.get('defense', 0))}`"
             f" HP `{creature['hp']}`"
-            f" SPD `{creature['speed']}`"
+            f" SPD `{creature.get('spd', creature.get('speed', 0))}`"
         )
     return (
         f"{prefix}{creature_label(str(creature['name']), str(creature['rarity']))} "

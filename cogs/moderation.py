@@ -90,6 +90,23 @@ class Moderation(commands.Cog):
         await ctx.channel.edit(slowmode_delay=seconds)
         await send_ok(ctx, f"slowmode set to {seconds}s")
 
+    @commands.hybrid_command(name="nuke", aliases=["channelnuke"])
+    @commands.has_guild_permissions(manage_channels=True)
+    async def nuke(self, ctx: commands.Context) -> None:
+        """Delete the current channel and recreate a fresh copy."""
+        assert ctx.guild is not None
+        channel = ctx.channel
+        if not isinstance(channel, (discord.TextChannel, discord.VoiceChannel, discord.ForumChannel)):
+            raise commands.BadArgument("This can only be used in a text, voice, or forum channel.")
+        try:
+            new = await channel.clone(name=channel.name, reason=f"Nuked by {ctx.author}")
+            await channel.delete(reason=f"Nuked by {ctx.author}")
+            await new.send(embed=status_embed("Nuked", f"This channel was nuked by {ctx.author.mention}."))
+        except discord.Forbidden:
+            raise commands.BadArgument("I don't have permission to manage this channel.")
+        except discord.HTTPException as exc:
+            raise commands.BadArgument(f"Failed to nuke channel: {exc}")
+
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Moderation(bot))

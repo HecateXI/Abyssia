@@ -15,7 +15,8 @@ _RARITY_COLORS: dict[str, tuple[int, int, int]] = {
     "Common": (139, 148, 158), "Uncommon": (74, 222, 128),
     "Rare": (56, 189, 248), "Epic": (167, 139, 250),
     "Legendary": (250, 204, 21), "Mythic": (251, 113, 133),
-    "Ancient": (249, 115, 22), "Divine": (254, 243, 199),
+    "Ancient": (249, 115, 22), "Patreon": (255, 66, 77),
+    "Divine": (254, 243, 199),
     "Eldritch": (34, 211, 238), "Abyssal": (130, 90, 200),
 }
 
@@ -49,6 +50,31 @@ _ZONE_BGS: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {
     "starless_menagerie": ((10, 10, 26), (4, 3, 14)),
     "throne_of_teeth": ((30, 18, 22), (14, 8, 12)),
     "black_sun_gate": ((6, 4, 18), (1, 1, 8)),
+}
+
+_NPC_CREATURE_FALLBACKS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("hound", "wolf"), "ribcage_hound"),
+    (("wraith", "spirit", "phantom"), "lost_soul"),
+    (("reaper", "stalker"), "bone_stalker"),
+    (("knight", "soldier", "blade"), "spectre_knight"),
+    (("leech", "watcher"), "mire_wisp"),
+    (("golem", "behemoth", "tyrant"), "ghostlight_behemoth"),
+    (("terror", "monarch", "sovereign"), "void_lord_asterion"),
+    (("herald", "void"), "void_thread_spider"),
+)
+
+_RARITY_FALLBACK_ASSET: dict[str, str] = {
+    "Common": "skeleton",
+    "Uncommon": "bone_stalker",
+    "Rare": "grave_warden",
+    "Epic": "spectre_knight",
+    "Legendary": "abyssal_hound",
+    "Mythic": "soulreaper_wyvern",
+    "Ancient": "ancient_starved_dragon",
+    "Patreon": "ancient_starved_dragon",
+    "Divine": "celestial_judge",
+    "Eldritch": "eater_beneath_names",
+    "Abyssal": "abyssal_godling",
 }
 
 _FONT_CACHE: dict[str, ImageFont.ImageFont] = {}
@@ -110,6 +136,26 @@ def _fit_name(draw: ImageDraw.ImageDraw, text: str, max_w: int, font: ImageFont.
     return "..."
 
 
+def _creature_asset_candidates(cr: dict[str, Any], name: str, rarity: str) -> list[str]:
+    candidates: list[str] = []
+    for field in ("image_key", "asset_key", "image"):
+        value = str(cr.get(field, "") or "").strip()
+        if value:
+            candidates.append(normalize_key(Path(value).stem))
+    candidates.append(normalize_key(name))
+    lowered = name.lower()
+    for needles, fallback in _NPC_CREATURE_FALLBACKS:
+        if any(needle in lowered for needle in needles):
+            candidates.append(fallback)
+            break
+    candidates.append(_RARITY_FALLBACK_ASSET.get(rarity, "skeleton"))
+    unique: list[str] = []
+    for key in candidates:
+        if key and key not in unique:
+            unique.append(key)
+    return unique
+
+
 class BattleCardRenderer:
 
     def __init__(self, layout_config_path: str | Path | None = None) -> None:
@@ -135,25 +181,30 @@ class BattleCardRenderer:
         right_team = data.get("enemy_team", [])[:3]
         left_hp = data.get("player_hp", [])
         right_hp = data.get("enemy_hp", [])
+        left_wp = data.get("player_wp", [])
+        right_wp = data.get("enemy_wp", [])
 
         W, H = 1600, 900
-        header_h = 150
-        card_h = 166
-        card_gap = 16
-        col_w = 600
-        col_left_x = 58
-        col_right_x = W - 58 - col_w
-        center_x = col_left_x + col_w + 24
-        center_w = col_right_x - center_x - 24
-        card_start_y = header_h + 26
+        top_margin = 16
+        bottom_margin = 16
+        side_margin = 36
+        header_h = 38
+        card_gap = 10
+        col_w = 620
+        col_left_x = side_margin
+        col_right_x = W - side_margin - col_w
+        center_x = col_left_x + col_w + 16
+        center_w = col_right_x - center_x - 16
+        usable_h = H - top_margin - bottom_margin - header_h
+        card_h = (usable_h - card_gap * 2) // 3
+        card_start_y = top_margin + header_h
 
         img = self._get_zone_bg(str(data.get("zone_key", "bloodmoon_forest")), W, H)
         darken = Image.new("RGB", (W, H), (0, 0, 0))
-        img = Image.blend(img, darken, 0.82)
+        img = Image.blend(img, darken, 0.66)
         vignette = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         vd = ImageDraw.Draw(vignette)
-        vd.rectangle((0, 0, W, H), outline=(0, 0, 0, 180), width=18)
-        vd.rectangle((0, 0, W, 180), fill=(0, 0, 0, 72))
+        vd.rectangle((0, 0, W, H), outline=(0, 0, 0, 180), width=14)
         img.paste(vignette, (0, 0), vignette)
         draw = ImageDraw.Draw(img)
 
@@ -163,117 +214,127 @@ class BattleCardRenderer:
         player_name = str(data.get("player_name", "Hunter"))
         enemy_name = str(data.get("enemy_name", "Opponent"))
         won = data.get("won")
-        if won is True:
-            result_text = "VICTORY"
-            result_color = _GREEN
-        elif won is False:
-            result_text = "DEFEAT"
-            result_color = _RED
-        elif data.get("turn"):
-            result_text = f"TURN {int(data.get('turn', 0))}"
-            result_color = _GOLD
-        else:
-            result_text = "ARENA BATTLE"
-            result_color = _GOLD
 
-        left_max_total = sum(max(1, int(cr.get("hp", 1))) for cr in left_team)
-        right_max_total = sum(max(1, int(cr.get("hp", 1))) for cr in right_team)
-        left_cur_total = sum(max(0, int(left_hp[i] if i < len(left_hp) else left_team[i].get("hp", 1))) for i in range(len(left_team)))
-        right_cur_total = sum(max(0, int(right_hp[i] if i < len(right_hp) else right_team[i].get("hp", 1))) for i in range(len(right_team)))
+        from core.battle_engine import compute_display_stats
+        left_max_total = sum(max(1, compute_display_stats(cr).get("HP", int(cr.get("hp", 1)))) for cr in left_team)
+        right_max_total = sum(max(1, compute_display_stats(cr).get("HP", int(cr.get("hp", 1)))) for cr in right_team)
+        left_cur_total = sum(max(0, int(left_hp[i] if i < len(left_hp) else compute_display_stats(left_team[i]).get("HP", int(left_team[i].get("hp", 1))))) for i in range(len(left_team)))
+        right_cur_total = sum(max(0, int(right_hp[i] if i < len(right_hp) else compute_display_stats(right_team[i]).get("HP", int(right_team[i].get("hp", 1))))) for i in range(len(right_team)))
         left_ratio = left_cur_total / max(1, left_max_total)
         right_ratio = right_cur_total / max(1, right_max_total)
         left_leading = left_ratio >= right_ratio
 
-        draw.rounded_rectangle((42, 28, W - 42, 128), radius=12, fill=(10, 9, 16), outline=(72, 66, 86), width=1)
-        draw.line((58, 128, W - 58, 128), fill=(*result_color, 120), width=2)
-        name_font = _font(30, bold=True)
-        rank_font = _font(13)
-        left_name = _fit_name(draw, player_name, 360, name_font)
-        right_name = _fit_name(draw, enemy_name, 360, name_font)
-        draw.text((72, 42), left_name, font=name_font, fill=_TEXT_BRIGHT if left_leading else _TEXT)
-        draw.text((72, 78), str(data.get("player_rank", ""))[:34], font=rank_font, fill=_TEXT_MUTED)
-        draw.text((W - 72 - _tw(draw, right_name, name_font), 42), right_name, font=name_font, fill=_TEXT_BRIGHT if not left_leading else _TEXT)
+        name_font = _font(18, bold=True)
+        rank_font = _font(11)
+        left_name = _fit_name(draw, player_name, 400, name_font)
+        right_name = _fit_name(draw, enemy_name, 400, name_font)
+        draw.text((col_left_x, top_margin), left_name, font=name_font, fill=_TEXT_BRIGHT if left_leading else _TEXT)
+        draw.text((col_right_x + col_w - _tw(draw, right_name, name_font), top_margin), right_name, font=name_font, fill=_TEXT_BRIGHT if not left_leading else _TEXT)
+        player_rank = str(data.get("player_rank", ""))[:34]
         enemy_rank = str(data.get("enemy_rank", ""))[:34]
-        draw.text((W - 72 - _tw(draw, enemy_rank, rank_font), 78), enemy_rank, font=rank_font, fill=_TEXT_MUTED)
+        draw.text((col_left_x, top_margin + 22), player_rank, font=rank_font, fill=_TEXT_MUTED)
+        draw.text((col_right_x + col_w - _tw(draw, enemy_rank, rank_font), top_margin + 22), enemy_rank, font=rank_font, fill=_TEXT_MUTED)
 
-        bar_y = 106
-        side_w = 500
+        bar_y = top_margin + 24
+        side_w = col_w - 20
         def team_bar(x: int, cur: int, mx: int, color: tuple[int, int, int], align_right: bool = False) -> None:
-            draw.rounded_rectangle((x, bar_y, x + side_w, bar_y + 16), radius=8, fill=(30, 18, 22), outline=(80, 55, 58))
+            draw.rounded_rectangle((x, bar_y, x + side_w, bar_y + 12), radius=6, fill=(30, 18, 22), outline=(80, 55, 58))
             ratio = max(0.0, min(1.0, cur / max(1, mx)))
             fw = int(side_w * ratio)
             if fw > 0:
                 if align_right:
-                    draw.rounded_rectangle((x + side_w - fw, bar_y + 1, x + side_w - 1, bar_y + 15), radius=7, fill=color)
+                    draw.rounded_rectangle((x + side_w - fw, bar_y + 1, x + side_w - 1, bar_y + 11), radius=5, fill=color)
                 else:
-                    draw.rounded_rectangle((x + 1, bar_y + 1, x + fw, bar_y + 15), radius=7, fill=color)
+                    draw.rounded_rectangle((x + 1, bar_y + 1, x + fw, bar_y + 11), radius=5, fill=color)
             txt = f"{cur:,}/{mx:,}"
-            font = _font(12, bold=True)
-            tx = x + side_w - _tw(draw, txt, font) - 8 if not align_right else x + 8
-            _shadow_text(draw, tx, bar_y, txt, font, _WHITE, offset=1)
+            font = _font(10, bold=True)
+            tx = x + side_w - _tw(draw, txt, font) - 6 if not align_right else x + 6
+            _shadow_text(draw, tx, bar_y - 1, txt, font, _WHITE, offset=1)
 
-        team_bar(72, left_cur_total, left_max_total, _GREEN if left_ratio > 0.35 else _RED)
-        team_bar(W - 72 - side_w, right_cur_total, right_max_total, _GREEN if right_ratio > 0.35 else _RED, align_right=True)
-
-        badge_w, badge_h = 186, 72
-        badge_x = W // 2 - badge_w // 2
-        badge_y = 38
-        draw.rounded_rectangle((badge_x, badge_y, badge_x + badge_w, badge_y + badge_h), radius=12,
-                               fill=(16, 13, 24), outline=result_color, width=2)
-        result_font = _font(25, bold=True)
-        result_w = _tw(draw, result_text, result_font)
-        draw.text((W // 2 - result_w // 2, badge_y + 15), result_text, font=result_font, fill=result_color)
-        sub = "VS" if won is not None else f"Frame {data.get('turn', 0)}"
-        sub_font = _font(12, bold=True)
-        draw.text((W // 2 - _tw(draw, sub, sub_font) // 2, badge_y + 48), sub, font=sub_font, fill=_TEXT_MUTED)
-
-        draw.text((col_left_x, header_h + 2), "YOUR TEAM", font=_font(14, bold=True), fill=_TEXT_MUTED)
-        right_label = "OPPONENT"
-        draw.text((col_right_x + col_w - _tw(draw, right_label, _font(14, bold=True)), header_h + 2),
-                  right_label, font=_font(14, bold=True), fill=_TEXT_MUTED)
+        team_bar(col_left_x, left_cur_total, left_max_total, _GREEN if left_ratio > 0.35 else _RED)
+        team_bar(col_right_x, right_cur_total, right_max_total, _GREEN if right_ratio > 0.35 else _RED, align_right=True)
 
         for i, cr in enumerate(left_team):
             y = card_start_y + i * (card_h + card_gap)
-            cur_hp = left_hp[i] if i < len(left_hp) else int(cr.get("hp", 1))
-            max_hp = int(cr.get("hp", 1))
-            self._draw_compact_creature_card(draw, img, col_left_x, y, col_w, card_h, cr, cur_hp, max_hp, is_left=True)
+            from core.battle_engine import compute_display_stats
+            computed = compute_display_stats(cr)
+            max_hp = computed.get("HP", int(cr.get("hp", 1)))
+            max_mp = computed.get("MANA", int(cr.get("mana", 200)))
+            cur_hp = left_hp[i] if i < len(left_hp) else max_hp
+            cur_mp = left_wp[i] if i < len(left_wp) else max_mp
+            self._draw_compact_creature_card(draw, img, col_left_x, y, col_w, card_h, cr, cur_hp, max_hp, cur_mp, max_mp, is_left=True)
 
         for i, cr in enumerate(right_team):
             y = card_start_y + i * (card_h + card_gap)
-            cur_hp = right_hp[i] if i < len(right_hp) else int(cr.get("hp", 1))
-            max_hp = int(cr.get("hp", 1))
-            self._draw_compact_creature_card(draw, img, col_right_x, y, col_w, card_h, cr, cur_hp, max_hp, is_left=False)
+            from core.battle_engine import compute_display_stats
+            computed = compute_display_stats(cr)
+            max_hp = computed.get("HP", int(cr.get("hp", 1)))
+            max_mp = computed.get("MANA", int(cr.get("mana", 200)))
+            cur_hp = right_hp[i] if i < len(right_hp) else max_hp
+            cur_mp = right_wp[i] if i < len(right_wp) else max_mp
+            self._draw_compact_creature_card(draw, img, col_right_x, y, col_w, card_h, cr, cur_hp, max_hp, cur_mp, max_mp, is_left=False)
 
         center_top = card_start_y
         center_bottom = card_start_y + 3 * card_h + 2 * card_gap
-        draw.rounded_rectangle((center_x, center_top, center_x + center_w, center_bottom), radius=12,
-                               fill=(10, 9, 16), outline=(64, 58, 76), width=1)
-        draw.text((center_x + 22, center_top + 20), "BATTLE STATUS", font=_font(14, bold=True), fill=_TEXT_MUTED)
-        draw.text((center_x + 22, center_top + 56), _fit_name(draw, player_name, center_w - 44, _font(18, bold=True)),
-                  font=_font(18, bold=True), fill=_TEXT)
-        draw.text((center_x + 22, center_top + 84), "versus", font=_font(12, bold=True), fill=_TEXT_MUTED)
-        draw.text((center_x + 22, center_top + 108), _fit_name(draw, enemy_name, center_w - 44, _font(18, bold=True)),
-                  font=_font(18, bold=True), fill=_GOLD)
+        draw.rounded_rectangle((center_x, center_top, center_x + center_w, center_bottom), radius=10,
+                               fill=(10, 9, 16, 180), outline=(64, 58, 76), width=1)
 
         rating_change = data.get("rating_change")
         rewards = data.get("rewards") or {}
         mvp = data.get("mvp") or {}
-        stat_y = center_bottom - 146
-        draw.line((center_x + 22, stat_y - 18, center_x + center_w - 22, stat_y - 18), fill=(54, 48, 66), width=1)
+        win_streak = int(data.get("win_streak", 0))
+        cy = center_top + 18
+        draw.text((center_x + 18, cy), "BATTLE STATUS", font=_font(14, bold=True), fill=_TEXT_MUTED)
+        cy += 26
+        draw.text((center_x + 18, cy), _fit_name(draw, player_name, center_w - 36, _font(18, bold=True)),
+                  font=_font(18, bold=True), fill=_TEXT)
+        cy += 24
+        draw.text((center_x + 18, cy), "versus", font=_font(13, bold=True), fill=_TEXT_MUTED)
+        cy += 18
+        draw.text((center_x + 18, cy), _fit_name(draw, enemy_name, center_w - 36, _font(18, bold=True)),
+                  font=_font(18, bold=True), fill=_GOLD)
+        cy += 34
         if rating_change is not None:
             sign = "+" if int(rating_change) > 0 else ""
             color = _GREEN if int(rating_change) >= 0 else _RED
-            draw.text((center_x + 22, stat_y), "RATING", font=_font(11), fill=_TEXT_MUTED)
-            draw.text((center_x + 22, stat_y + 20), f"{sign}{int(rating_change)}", font=_font(24, bold=True), fill=color)
+            draw.text((center_x + 18, cy), "RATING", font=_font(12), fill=_TEXT_MUTED)
+            cy += 18
+            draw.text((center_x + 18, cy), f"{sign}{int(rating_change)}", font=_font(24, bold=True), fill=color)
+            cy += 32
+        if win_streak >= 3:
+            from core.rpg_data import get_streak_tier
+            tier = get_streak_tier(win_streak)
+            if tier.label:
+                draw.line((center_x + 18, cy, center_x + center_w - 18, cy), fill=(54, 48, 66), width=1)
+                cy += 12
+                streak_text = f"{tier.emoji} {win_streak}x STREAK"
+                draw.text((center_x + 18, cy), "STREAK", font=_font(12), fill=_TEXT_MUTED)
+                cy += 16
+                draw.text((center_x + 18, cy), streak_text, font=_font(16, bold=True), fill=_ORANGE)
+                cy += 22
+                bonus_parts = []
+                if tier.xp_boost > 0:
+                    bonus_parts.append(f"+{tier.xp_boost:.0%} XP")
+                if tier.gold_boost > 0:
+                    bonus_parts.append(f"+{tier.gold_boost:.0%} Gold")
+                if tier.catch_boost > 0:
+                    bonus_parts.append(f"+{tier.catch_boost:.0%} Catch")
+                if bonus_parts:
+                    draw.text((center_x + 18, cy), " / ".join(bonus_parts), font=_font(13, bold=True), fill=_GREEN)
+                    cy += 18
+        draw.line((center_x + 18, cy, center_x + center_w - 18, cy), fill=(54, 48, 66), width=1)
+        cy += 14
         if mvp:
-            draw.text((center_x + 22, stat_y + 62), "MVP", font=_font(11), fill=_TEXT_MUTED)
-            draw.text((center_x + 22, stat_y + 82), _fit_name(draw, str(mvp.get("name", "")), center_w - 44, _font(17, bold=True)),
-                      font=_font(17, bold=True), fill=_GOLD)
+            draw.text((center_x + 18, cy), "MVP", font=_font(12), fill=_TEXT_MUTED)
+            cy += 18
+            draw.text((center_x + 18, cy), _fit_name(draw, str(mvp.get("name", "")), center_w - 36, _font(16, bold=True)),
+                      font=_font(16, bold=True), fill=_GOLD)
         elif isinstance(rewards, dict) and rewards:
             gold = int(rewards.get("gold", 0))
             gems = int(rewards.get("gems", 0))
-            draw.text((center_x + 22, stat_y + 62), "REWARDS", font=_font(11), fill=_TEXT_MUTED)
-            draw.text((center_x + 22, stat_y + 82), f"{gold:,} souls  /  {gems} gems", font=_font(15, bold=True), fill=_GOLD)
+            draw.text((center_x + 18, cy), "REWARDS", font=_font(12), fill=_TEXT_MUTED)
+            cy += 18
+            draw.text((center_x + 18, cy), f"{gold:,} souls  /  {gems} gems", font=_font(15, bold=True), fill=_GOLD)
 
         return self._save(img)
 
@@ -289,15 +350,22 @@ class BattleCardRenderer:
 
     def _draw_compact_creature_card(self, draw: ImageDraw.ImageDraw, img: Image.Image,
                                     x: int, y: int, w: int, h: int, cr: dict[str, Any],
-                                    cur_hp: int, max_hp: int, is_left: bool) -> None:
+                                    cur_hp: int, max_hp: int, cur_mp: int, max_mp: int, is_left: bool) -> None:
         rarity = str(cr.get("rarity", "Common"))
         rc = _col(rarity)
         name = str(cr.get("name", "?"))
         level = int(cr.get("level", 1))
-        attack = int(cr.get("attack", 0))
-        defense = int(cr.get("defense", 0))
-        speed = int(cr.get("speed", 1))
         dead = cur_hp <= 0
+
+        from core.battle_engine import compute_display_stats
+        computed = compute_display_stats(cr)
+        stat_str = computed.get("STR", 0)
+        stat_def = computed.get("DEF", 0)
+        stat_mana = computed.get("MANA", 0)
+        stat_mag = computed.get("MAG", 0)
+        stat_res = computed.get("RES", 0)
+        stat_spd = computed.get("SPD", 0)
+        stat_crit = computed.get("Crit", 5)
 
         pw = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         pd = ImageDraw.Draw(pw)
@@ -305,19 +373,30 @@ class BattleCardRenderer:
         alpha = 148 if dead else 218
         outline = _lerp(rc, _BORDER, 0.24 if not dead else 0.65)
         pd.rounded_rectangle((0, 0, w - 1, h - 1), radius=12, fill=(*fill_col, alpha), outline=(*outline, 210), width=2)
-        pd.rectangle((1, 1, w - 2, 7), fill=(*rc, 190 if not dead else 70))
+        pd.rectangle((1, 1, w - 2, 6), fill=(*rc, 190 if not dead else 70))
         img.paste(pw, (x, y), pw)
 
-        ps = 132
-        pad = 16
+        ps = min(180, h - 24)
+        pad = 14
         p_x = x + pad if is_left else x + w - ps - pad
         p_y = y + (h - ps) // 2
 
-        portrait = self._load_asset("creatures", normalize_key(name), (ps, ps))
+        portrait = None
+        for asset_key in _creature_asset_candidates(cr, name, rarity):
+            portrait = self._load_asset("creatures", asset_key, (ps, ps))
+            if portrait is not None:
+                break
         if portrait is None:
             portrait = Image.new("RGBA", (ps, ps), (0, 0, 0, 0))
             pdd = ImageDraw.Draw(portrait)
             pdd.rounded_rectangle((2, 2, ps - 2, ps - 2), radius=12, fill=(*_PANEL_DARK, 255), outline=_BORDER)
+
+        mask = Image.new("L", (ps, ps), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, ps - 1, ps - 1), radius=12, fill=255)
+        r, g, b, a = portrait.split()
+        from PIL import ImageChops
+        a = ImageChops.multiply(a, mask)
+        portrait = Image.merge("RGBA", (r, g, b, a))
 
         if dead:
             portrait = portrait.convert("L").convert("RGBA")
@@ -336,23 +415,30 @@ class BattleCardRenderer:
         info_x = x + ps + pad * 2 if is_left else x + pad
         info_w = w - ps - pad * 3
 
-        font_name = _font(24, bold=True)
+        font_name = _font(22, bold=True)
         nc = _TEXT_MUTED if dead else _TEXT_BRIGHT
-        display_name = _fit_name(draw, name, info_w - 94, font_name)
+        display_name = _fit_name(draw, name, info_w - 100, font_name)
         nw = _tw(draw, display_name, font_name)
-        draw.text((info_x, y + 20), display_name, font=font_name, fill=nc)
+        draw.text((info_x, y + 14), display_name, font=font_name, fill=nc)
 
         font_lv = _font(16, bold=True)
         lv_text = f"L.{level}"
-        draw.text((info_x + nw + 12, y + 25), lv_text, font=font_lv, fill=rc if not dead else _TEXT_MUTED)
+        draw.text((info_x + nw + 10, y + 17), lv_text, font=font_lv, fill=rc if not dead else _TEXT_MUTED)
+
+        rarity_text = rarity.upper()
+        rarity_font = _font(11, bold=True)
+        rw = _tw(draw, rarity_text, rarity_font) + 14
+        draw.rounded_rectangle((info_x + info_w - rw, y + 16, info_x + info_w, y + 38), radius=5,
+                               fill=(12, 10, 18), outline=rc if not dead else _BORDER)
+        draw.text((info_x + info_w - rw + 7, y + 21), rarity_text, font=rarity_font, fill=rc if not dead else _TEXT_MUTED)
 
         bar_x = info_x
-        bar_y = y + 62
+        bar_y = y + 46
         bar_w = info_w
         bar_h = 28
         ratio = max(0.0, min(1.0, cur_hp / max(1, max_hp)))
 
-        draw.rounded_rectangle((bar_x, bar_y, bar_x + bar_w, bar_y + bar_h), radius=8,
+        draw.rounded_rectangle((bar_x, bar_y, bar_x + bar_w, bar_y + bar_h), radius=7,
                                fill=(27, 17, 20), outline=(68, 42, 46))
 
         if dead:
@@ -366,38 +452,112 @@ class BattleCardRenderer:
 
         fw = int((bar_w - 2) * ratio)
         if fw > 0:
-            draw.rounded_rectangle((bar_x + 1, bar_y + 1, bar_x + 1 + fw, bar_y + bar_h - 1), radius=7, fill=hp_color)
+            draw.rounded_rectangle((bar_x + 1, bar_y + 1, bar_x + 1 + fw, bar_y + bar_h - 1), radius=6, fill=hp_color)
 
         font_hp = _font(15, bold=True)
-        hp_text = f"{cur_hp}/{max_hp}"
+        hp_text = f"{cur_hp:,}/{max_hp:,}"
         hw = _tw(draw, hp_text, font_hp)
-        _shadow_text(draw, bar_x + bar_w - hw - 10, bar_y + 4, hp_text, font_hp, _WHITE, offset=1)
+        _shadow_text(draw, bar_x + bar_w - hw - 8, bar_y + 5, hp_text, font_hp, _WHITE, offset=1)
         pct_text = f"{int(ratio*100)}%"
-        _shadow_text(draw, bar_x + 10, bar_y + 4, pct_text, font_hp, _WHITE, offset=1)
+        _shadow_text(draw, bar_x + 8, bar_y + 5, pct_text, font_hp, _WHITE, offset=1)
 
-        stat_y = bar_y + bar_h + 18
-        font_stat_lbl = _font(12)
-        font_stat_val = _font(17, bold=True)
-        stats = (("ATK", attack, _RED), ("DEF", defense, _BLUE))
-        for idx, (label, value, color) in enumerate(stats):
-            sx = info_x + idx * 118
-            draw.text((sx, stat_y), label, font=font_stat_lbl, fill=_TEXT_MUTED)
-            draw.text((sx + 34, stat_y - 3), str(value), font=font_stat_val, fill=color if not dead else _TEXT_MUTED)
+        # Mana bar
+        mp_bar_y = bar_y + bar_h + 6
+        mp_ratio = max(0.0, min(1.0, cur_mp / max(1, max_mp)))
+        draw.rounded_rectangle((bar_x, mp_bar_y, bar_x + bar_w, mp_bar_y + bar_h), radius=7,
+                               fill=(18, 18, 30), outline=(42, 42, 68))
 
-        rarity_text = rarity.upper()
-        rarity_font = _font(11, bold=True)
-        rw = _tw(draw, rarity_text, rarity_font) + 18
-        draw.rounded_rectangle((info_x + info_w - rw, y + 23, info_x + info_w, y + 47), radius=6,
-                               fill=(12, 10, 18), outline=rc if not dead else _BORDER)
-        draw.text((info_x + info_w - rw + 9, y + 28), rarity_text, font=rarity_font, fill=rc if not dead else _TEXT_MUTED)
+        if mp_ratio > 0.5:
+            mp_color = (80, 140, 235)
+        elif mp_ratio > 0.2:
+            mp_color = (120, 100, 220)
+        else:
+            mp_color = (60, 80, 180)
+
+        mp_fw = int((bar_w - 2) * mp_ratio)
+        if mp_fw > 0:
+            draw.rounded_rectangle((bar_x + 1, mp_bar_y + 1, bar_x + 1 + mp_fw, mp_bar_y + bar_h - 1), radius=6, fill=mp_color)
+
+        font_mp = _font(14, bold=True)
+        mp_text = f"{cur_mp:,}/{max_mp:,}"
+        mp_w = _tw(draw, mp_text, font_mp)
+        _shadow_text(draw, bar_x + bar_w - mp_w - 8, mp_bar_y + 5, mp_text, font_mp, _WHITE, offset=1)
+        mp_pct_text = f"{int(mp_ratio*100)}%"
+        _shadow_text(draw, bar_x + 8, mp_bar_y + 5, mp_pct_text, font_mp, _WHITE, offset=1)
+
+        stat_y = mp_bar_y + bar_h + 12
+        font_stat_val = _font(14, bold=True)
+        icon_size = 18
+        stat_pairs = [
+            ("hp", max_hp, _GREEN),
+            ("mana", stat_mana, (80, 140, 235)),
+            ("str", stat_str, _GOLD),
+            ("mag", stat_mag, (255, 165, 55)),
+            ("def", stat_def, _BLUE),
+            ("res", stat_res, (130, 180, 235)),
+            ("spd", stat_spd, (180, 130, 255)),
+        ]
+        stat_col_w = info_w / 2
+        for idx, (key, value, color) in enumerate(stat_pairs):
+            row = idx // 2
+            col = idx % 2
+            sx = info_x + col * int(stat_col_w)
+            sy = stat_y + row * 22
+            val_text = f"{value:,}{'%' if key in ('def','res') else ''}"
+            icon = self._load_asset("stats", key, (icon_size, icon_size))
+            if is_left:
+                if icon:
+                    img.paste(icon, (sx, sy), icon)
+                    draw.text((sx + icon_size + 6, sy - 1), val_text,
+                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
+                else:
+                    lbl = key.upper()
+                    draw.text((sx, sy), lbl, font=_font(11, bold=True), fill=_TEXT_MUTED if dead else color)
+                    draw.text((sx + 30, sy), val_text,
+                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
+            else:
+                val_w = _tw(draw, val_text, font_stat_val)
+                if icon:
+                    icon_x = sx + int(stat_col_w) - icon_size
+                    draw.text((icon_x - 6 - val_w, sy - 1), val_text,
+                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
+                    img.paste(icon, (icon_x, sy), icon)
+                else:
+                    lbl = key.upper()
+                    draw.text((sx + int(stat_col_w) - 30 - val_w, sy), val_text,
+                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
+                    draw.text((sx + int(stat_col_w) - 30, sy), lbl,
+                             font=_font(11, bold=True), fill=_TEXT_MUTED if dead else color)
+        # Crit on its own line
+        crit_y = stat_y + 4 * 22
+        if dead:
+            crit_text = f"Crit {stat_crit}%"
+            if is_left:
+                draw.text((info_x, crit_y), crit_text, font=_font(11, bold=True), fill=_TEXT_MUTED)
+            else:
+                cw = _tw(draw, crit_text, _font(11, bold=True))
+                draw.text((info_x + int(stat_col_w) * 2 - cw, crit_y), crit_text, font=_font(11, bold=True), fill=_TEXT_MUTED)
+        else:
+            if is_left:
+                draw.text((info_x, crit_y), "Crit", font=_font(11, bold=True), fill=_TEXT_MUTED)
+                draw.text((info_x + 30, crit_y), f"{stat_crit}%", font=font_stat_val, fill=(236, 201, 75))
+            else:
+                pct_text = f"{stat_crit}%"
+                pct_w = _tw(draw, pct_text, font_stat_val)
+                label_w = _tw(draw, "Crit", _font(11, bold=True))
+                draw.text((info_x + int(stat_col_w) * 2 - label_w - 6 - pct_w, crit_y), pct_text, font=font_stat_val, fill=(236, 201, 75))
+                draw.text((info_x + int(stat_col_w) * 2 - label_w, crit_y), "Crit", font=_font(11, bold=True), fill=_TEXT_MUTED)
 
         w_data = cr.get("_weapon") if isinstance(cr.get("_weapon"), dict) else None
-        if w_data and not dead:
+        if w_data:
             w_rarity = str(w_data.get("rarity", "Common"))
             w_rc = _col(w_rarity)
-            w_sz = 40
-            wi_x = info_x + info_w - w_sz
-            wi_y = stat_y - 10
+            w_sz = 48
+            if is_left:
+                wi_x = info_x + info_w - w_sz
+            else:
+                wi_x = info_x
+            wi_y = stat_y + 48
 
             w_bg = Image.new("RGBA", (w_sz, w_sz), (0, 0, 0, 0))
             w_d = ImageDraw.Draw(w_bg)
@@ -405,12 +565,12 @@ class BattleCardRenderer:
             img.paste(w_bg, (wi_x, wi_y), w_bg)
 
             weapon_type = str(w_data.get("weapon_type", "sword") or "sword")
-            weapon_icon = self._load_asset("weapons", weapon_type, (w_sz - 8, w_sz - 8))
+            weapon_icon = self._load_asset("weapons", weapon_type, (w_sz - 10, w_sz - 10))
             if weapon_icon:
-                img.paste(weapon_icon, (wi_x + 4, wi_y + 4), weapon_icon)
+                img.paste(weapon_icon, (wi_x + 5, wi_y + 5), weapon_icon)
             else:
-                draw.line((wi_x + 12, wi_y + 30, wi_x + 28, wi_y + 10), fill=w_rc, width=4)
-                draw.line((wi_x + 10, wi_y + 28, wi_x + 24, wi_y + 38), fill=w_rc, width=3)
+                draw.line((wi_x + 14, wi_y + 36, wi_x + 32, wi_y + 12), fill=w_rc, width=4)
+                draw.line((wi_x + 12, wi_y + 34, wi_x + 26, wi_y + 42), fill=w_rc, width=3)
 
             passive_raw = w_data.get("passive")
             if passive_raw:
@@ -420,22 +580,19 @@ class BattleCardRenderer:
                 except Exception:
                     passive_key = ""
                 if passive_key:
-                    passive_icon = self._load_asset("passives", passive_key, (22, 22))
+                    passive_icon = self._load_asset("passives", passive_key, (28, 28))
                     if passive_icon:
-                        img.paste(passive_icon, (wi_x - 26, wi_y + 9), passive_icon)
-            return
-            
-            # Since we don't have distinct weapon icons, just draw a little sword symbol
-            w_font = _font(16)
-            ws_w = _tw(draw, "⚔", w_font)
-            draw.text((wi_x + (w_sz-ws_w)//2, wi_y + 4), "⚔", font=w_font, fill=w_rc)
+                        if is_left:
+                            img.paste(passive_icon, (wi_x - 32, wi_y + 10), passive_icon)
+                        else:
+                            img.paste(passive_icon, (wi_x + w_sz + 4, wi_y + 10), passive_icon)
 
     # ── Background ─────────────────────────────────────
 
     def _build_background(self, zone_key: str) -> Image.Image:
         img = self._get_zone_bg(zone_key, W, H)
         darken = Image.new("RGB", (W, H), (0, 0, 0))
-        img = Image.blend(img, darken, 0.60)
+        img = Image.blend(img, darken, 0.44)
         return img
 
     def _get_zone_bg(self, zone_key: str, w: int, h: int) -> Image.Image:
@@ -477,10 +634,13 @@ class BattleCardRenderer:
         if path and path.exists():
             try:
                 a = Image.open(path).convert("RGBA")
-                if kind == "creatures" and max(a.size) < min(size):
-                    scale = max(1, min(size) // max(1, max(a.size)))
-                    a = a.resize((a.width * scale, a.height * scale), Image.Resampling.NEAREST)
-                a.thumbnail(size, Image.Resampling.LANCZOS)
+                if kind == "creatures":
+                    bbox = a.getbbox()
+                    if bbox:
+                        a = a.crop(bbox)
+                    a = a.resize(size, Image.Resampling.NEAREST)
+                else:
+                    a.thumbnail(size, Image.Resampling.LANCZOS)
                 c = Image.new("RGBA", size, (0, 0, 0, 0))
                 c.alpha_composite(a, ((size[0] - a.width) // 2, (size[1] - a.height) // 2))
                 return c

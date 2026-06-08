@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 
 import discord
@@ -17,9 +18,13 @@ from core.rpg import (
     team_creatures,
     weapon_display_name,
     weapon_for_creature,
+    weapon_quality_rarity,
 )
 from core.rpg_data import MATERIALS, RARITY_INDEX
-from core.theme import GOLD_COLOR, creature_label, dark_embed, rarity_label, status_embed
+from core.theme import GOLD_COLOR, dark_embed, status_embed
+
+
+log = logging.getLogger(__name__)
 
 
 def _int(v) -> int:
@@ -37,6 +42,7 @@ def _int(v) -> int:
 class TradeOffer:
     weapons: list[int] = field(default_factory=list)
     creatures: list[int] = field(default_factory=list)
+    materials: dict[str, int] = field(default_factory=dict)
     souls: int = 0
     gems: int = 0
     confirmed: bool = False
@@ -59,6 +65,8 @@ def _offer_summary(offer: TradeOffer, label: str) -> str:
         parts.append(f"**{offer.souls:,}** Souls")
     if offer.gems > 0:
         parts.append(f"**{offer.gems}** Gems")
+    if offer.materials:
+        parts.append(f"{sum(offer.materials.values()):,} material(s)")
     if offer.weapons:
         parts.append(f"{len(offer.weapons)} weapon(s)")
     if offer.creatures:
@@ -69,15 +77,39 @@ def _offer_summary(offer: TradeOffer, label: str) -> str:
 
 
 def _trade_embed(session: TradeSession) -> discord.Embed:
-    embed = discord.Embed(title="🤝 Trade", color=GOLD_COLOR)
+    embed = discord.Embed(title="Trade", color=GOLD_COLOR)
     a_name = session.player_a.display_name
     b_name = session.player_b.display_name
-    a_check = " ✅" if session.offer_a.confirmed else ""
-    b_check = " ✅" if session.offer_b.confirmed else ""
+    a_check = " [confirmed]" if session.offer_a.confirmed else ""
+    b_check = " [confirmed]" if session.offer_b.confirmed else ""
     embed.add_field(name=f"{a_name}{a_check}", value=_offer_summary(session.offer_a, a_name), inline=False)
     embed.add_field(name=f"{b_name}{b_check}", value=_offer_summary(session.offer_b, b_name), inline=False)
     embed.set_footer(text="Both players must confirm to complete the trade.")
     return embed
+
+
+def _plain_label(value: object, *, limit: int = 100) -> str:
+    text = str(value or "").replace("\n", " ").strip()
+    return text[:limit] or "Unknown"
+
+
+def _weapon_option_label(row) -> str:
+    return _plain_label(weapon_display_name(row), limit=100)
+
+
+def _weapon_option_description(row) -> str:
+    quality = _int(row["quality_pct"] if "quality_pct" in row.keys() else 50)
+    rarity = _plain_label(weapon_quality_rarity(quality), limit=26)
+    wtype = _plain_label(row["weapon_type"] if "weapon_type" in row.keys() else "weapon", limit=24)
+    return _plain_label(f"{rarity} {quality}% {wtype}", limit=100)
+
+
+def _creature_option_label(row) -> str:
+    return _plain_label(f"{row['name']} Lv.{row['level']}", limit=100)
+
+
+def _creature_option_description(row) -> str:
+    return _plain_label(f"{row['rarity']} STR {row.get('str_stat', row.get('attack', 0))} DEF {row.get('pr_stat', row.get('defense', 0))}", limit=100)
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -106,7 +138,7 @@ class TradeView(discord.ui.View):
         if self.session.message:
             await self.session.message.edit(embed=_trade_embed(self.session), view=self)
 
-    @discord.ui.button(label="⚔️ Add Weapon", style=discord.ButtonStyle.primary, row=0)
+    @discord.ui.button(label="Add Weapon", style=discord.ButtonStyle.primary, row=0)
     async def add_weapon(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -121,19 +153,10 @@ class TradeView(discord.ui.View):
         if not unequipped:
             await interaction.response.send_message("No unequipped weapons available.", ephemeral=True)
             return
-        options = []
-        for w in unequipped[:25]:
-            wname = weapon_display_name(w)
-            options.append(discord.SelectOption(
-                label=wname[:100],
-                value=str(w["id"]),
-                description=f"{rarity_label(str(w['rarity']))} ATK+{w['attack_bonus']} DEF+{w['defense_bonus']}",
-                emoji="⚔️",
-            ))
         view = WeaponSelectView(self.session, interaction.user.id, unequipped)
         await interaction.response.send_message("Select a weapon to add:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="🐾 Add Creature", style=discord.ButtonStyle.primary, row=0)
+    @discord.ui.button(label="Add Creature", style=discord.ButtonStyle.primary, row=0)
     async def add_creature(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -145,7 +168,7 @@ class TradeView(discord.ui.View):
         db = interaction.client.db
         creatures = await team_creatures(db, interaction.user.id)
         all_creatures = await db.fetchall(
-            "SELECT id, name, rarity, level, attack, defense FROM rpg_creatures WHERE user_id = ? ORDER BY rarity DESC, level DESC",
+            "SELECT id, name, rarity, level, str_stat, pr_stat, hp, spd FROM rpg_creatures WHERE user_id = ? ORDER BY rarity DESC, level DESC",
             (interaction.user.id,),
         )
         team_ids = {int(c["id"]) for c in creatures}
@@ -153,18 +176,10 @@ class TradeView(discord.ui.View):
         if not available:
             await interaction.response.send_message("No creatures available to trade.", ephemeral=True)
             return
-        options = []
-        for c in available[:25]:
-            options.append(discord.SelectOption(
-                label=f"{creature_label(str(c['name']), str(c['rarity']))[:70]} Lv.{c['level']}",
-                value=str(c["id"]),
-                description=f"{rarity_label(str(c['rarity']))} ATK {c['attack']} DEF {c['defense']}",
-                emoji="🐾",
-            ))
         view = CreatureSelectView(self.session, interaction.user.id, available)
         await interaction.response.send_message("Select a creature to add:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="💰 Add Souls", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(label="Add Souls", style=discord.ButtonStyle.secondary, row=1)
     async def add_souls(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -176,7 +191,7 @@ class TradeView(discord.ui.View):
         modal = CurrencyModal(self.session, interaction.user.id, "souls")
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="💎 Add Gems", style=discord.ButtonStyle.secondary, row=1)
+    @discord.ui.button(label="Add Gems", style=discord.ButtonStyle.secondary, row=1)
     async def add_gems(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -217,7 +232,7 @@ class TradeView(discord.ui.View):
         view = MaterialSelectView(self.session, interaction.user.id, mats)
         await interaction.response.send_message("Select a material to add:", view=view, ephemeral=True)
 
-    @discord.ui.button(label="✅ Confirm", style=discord.ButtonStyle.success, row=2)
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, row=2)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -225,13 +240,24 @@ class TradeView(discord.ui.View):
         offer = self._get_offer(interaction.user.id)
         other = self._get_other_offer(interaction.user.id)
         offer.confirmed = True
-        await interaction.response.send_message("✅ You confirmed the trade.", ephemeral=True)
+        await interaction.response.send_message("You confirmed the trade.", ephemeral=True)
         if other.confirmed:
-            await self._execute_trade(interaction)
+            try:
+                await self._execute_trade(interaction)
+            except Exception:
+                log.exception("Exchange finalization crashed")
+                embed = dark_embed("Trade Failed", "The trade could not be finalized. Nothing else will be processed for this session.", color=discord.Color.dark_red())
+                if self.session.message:
+                    try:
+                        await self.session.message.edit(embed=embed, view=None)
+                    except discord.DiscordException:
+                        log.warning("Could not edit failed exchange message", exc_info=True)
+                self.session.expired = True
+                self.stop()
         else:
             await self._refresh()
 
-    @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.danger, row=2)
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, row=2)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -248,99 +274,102 @@ class TradeView(discord.ui.View):
         db = interaction.client.db
         a_id = self.session.player_a.id
         b_id = self.session.player_b.id
-        ga = self.session.guild_id
-        gb = self.session.guild_id
         a = self.session.offer_a
         b = self.session.offer_b
         errors: list[str] = []
 
-        # Validate and transfer weapons
+        # Validate everything first so a broken offer cannot half-complete a trade.
         for wid in a.weapons:
             row = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (wid, a_id))
             if not row or row["equipped_creature_id"]:
                 errors.append(f"Weapon #{wid} no longer available.")
-                continue
-            await db.execute("UPDATE weapons SET user_id = ? WHERE id = ?", (b_id, wid))
         for wid in b.weapons:
             row = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (wid, b_id))
             if not row or row["equipped_creature_id"]:
                 errors.append(f"Weapon #{wid} no longer available.")
-                continue
-            await db.execute("UPDATE weapons SET user_id = ? WHERE id = ?", (a_id, wid))
 
-        # Validate and transfer creatures
         for cid in a.creatures:
             row = await db.fetchone("SELECT id FROM rpg_creatures WHERE id = ? AND user_id = ?", (cid, a_id))
             team_check = await db.fetchone("SELECT creature_id FROM rpg_teams WHERE creature_id = ?", (cid,))
             if not row or team_check:
                 errors.append(f"Creature #{cid} no longer available.")
-                continue
-            await db.execute("UPDATE rpg_creatures SET user_id = ? WHERE id = ?", (b_id, cid))
         for cid in b.creatures:
             row = await db.fetchone("SELECT id FROM rpg_creatures WHERE id = ? AND user_id = ?", (cid, b_id))
             team_check = await db.fetchone("SELECT creature_id FROM rpg_teams WHERE creature_id = ?", (cid,))
             if not row or team_check:
                 errors.append(f"Creature #{cid} no longer available.")
-                continue
-            await db.execute("UPDATE rpg_creatures SET user_id = ? WHERE id = ?", (a_id, cid))
 
-        # Validate and transfer materials
         for mk, mq in getattr(a, "materials", {}).items():
             have = await get_quantity(db, a_id, "material", mk)
             if have < mq:
                 errors.append(f"Not enough {MATERIALS.get(mk, mk)}.")
-                continue
-            await add_item(db, a_id, "material", mk, -mq)
-            await add_item(db, b_id, "material", mk, mq)
         for mk, mq in getattr(b, "materials", {}).items():
             have = await get_quantity(db, b_id, "material", mk)
             if have < mq:
                 errors.append(f"Not enough {MATERIALS.get(mk, mk)}.")
-                continue
-            await add_item(db, b_id, "material", mk, -mq)
-            await add_item(db, a_id, "material", mk, mq)
 
-        # Validate and transfer currency
         pa = await ensure_player(db, a_id, "")
         pb = await ensure_player(db, b_id, "")
-        if a.souls > 0:
-            if _int(pa["gold"]) < a.souls:
-                errors.append("Not enough Souls for trade.")
-            else:
-                await award_currency(db, a_id, gold=-a.souls)
-                await award_currency(db, b_id, gold=a.souls)
-        if a.gems > 0:
-            if _int(pa["gems"]) < a.gems:
-                errors.append("Not enough Gems for trade.")
-            else:
-                await award_currency(db, a_id, gems=-a.gems)
-                await award_currency(db, b_id, gems=a.gems)
-        if b.souls > 0:
-            if _int(pb["gold"]) < b.souls:
-                errors.append("Not enough Souls for trade.")
-            else:
-                await award_currency(db, b_id, gold=-b.souls)
-                await award_currency(db, a_id, gold=b.souls)
-        if b.gems > 0:
-            if _int(pb["gems"]) < b.gems:
-                errors.append("Not enough Gems for trade.")
-            else:
-                await award_currency(db, b_id, gems=-b.gems)
-                await award_currency(db, a_id, gems=b.gems)
+        if a.souls > 0 and _int(pa["gold"]) < a.souls:
+            errors.append(f"{self.session.player_a.display_name} does not have enough Souls.")
+        if a.gems > 0 and _int(pa["gems"]) < a.gems:
+            errors.append(f"{self.session.player_a.display_name} does not have enough Gems.")
+        if b.souls > 0 and _int(pb["gold"]) < b.souls:
+            errors.append(f"{self.session.player_b.display_name} does not have enough Souls.")
+        if b.gems > 0 and _int(pb["gems"]) < b.gems:
+            errors.append(f"{self.session.player_b.display_name} does not have enough Gems.")
 
         if errors:
-            embed = dark_embed("⚠️ Trade Completed with Issues", "\n".join(errors), color=discord.Color.orange())
-        else:
-            embed = dark_embed("✅ Trade Complete", f"{self.session.player_a.mention} and {self.session.player_b.mention} have completed their trade!", color=discord.Color.green())
+            embed = dark_embed("Trade Cancelled", "\n".join(errors), color=discord.Color.orange())
+            if self.session.message:
+                try:
+                    await self.session.message.edit(embed=embed, view=None)
+                except discord.DiscordException:
+                    log.warning("Could not edit failed exchange message", exc_info=True)
+            self.session.expired = True
+            return
+
+        for wid in a.weapons:
+            await db.execute("UPDATE weapons SET user_id = ?, equipped_creature_id = NULL WHERE id = ?", (b_id, wid))
+        for wid in b.weapons:
+            await db.execute("UPDATE weapons SET user_id = ?, equipped_creature_id = NULL WHERE id = ?", (a_id, wid))
+        for cid in a.creatures:
+            await db.execute("UPDATE rpg_creatures SET user_id = ? WHERE id = ?", (b_id, cid))
+        for cid in b.creatures:
+            await db.execute("UPDATE rpg_creatures SET user_id = ? WHERE id = ?", (a_id, cid))
+        for mk, mq in getattr(a, "materials", {}).items():
+            await add_item(db, a_id, "material", mk, -mq)
+            await add_item(db, b_id, "material", mk, mq)
+        for mk, mq in getattr(b, "materials", {}).items():
+            await add_item(db, b_id, "material", mk, -mq)
+            await add_item(db, a_id, "material", mk, mq)
+        if a.souls > 0:
+            await award_currency(db, a_id, gold=-a.souls)
+            await award_currency(db, b_id, gold=a.souls)
+        if a.gems > 0:
+            await award_currency(db, a_id, gems=-a.gems)
+            await award_currency(db, b_id, gems=a.gems)
+        if b.souls > 0:
+            await award_currency(db, b_id, gold=-b.souls)
+            await award_currency(db, a_id, gold=b.souls)
+        if b.gems > 0:
+            await award_currency(db, b_id, gems=-b.gems)
+            await award_currency(db, a_id, gems=b.gems)
+
+        embed = dark_embed("Trade Complete", f"{self.session.player_a.mention} and {self.session.player_b.mention} have completed their trade!", color=discord.Color.green())
         if self.session.message:
-            await self.session.message.edit(embed=embed, view=None)
+            try:
+                await self.session.message.edit(embed=embed, view=None)
+            except discord.DiscordException:
+                log.warning("Could not edit completed exchange message", exc_info=True)
+        self.session.expired = True
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return self._is_participant(interaction.user.id)
 
     async def on_timeout(self) -> None:
         self.session.expired = True
-        embed = dark_embed("⏱️ Trade Expired", "The trade has timed out.", color=discord.Color.dark_red())
+        embed = dark_embed("Trade Expired", "The trade has timed out.", color=discord.Color.dark_red())
         if self.session.message:
             await self.session.message.edit(embed=embed, view=None)
 
@@ -368,8 +397,11 @@ class WeaponSelectView(discord.ui.View):
 class WeaponSelect(discord.ui.Select):
     def __init__(self, session: TradeSession, user_id: int, weapons: list) -> None:
         super().__init__(placeholder="Select a weapon...", options=[
-            discord.SelectOption(label=weapon_display_name(w)[:100], value=str(w["id"]),
-                                description=f"{rarity_label(str(w['rarity']))} ATK+{w['attack_bonus']} DEF+{w['defense_bonus']}")
+            discord.SelectOption(
+                label=_weapon_option_label(w),
+                value=str(w["id"]),
+                description=_weapon_option_description(w),
+            )
             for w in weapons[:25]
         ])
         self.session = session
@@ -383,7 +415,7 @@ class WeaponSelect(discord.ui.Select):
         offer.confirmed = False
         other_offer = self.session.offer_b if self.user_id == self.session.player_a.id else self.session.offer_a
         other_offer.confirmed = False
-        await interaction.response.edit_message(content=f"✅ Added weapon #{wid}.", view=None)
+        await interaction.response.edit_message(content=f"Added weapon #{wid}.", view=None)
         if self.session.message:
             await self.session.message.edit(embed=_trade_embed(self.session))
 
@@ -406,8 +438,11 @@ class CreatureSelectView(discord.ui.View):
 class CreatureSelect(discord.ui.Select):
     def __init__(self, session: TradeSession, user_id: int, creatures: list) -> None:
         super().__init__(placeholder="Select a creature...", options=[
-            discord.SelectOption(label=f"{creature_label(str(c['name']), str(c['rarity']))[:70]} Lv.{c['level']}", value=str(c["id"]),
-                                description=f"{rarity_label(str(c['rarity']))} ATK {c['attack']} DEF {c['defense']}")
+            discord.SelectOption(
+                label=_creature_option_label(c),
+                value=str(c["id"]),
+                description=_creature_option_description(c),
+            )
             for c in creatures[:25]
         ])
         self.session = session
@@ -421,7 +456,7 @@ class CreatureSelect(discord.ui.Select):
         offer.confirmed = False
         other_offer = self.session.offer_b if self.user_id == self.session.player_a.id else self.session.offer_a
         other_offer.confirmed = False
-        await interaction.response.edit_message(content=f"✅ Added creature #{cid}.", view=None)
+        await interaction.response.edit_message(content=f"Added creature #{cid}.", view=None)
         if self.session.message:
             await self.session.message.edit(embed=_trade_embed(self.session))
 
@@ -483,7 +518,7 @@ class MaterialAmountModal(discord.ui.Modal, title="Material Amount"):
         other_offer = self.session.offer_b if self.user_id == self.session.player_a.id else self.session.offer_a
         other_offer.confirmed = False
         name = MATERIALS.get(self.material_key, self.material_key.replace("_", " ").title())
-        await interaction.response.send_message(f"✅ Added {qty}x {name}.", ephemeral=True)
+        await interaction.response.send_message(f"Added {qty}x {name}.", ephemeral=True)
         if self.session.message:
             await self.session.message.edit(embed=_trade_embed(self.session))
 
@@ -513,7 +548,7 @@ class CurrencyModal(discord.ui.Modal, title="Add Currency"):
         other_offer = self.session.offer_b if self.user_id == self.session.player_a.id else self.session.offer_a
         other_offer.confirmed = False
         label = "Souls" if self.currency == "souls" else "Gems"
-        await interaction.response.send_message(f"✅ Set {label} offer to **{qty:,}**.", ephemeral=True)
+        await interaction.response.send_message(f"Set {label} offer to **{qty:,}**.", ephemeral=True)
         if self.session.message:
             await self.session.message.edit(embed=_trade_embed(self.session))
 
@@ -535,12 +570,13 @@ class RPGTrade(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
-    @commands.hybrid_command(name="exchange", aliases=["ptrade", "xchange"])
+    @commands.hybrid_command(name="exchange", aliases=["ptrade", "xchange"], enabled=False)
     async def trade(self, ctx: commands.Context, target: discord.Member | None = None) -> None:
         """Trade weapons, creatures, and currency with another hunter."""
-        assert ctx.guild is not None
+        if ctx.guild is None:
+            raise commands.BadArgument("Use exchange inside a server.")
         if target is None:
-            await ctx.reply(embed=status_embed("Trade", "Usage: `b trade @player`"), mention_author=False)
+            await ctx.reply(embed=status_embed("Trade", "Usage: `b exchange @player`"), mention_author=False)
             return
         if target.bot:
             raise commands.BadArgument("You cannot trade with bots.")
@@ -561,17 +597,26 @@ class RPGTrade(commands.Cog):
         embed = _trade_embed(session)
         embed.description = f"{ctx.author.mention} wants to trade with {target.mention}!\n\nBoth players add items, then confirm."
         view = TradeView(session)
-        msg = await ctx.reply(embed=embed, view=view, mention_author=False)
-        session.message = msg
 
-        timed_out = await view.wait()
-        if not session.expired and timed_out:
-            session.expired = True
-            embed = dark_embed("⏱️ Trade Expired", "The trade has timed out.", color=discord.Color.dark_red())
-            await msg.edit(embed=embed, view=None)
-
-        _active_trades.pop(ctx.author.id, None)
-        _active_trades.pop(target.id, None)
+        try:
+            msg = await ctx.reply(embed=embed, view=view, mention_author=False)
+            session.message = msg
+            timed_out = await view.wait()
+            if not session.expired and timed_out:
+                session.expired = True
+                embed = dark_embed("Trade Expired", "The trade has timed out.", color=discord.Color.dark_red())
+                await msg.edit(embed=embed, view=None)
+        except Exception:
+            log.exception("Exchange session crashed")
+            if session.message:
+                try:
+                    await session.message.edit(embed=dark_embed("Trade Failed", "The trade crashed safely and no active trade lock remains.", color=discord.Color.dark_red()), view=None)
+                except Exception:
+                    log.exception("Could not edit failed exchange message")
+            raise
+        finally:
+            _active_trades.pop(ctx.author.id, None)
+            _active_trades.pop(target.id, None)
 
 
 async def setup(bot: commands.Bot) -> None:

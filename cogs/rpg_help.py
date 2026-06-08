@@ -59,7 +59,7 @@ CATEGORY_STYLES: dict[str, dict[str, object]] = {
         "emoji": "🎒",
         "asset": ("ui", "inventory"),
         "summary": "Profile, inventory, quests, daily rewards, and achievements.",
-        "featured": ["profile", "inventory", "daily", "checklist", "quests", "bestiary"],
+        "featured": ["profile", "inventory", "daily", "checklist", "quests", "bestiary", "zoodense"],
     },
     "Bestiary": {
         "emoji": "📖",
@@ -83,7 +83,7 @@ CATEGORY_STYLES: dict[str, dict[str, object]] = {
         "emoji": "⚔️",
         "asset": ("weapons", "sword"),
         "summary": "Inspect, equip, reroll, and manage creature weapons.",
-        "featured": ["weapons", "weaponequip", "weaponunequip", "weaponreroll", "weaponshards", "wdex"],
+        "featured": ["weapons", "weaponequip", "weaponunequip", "wr", "weaponshards", "wdex"],
     },
     "Battle & Raids": {
         "emoji": "🔥",

@@ -3,19 +3,33 @@ from __future__ import annotations
 import argparse
 import math
 import os
+import shutil
 import sqlite3
 import sys
 from hashlib import sha256
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT_DIR))
 
 from core.content_config import safe_key
-from core.rpg_data import CHARMS, CREATURES, MATERIALS, RARITY_BY_NAME, SIGILS
+from core.discord_assets import CURRENCY_KEYS, UI_KEYS
+from core.rpg_data import (
+    BOSSES,
+    CHARMS,
+    CREATURES,
+    EQUIPMENT,
+    MATERIALS,
+    RARITIES,
+    RARITY_BY_NAME,
+    RARITY_INDEX,
+    SIGILS,
+    WEAPON_PASSIVES,
+    WEAPON_TYPES,
+)
 
 
 ASSET_DIR = ROOT_DIR / "data" / "assets"
@@ -37,6 +51,35 @@ INFUSED_COLORS = {
     "Diamond": (220, 230, 245, 255),
     "Abyssal": (130, 65, 210, 255),
 }
+
+ROOT_PREVIEW_NAMES = {"icon_preview_64.png", "icon_preview_ordered.png", "icon_preview_sheet.png"}
+_FONT_CACHE: dict[tuple[int, bool], ImageFont.ImageFont] = {}
+
+
+def _font(size: int, *, bold: bool = True) -> ImageFont.ImageFont:
+    key = (size, bold)
+    if key in _FONT_CACHE:
+        return _FONT_CACHE[key]
+    candidates = [
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/seguisb.ttf" if bold else "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/calibrib.ttf" if bold else "C:/Windows/Fonts/calibri.ttf",
+    ]
+    for candidate in candidates:
+        try:
+            font = ImageFont.truetype(candidate, size)
+            _FONT_CACHE[key] = font
+            return font
+        except Exception:
+            continue
+    font = ImageFont.load_default()
+    _FONT_CACHE[key] = font
+    return font
+
+
+def _text_size(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> tuple[int, int]:
+    bbox = draw.textbbox((0, 0), text, font=font)
+    return bbox[2] - bbox[0], bbox[3] - bbox[1]
 
 
 def _mix(a: tuple[int, int, int, int], b: tuple[int, int, int, int], t: float) -> tuple[int, int, int, int]:
@@ -65,6 +108,28 @@ def _save(image: Image.Image, kind: str, key: str) -> None:
         image = image.resize((EXPORT_SIZE, EXPORT_SIZE), Image.Resampling.NEAREST)
     image.save(out / f"{key}.png", "PNG")
     print(f"{kind}/{key}.png")
+
+
+def _asset_pngs() -> list[Path]:
+    return sorted(path for path in ASSET_DIR.rglob("*.png") if path.is_file())
+
+
+def _write_manifest(paths: list[Path], manifest_path: Path) -> None:
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    lines = [str(path.relative_to(ROOT_DIR)).replace("\\", "/") for path in paths]
+    manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _backup_assets(paths: list[Path]) -> Path:
+    backup_root = ROOT_DIR / "data" / "asset_backups" / "pixel_revamp_latest"
+    if backup_root.exists():
+        shutil.rmtree(backup_root)
+    for path in paths:
+        relative = path.relative_to(ASSET_DIR)
+        target = backup_root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+    return backup_root
 
 
 def _soft_disc(draw: ImageDraw.ImageDraw, cx: int, cy: int, r: int, color: tuple[int, int, int, int]) -> None:
@@ -148,6 +213,15 @@ def _staff(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
     draw.ellipse((cx - 6, 9, cx + 6, 21), fill=(218, 184, 255, 255))
 
 
+def _staff_purity(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.line((cx, 18, cx, 58), fill=(210, 205, 185, 255), width=6)
+    _soft_disc(draw, cx, 16, 15, CYAN)
+    draw.ellipse((cx - 14, 3, cx + 14, 31), fill=(225, 245, 255, 255), outline=INK, width=2)
+    draw.rectangle((cx - 3, 8, cx + 3, 25), fill=CYAN)
+    draw.rectangle((cx - 10, 15, cx + 10, 20), fill=CYAN)
+    draw.arc((cx - 22, cy - 20, cx + 22, cy + 24), 45, 315, fill=WHITE, width=3)
+
+
 def _shield(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
     pts = [(cx, 5), (cx + 23, 15), (cx + 19, 42), (cx, 60), (cx - 19, 42), (cx - 23, 15)]
     draw.polygon(pts, fill=(50, 80, 130, 255), outline=INK)
@@ -161,11 +235,154 @@ def _hammer(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
     draw.rectangle((cx - 16, 11, cx + 16, 15), fill=(195, 205, 218, 255))
 
 
+def _bow(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.arc((cx - 23, cy - 26, cx + 19, cy + 28), 275, 85, fill=(138, 88, 48, 255), width=5)
+    draw.line((cx + 12, cy - 21, cx + 12, cy + 24), fill=WHITE, width=2)
+    draw.line((cx - 11, cy + 3, cx + 20, cy - 11), fill=(210, 225, 240, 255), width=3)
+    draw.polygon([(cx + 20, cy - 11), (cx + 14, cy - 12), (cx + 18, cy - 5)], fill=GOLD, outline=INK)
+
+
+def _crossbow(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.line((cx - 22, cy - 6, cx + 22, cy - 6), fill=(138, 88, 48, 255), width=6)
+    draw.arc((cx - 28, cy - 19, cx - 2, cy + 8), 275, 70, fill=(186, 128, 64, 255), width=4)
+    draw.arc((cx + 2, cy - 19, cx + 28, cy + 8), 110, 265, fill=(186, 128, 64, 255), width=4)
+    draw.line((cx, cy - 20, cx, cy + 30), fill=(118, 74, 40, 255), width=7)
+    draw.line((cx - 18, cy - 7, cx + 18, cy - 7), fill=WHITE, width=2)
+    draw.line((cx, cy - 24, cx, cy + 24), fill=(210, 225, 240, 255), width=3)
+    draw.polygon([(cx, cy - 27), (cx - 4, cy - 18), (cx + 4, cy - 18)], fill=CYAN, outline=INK)
+
+
+def _orb(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    _soft_disc(draw, cx, cy, 21, PURPLE)
+    draw.ellipse((cx - 20, cy - 20, cx + 20, cy + 20), fill=(80, 50, 160, 255), outline=INK, width=2)
+    draw.ellipse((cx - 12, cy - 12, cx + 12, cy + 12), fill=(175, 120, 245, 255), outline=(220, 205, 255, 255), width=2)
+    draw.arc((cx - 25, cy - 12, cx + 25, cy + 13), 15, 345, fill=CYAN, width=3)
+
+
+def _rune(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    pts = _star_points(cx, cy, 24, 10, 6)
+    draw.polygon(pts, fill=(54, 43, 96, 255), outline=INK)
+    draw.polygon([(cx, cy - 20), (cx + 15, cy), (cx, cy + 20), (cx - 15, cy)], fill=(95, 72, 190, 255), outline=CYAN)
+    draw.line((cx, cy - 13, cx, cy + 13), fill=WHITE, width=3)
+    draw.line((cx - 9, cy, cx + 9, cy), fill=WHITE, width=3)
+
+
+def _scythe(draw: ImageDraw.ImageDraw, cx: int, cy: int, color=(180, 50, 70, 255)) -> None:
+    draw.line((cx, 14, cx, 58), fill=(100, 65, 40, 255), width=5)
+    draw.arc((cx - 26, cy - 28, cx + 6, cy + 4), 200, 350, fill=color, width=5)
+    draw.polygon([(cx - 20, cy - 22), (cx - 26, cy - 10), (cx - 14, cy - 16)], fill=_mix(color, WHITE, 0.25), outline=INK)
+    _soft_disc(draw, cx, 12, 8, color)
+
+
+def _soulreaper(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    _scythe(draw, cx, cy, color=(160, 40, 60, 255))
+    _soft_disc(draw, cx, 32, 10, (200, 50, 80, 255))
+    draw.ellipse((cx - 5, 28, cx + 5, 38), fill=(255, 200, 200, 255))
+
+
+def _final_bell_scythe(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    _scythe(draw, cx, cy, color=(140, 120, 60, 255))
+    draw.arc((cx - 10, 6, cx + 10, 22), 0, 180, fill=GOLD, width=3)
+    draw.ellipse((cx - 6, 10, cx + 6, 20), fill=GOLD, outline=INK)
+    draw.line((cx, 20, cx, 25), fill=GOLD, width=2)
+
+
+def _briar_relic(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.line((cx, 18, cx, 56), fill=(90, 60, 40, 255), width=5)
+    for dy in range(-12, 16, 6):
+        draw.line((cx - 14, cy + dy, cx + 14, cy + dy + 4), fill=(60, 140, 60, 255), width=3)
+        draw.line((cx - 10, cy + dy + 2, cx + 10, cy + dy - 2), fill=(80, 160, 80, 255), width=2)
+    _soft_disc(draw, cx, cy - 8, 12, (60, 140, 60, 255))
+    draw.polygon([(cx, cy - 20), (cx + 8, cy - 8), (cx, cy + 4), (cx - 8, cy - 8)], fill=(100, 200, 100, 255), outline=INK)
+
+
+def _rot_chalice(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.polygon([(cx - 14, cy - 10), (cx + 14, cy - 10), (cx + 10, cy + 10), (cx - 10, cy + 10)], fill=(120, 80, 50, 255), outline=INK)
+    draw.rectangle((cx - 4, cy + 10, cx + 4, cy + 22), fill=(100, 65, 40, 255), outline=INK)
+    draw.ellipse((cx - 12, cy + 18, cx + 12, cy + 28), fill=(100, 65, 40, 255), outline=INK)
+    draw.ellipse((cx - 10, cy - 14, cx + 10, cy - 4), fill=(80, 180, 60, 255))
+    for i in range(3):
+        x = cx - 6 + i * 6
+        draw.ellipse((x, cy - 18 - i * 3, x + 4, cy - 14 - i * 3), fill=(60, 150, 50, 255))
+
+
+def _banner(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.line((cx - 8, 8, cx - 8, 58), fill=(100, 65, 40, 255), width=4)
+    draw.polygon([(cx - 8, 10), (cx + 22, 14), (cx + 18, 38), (cx - 8, 34)], fill=(40, 30, 60, 255), outline=INK)
+    draw.polygon([(cx - 4, 14), (cx + 18, 17), (cx + 15, 34), (cx - 4, 31)], fill=(80, 50, 120, 255))
+    _soft_disc(draw, cx + 6, 24, 8, PURPLE)
+    draw.polygon(_star_points(cx + 6, 24, 6, 3, 5), fill=GOLD)
+
+
+def _eye(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.ellipse((cx - 22, cy - 14, cx + 22, cy + 14), fill=(60, 40, 80, 255), outline=INK, width=2)
+    draw.ellipse((cx - 12, cy - 10, cx + 12, cy + 10), fill=(200, 180, 220, 255))
+    draw.ellipse((cx - 6, cy - 6, cx + 6, cy + 6), fill=PURPLE, outline=INK)
+    draw.ellipse((cx - 2, cy - 2, cx + 2, cy + 2), fill=WHITE)
+    for angle in range(0, 360, 45):
+        rad = math.radians(angle)
+        x1 = cx + int(math.cos(rad) * 20)
+        y1 = cy + int(math.sin(rad) * 12)
+        draw.line((cx + int(math.cos(rad) * 14), cy + int(math.sin(rad) * 8), x1, y1), fill=(120, 80, 160, 255), width=2)
+
+
+def _judgement_blade(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.polygon([(cx, 6), (cx + 8, 32), (cx + 3, 50), (cx - 3, 50), (cx - 8, 32)], fill=(200, 190, 170, 255), outline=INK)
+    draw.line((cx + 2, 10, cx + 5, 30), fill=WHITE, width=2)
+    draw.rounded_rectangle((cx - 16, 34, cx + 16, 40), radius=2, fill=GOLD, outline=INK)
+    draw.rectangle((cx - 3, 39, cx + 3, 56), fill=(120, 80, 40, 255), outline=INK)
+    draw.polygon(_star_points(cx, 37, 5, 2, 4), fill=WHITE)
+
+
+def _lantern(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.arc((cx - 8, 6, cx + 8, 18), 180, 360, fill=(120, 80, 40, 255), width=3)
+    draw.line((cx, 12, cx, 18), fill=(120, 80, 40, 255), width=3)
+    draw.rounded_rectangle((cx - 14, 18, cx + 14, 48), radius=4, fill=(80, 60, 40, 255), outline=INK, width=2)
+    draw.rounded_rectangle((cx - 10, 22, cx + 10, 44), radius=3, fill=(200, 160, 60, 255))
+    _soft_disc(draw, cx, 33, 10, (240, 200, 80, 255))
+    draw.ellipse((cx - 4, 28, cx + 4, 38), fill=WHITE)
+    draw.rectangle((cx - 8, 48, cx + 8, 54), fill=(80, 60, 40, 255), outline=INK)
+
+
+def _mirror_relic(draw: ImageDraw.ImageDraw, cx: int, cy: int) -> None:
+    draw.ellipse((cx - 20, cy - 20, cx + 20, cy + 20), fill=(60, 60, 80, 255), outline=INK, width=2)
+    draw.ellipse((cx - 16, cy - 16, cx + 16, cy + 16), fill=(140, 150, 180, 255))
+    draw.ellipse((cx - 10, cy - 10, cx + 10, cy + 10), fill=(200, 210, 230, 255))
+    draw.line((cx - 6, cy - 6, cx + 2, cy + 2), fill=WHITE, width=2)
+    draw.line((cx + 6, cy - 2, cx - 2, cy + 6), fill=WHITE, width=1)
+    for angle in range(0, 360, 60):
+        rad = math.radians(angle)
+        x = cx + int(math.cos(rad) * 18)
+        y = cy + int(math.sin(rad) * 18)
+        draw.ellipse((x - 2, y - 2, x + 2, y + 2), fill=CYAN)
+
+
 def make_weapon(key: str) -> None:
     image, draw = _img((176, 154, 112, 255))
     _soft_disc(draw, 32, 34, 22, (95, 110, 150, 255))
     _pixel_sparkles(draw, (190, 205, 225, 255), _hash_int(key))
-    {"sword": _sword, "axe": _axe, "dagger": _dagger, "staff": _staff, "shield": _shield, "hammer": _hammer}[key](draw, 32, 32)
+    {
+        "sword": _sword,
+        "bow": _bow,
+        "axe": _axe,
+        "dagger": _dagger,
+        "crossbow": _crossbow,
+        "staff": _staff,
+        "staff_of_purity": _staff_purity,
+        "shield": _shield,
+        "hammer": _hammer,
+        "orb": _orb,
+        "rune": _rune,
+        "soulreaper": _soulreaper,
+        "final_bell_scythe": _final_bell_scythe,
+        "briar_relic": _briar_relic,
+        "rot_chalice": _rot_chalice,
+        "banner": _banner,
+        "eye": _eye,
+        "judgement_blade": _judgement_blade,
+        "lantern": _lantern,
+        "mirror_relic": _mirror_relic,
+    }.get(key, _sword)(draw, 32, 32)
     _save(_outline(image), "weapons", key)
 
 
@@ -324,7 +541,21 @@ def make_passive(key: str, color: tuple[int, int, int, int]) -> None:
     _soft_disc(draw, 32, 32, 23, color)
     _pixel_sparkles(draw, color, _hash_int(key))
     draw.ellipse((12, 12, 52, 52), fill=color, outline=INK, width=2)
-    if key == "crit":
+    stat_letters = {
+        "strength": "S",
+        "magic": "M",
+        "hp": "H",
+        "wp": "W",
+        "pr": "P",
+        "mr": "R",
+    }
+    if key in stat_letters:
+        font = _font(30 if key != "wp" else 27, bold=True)
+        text = stat_letters[key]
+        tw, th = _text_size(draw, text, font)
+        draw.text((32 - tw // 2 + 2, 32 - th // 2 + 2), text, font=font, fill=INK)
+        draw.text((32 - tw // 2, 32 - th // 2), text, font=font, fill=WHITE)
+    elif key == "crit":
         draw.polygon(_star_points(32, 32, 20, 8), fill=WHITE)
     elif key == "shield":
         _shield(draw, 32, 32)
@@ -333,6 +564,32 @@ def make_passive(key: str, color: tuple[int, int, int, int]) -> None:
         draw.rectangle((15, 28, 49, 36), fill=WHITE)
     elif key == "stun":
         draw.polygon([(35, 8), (21, 34), (33, 32), (28, 56), (46, 25), (34, 28)], fill=WHITE)
+    elif key == "life_steal":
+        draw.polygon([(32, 12), (42, 28), (32, 52), (22, 28)], fill=WHITE)
+        draw.ellipse((27, 22, 37, 32), fill=_mix(color, INK, 0.35))
+    elif key == "mana_tap":
+        draw.ellipse((22, 18, 42, 46), fill=WHITE)
+        draw.polygon([(32, 14), (38, 24), (32, 34), (26, 24)], fill=_mix(color, WHITE, 0.5))
+    elif key == "soul_gain":
+        draw.ellipse((22, 20, 42, 40), fill=WHITE)
+        draw.polygon([(32, 16), (40, 28), (32, 44), (24, 28)], fill=_mix(color, WHITE, 0.35))
+    elif key == "gem_finder":
+        _diamond(draw, 32, 32, 16, fill=WHITE, outline=INK, width=2)
+        draw.line((26, 28, 38, 28), fill=_mix(color, INK, 0.3), width=1)
+    elif key == "xp_boost":
+        draw.rectangle((24, 18, 40, 46), fill=WHITE, outline=INK)
+        draw.line((28, 24, 36, 24), fill=_mix(color, INK, 0.4), width=1)
+        draw.line((28, 28, 36, 28), fill=_mix(color, INK, 0.4), width=1)
+        draw.line((28, 32, 34, 32), fill=_mix(color, INK, 0.4), width=1)
+    elif key == "rare_finder":
+        draw.polygon(_star_points(32, 32, 16, 7, 4), fill=WHITE)
+    elif key == "energize":
+        draw.polygon([(36, 10), (22, 34), (33, 32), (28, 54), (44, 26), (33, 28)], fill=WHITE)
+    elif key == "fear":
+        draw.ellipse((20, 18, 44, 42), fill=WHITE)
+        draw.ellipse((26, 24, 30, 30), fill=INK)
+        draw.ellipse((34, 24, 38, 30), fill=INK)
+        draw.arc((26, 32, 38, 40), 0, 180, fill=INK, width=2)
     else:
         draw.ellipse((24, 18, 40, 42), fill=WHITE)
         draw.polygon([(32, 9), (41, 30), (32, 56), (23, 30)], fill=_mix(color, WHITE, 0.35))
@@ -358,6 +615,159 @@ def make_status(key: str, color: tuple[int, int, int, int]) -> None:
         draw.ellipse((20, 24, 44, 38), outline=WHITE, width=4)
         draw.ellipse((28, 28, 36, 36), fill=WHITE)
     _save(_outline(image), "status", key)
+
+
+def make_rarity(key: str, name: str | None = None) -> None:
+    display = name or key.replace("_", " ").title()
+    color = _rarity_color(display)
+    if color == RARITY_FALLBACK:
+        color = _hash_color(key, 0)
+    image, draw = _img(color)
+    rank = RARITY_INDEX.get(display, 0)
+    salt = _hash_int(key)
+    _soft_disc(draw, 32, 32, 23 + min(5, rank // 2), color)
+    _pixel_sparkles(draw, _mix(color, WHITE, 0.35), salt)
+
+    if rank >= 5:
+        rays = 8 + min(8, rank)
+        draw.polygon(_star_points(32, 32, 29, 22, rays), fill=_mix(color, INK, 0.16), outline=_mix(color, WHITE, 0.12))
+    if rank >= 8:
+        draw.ellipse((7, 7, 57, 57), outline=_mix(color, WHITE, 0.50), width=2)
+        draw.arc((5, 13, 59, 51), 200, 340, fill=_mix(color, WHITE, 0.45), width=2)
+
+    outer = _mix(color, WHITE, 0.08 + min(0.30, rank * 0.025))
+    inner = _mix(color, INK, 0.18)
+    draw.ellipse((10, 10, 54, 54), fill=inner, outline=INK, width=3)
+    for ring in range(1 + min(3, rank // 3)):
+        inset = 13 + ring * 3
+        draw.ellipse((inset, inset, SIZE - inset, SIZE - inset), outline=_mix(outer, WHITE, ring * 0.12), width=1)
+
+    if rank >= 6:
+        crown_y = 10
+        crown = [(22, crown_y + 9), (26, crown_y), (31, crown_y + 8), (36, crown_y), (42, crown_y + 9), (42, crown_y + 15), (22, crown_y + 15)]
+        draw.polygon(crown, fill=GOLD, outline=INK)
+        for gx in (26, 36):
+            _diamond(draw, gx, crown_y + 4, 3, fill=_mix(color, WHITE, 0.45), outline=INK, width=1)
+    if rank >= 10:
+        for x, y in ((12, 19), (52, 19), (13, 48), (51, 48)):
+            draw.polygon(_star_points(x, y, 5, 2), fill=_mix(color, WHITE, 0.60), outline=INK)
+
+    letter = (display.strip()[:1] or key.strip()[:1] or "?").upper()
+    font = _font(34 if letter != "W" else 31, bold=True)
+    tw, th = _text_size(draw, letter, font)
+    tx = 32 - tw // 2
+    ty = 32 - th // 2 - 3
+    draw.text((tx + 2, ty + 3), letter, font=font, fill=INK)
+    draw.text((tx, ty), letter, font=font, fill=_mix(color, WHITE, 0.72))
+    draw.text((tx + 1, ty - 1), letter, font=font, fill=WHITE)
+    if rank >= 4:
+        _diamond(draw, 32, 51, 5, fill=_mix(color, WHITE, 0.55), outline=INK, width=1)
+    _save(_outline(image), "rarity", key)
+
+
+def make_ui(key: str) -> None:
+    color = _hash_color(key, 1)
+    image, draw = _img(color)
+    _soft_disc(draw, 32, 32, 23, color)
+    _pixel_sparkles(draw, color, _hash_int(key))
+    k = key.lower()
+    if "hunt" in k:
+        draw.polygon([(17, 48), (34, 8), (47, 48)], fill=_mix(color, WHITE, 0.25), outline=INK)
+        draw.line((32, 16, 32, 49), fill=WHITE, width=3)
+        draw.arc((13, 19, 51, 57), 200, 340, fill=GOLD, width=3)
+    elif "battle" in k or "boss" in k:
+        _sword(draw, 25, 32, color=(210, 225, 240, 255))
+        _shield(draw, 41, 34)
+    elif "inventory" in k or "shop" in k or "market" in k:
+        draw.rounded_rectangle((13, 18, 51, 49), radius=4, fill=(118, 80, 46, 255), outline=INK, width=2)
+        draw.rectangle((13, 26, 51, 33), fill=_mix(color, INK, 0.18))
+        _diamond(draw, 32, 26, 7, fill=GOLD, outline=INK, width=1)
+    elif "profile" in k or "team" in k:
+        for cx, cy, r in ((24, 25, 10), (42, 27, 8), (33, 40, 11)):
+            draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=_mix(color, WHITE, 0.2), outline=INK, width=2)
+    elif "forge" in k or "craft" in k:
+        _hammer(draw, 32, 32)
+        draw.arc((14, 11, 50, 48), 205, 330, fill=(245, 110, 24, 255), width=3)
+    elif "daily" in k or "quest" in k:
+        draw.rounded_rectangle((17, 10, 47, 54), radius=3, fill=(224, 214, 178, 255), outline=INK, width=2)
+        draw.line((23, 23, 42, 23), fill=color, width=3)
+        draw.line((23, 33, 39, 33), fill=color, width=3)
+        draw.polygon(_star_points(44, 15, 8, 3), fill=GOLD, outline=INK)
+    elif "leader" in k:
+        for i, h in enumerate((18, 30, 24)):
+            x = 14 + i * 12
+            draw.rectangle((x, 52 - h, x + 9, 52), fill=_mix(color, WHITE, i * 0.12), outline=INK)
+        draw.polygon(_star_points(32, 13, 9, 4), fill=GOLD, outline=INK)
+    elif "sell" in k:
+        draw.ellipse((13, 13, 51, 51), fill=GOLD, outline=INK, width=2)
+        draw.line((22, 32, 42, 32), fill=INK, width=4)
+        draw.line((32, 20, 32, 44), fill=INK, width=4)
+    elif "settings" in k:
+        draw.ellipse((13, 13, 51, 51), outline=_mix(color, WHITE, 0.28), width=8)
+        draw.ellipse((25, 25, 39, 39), fill=WHITE, outline=INK, width=2)
+    else:
+        draw.polygon(_star_points(32, 32, 24, 10, 6), fill=color, outline=INK)
+    _save(_outline(image), "ui", key)
+
+
+def make_equipment(key: str) -> None:
+    color = _hash_color(key, 2)
+    image, draw = _img(color)
+    _soft_disc(draw, 32, 32, 23, color)
+    _pixel_sparkles(draw, color, _hash_int(key))
+    k = key.lower()
+    if any(word in k for word in ("sword", "blade", "cleaver", "soulreaper")):
+        _sword(draw, 32, 32, color=(210, 225, 240, 255))
+    elif any(word in k for word in ("charm", "eye", "talisman", "crown", "sigil")):
+        draw.ellipse((17, 9, 47, 39), fill=(22, 18, 34, 255), outline=GOLD, width=3)
+        _diamond(draw, 32, 31, 18, fill=color, outline=INK, width=2)
+        draw.polygon(_star_points(32, 31, 9, 4), fill=_mix(color, WHITE, 0.5), outline=INK)
+    else:
+        _shield(draw, 32, 32)
+    _save(_outline(image), "equipment", key)
+
+
+def make_zone(key: str) -> None:
+    h = _hash_int(key)
+    sky = _hash_color(key, 3)
+    ground = _mix(sky, (18, 16, 18, 255), 0.55)
+    image, draw = _img(sky)
+    for y in range(7, 58):
+        t = (y - 7) / 51
+        draw.line((7, y, 57, y), fill=_mix(sky, ground, t))
+    draw.rectangle((7, 42, 57, 57), fill=ground)
+    for i in range(4):
+        x = 8 + ((h >> (i * 5)) % 43)
+        top = 15 + ((h >> (i * 7)) % 17)
+        draw.polygon([(x - 10, 42), (x, top), (x + 14, 42)], fill=_mix(ground, INK, 0.08), outline=INK)
+    draw.ellipse((39, 10, 52, 23), fill=_mix(sky, WHITE, 0.35), outline=INK)
+    draw.arc((9, 11, 54, 54), 200, 340, fill=_mix(sky, WHITE, 0.22), width=2)
+    _save(_outline(image), "zones", key)
+
+
+def make_boss(key: str) -> None:
+    color = _hash_color(key, 4)
+    image, draw = _img(color)
+    _soft_disc(draw, 32, 31, 25, color)
+    _pixel_sparkles(draw, color, _hash_int(key))
+    draw.polygon([(32, 6), (53, 19), (49, 49), (32, 60), (15, 49), (11, 19)], fill=_mix(color, INK, 0.08), outline=INK)
+    draw.polygon([(19, 17), (12, 3), (28, 12)], fill=color, outline=INK)
+    draw.polygon([(45, 17), (52, 3), (36, 12)], fill=color, outline=INK)
+    _eyes(draw, (25, 29), (39, 29), (255, 240, 145, 255))
+    draw.rectangle((24, 41, 40, 47), fill=INK)
+    for x in (26, 32, 38):
+        draw.polygon([(x, 47), (x + 3, 54), (x - 3, 54)], fill=WHITE, outline=INK)
+    _save(_outline(image), "bosses", key)
+
+
+def _hash_color(key: str, salt: int) -> tuple[int, int, int, int]:
+    h = _hash_int(f"{salt}:{key}")
+    palettes = [
+        (255, 66, 77, 255), (255, 191, 71, 255), (80, 220, 160, 255),
+        (84, 190, 255, 255), (184, 112, 255, 255), (255, 120, 160, 255),
+        (115, 235, 230, 255),
+    ]
+    return palettes[h % len(palettes)]
 
 
 def _hash_int(text: str) -> int:
@@ -541,7 +951,7 @@ CREATURE_DRAWERS = {
 }
 
 
-def make_creature(name: str, rarity: str) -> None:
+def make_creature(name: str, rarity: str, asset_key: str | None = None) -> None:
     base_name, infused = _infused_base(name)
     accent = infused or _rarity_color(rarity)
     h = _hash_int(name)
@@ -561,7 +971,7 @@ def make_creature(name: str, rarity: str) -> None:
         draw.arc((8, 8, 56, 56), 210, 340, fill=infused, width=2)
     else:
         draw.ellipse((49, 49, 58, 58), fill=accent, outline=INK)
-    _save(_outline(image), "creatures", safe_key(name))
+    _save(_outline(image), "creatures", asset_key or safe_key(name))
 
 
 def _db_creatures() -> list[tuple[str, str]]:
@@ -580,8 +990,144 @@ def _db_creatures() -> list[tuple[str, str]]:
         return []
 
 
-def main(*, include_creatures: bool = True) -> None:
-    for key in ("sword", "axe", "dagger", "staff", "shield", "hammer"):
+def _creature_rarity_by_key() -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for creature in CREATURES:
+        mapping[safe_key(creature.name)] = creature.rarity
+    for name, rarity in _db_creatures():
+        mapping.setdefault(safe_key(name), rarity)
+    return mapping
+
+
+def _generate_existing_asset_keys(existing_paths: list[Path], *, include_creatures: bool) -> None:
+    by_kind: dict[str, set[str]] = {}
+    for path in existing_paths:
+        relative = path.relative_to(ASSET_DIR)
+        if len(relative.parts) != 2:
+            continue
+        kind, filename = relative.parts
+        if path.name in ROOT_PREVIEW_NAMES:
+            continue
+        by_kind.setdefault(kind, set()).add(path.stem)
+
+    for key in sorted(by_kind.get("ui", set()) | set(UI_KEYS)):
+        make_ui(key)
+
+    for key in sorted(by_kind.get("weapons", set())):
+        if key in WEAPON_TYPES:
+            make_weapon(key)
+        else:
+            make_equipment(key)
+
+    for key in sorted(by_kind.get("passives", set())):
+        make_passive(key, _hash_color(key, 7))
+
+    for key in sorted(by_kind.get("status", set())):
+        make_status(key, _hash_color(key, 8))
+
+    sigil_ranks = {sigil.key: rank for rank, sigil in enumerate(SIGILS, start=1)}
+    charm_ranks = {charm.key: rank for rank, charm in enumerate(CHARMS, start=1)}
+    for key in sorted(by_kind.get("buffs", set())):
+        if key in sigil_ranks:
+            make_buff(key, True, min(sigil_ranks[key], 5))
+        elif key in charm_ranks:
+            make_buff(key, False, min(charm_ranks[key], 5))
+        else:
+            make_buff(key, "blood" in key, 3)
+
+    for key in sorted(by_kind.get("currency", set()) | set(CURRENCY_KEYS)):
+        if key in {"gold", "souls"}:
+            make_currency(key, GOLD, "coin")
+        elif "gem" in key or "crystal" in key:
+            make_currency(key, CYAN if "gem" in key else PURPLE, "gem")
+        else:
+            make_currency(key, _hash_color(key, 9), "star")
+
+    for key in sorted(by_kind.get("materials", set()) | set(MATERIALS)):
+        make_material(key, _hash_color(key, 10))
+
+    for key in sorted(by_kind.get("crate", set())):
+        make_crate(key, _hash_color(key, 11), _hash_color(key, 12))
+
+    for key in sorted(by_kind.get("consumable", set())):
+        if key == "hunt_sword":
+            make_consumable()
+        else:
+            make_equipment(key)
+
+    rarity_names = {safe_key(rarity.name): rarity.name for rarity in RARITIES}
+    existing_rarity_keys = {safe_key(key) for key in by_kind.get("rarity", set())}
+    for key in sorted(existing_rarity_keys | set(rarity_names)):
+        make_rarity(key, rarity_names.get(safe_key(key)))
+
+    for key in sorted(by_kind.get("equipment", set()) | set(EQUIPMENT)):
+        make_equipment(key)
+
+    # Zone PNGs are full-card scene backgrounds consumed by the hunt/battle renderers.
+    # They are generated by scripts/generate_zone_backgrounds.py, so do not replace
+    # them with 128px icon sprites here.
+
+    for key in sorted(by_kind.get("bosses", set()) | {boss.key for boss in BOSSES}):
+        make_boss(key)
+
+    if include_creatures:
+        rarity_by_key = _creature_rarity_by_key()
+        existing_creatures = by_kind.get("creatures", set())
+        for key in sorted(existing_creatures):
+            display = key.replace("_", " ").replace("-", " ").title()
+            rarity = rarity_by_key.get(safe_key(key), "Common")
+            make_creature(display, rarity, asset_key=key)
+
+
+def _write_contact_sheets() -> None:
+    sheets = []
+    for kind_dir in sorted(path for path in ASSET_DIR.iterdir() if path.is_dir()):
+        pngs = sorted(kind_dir.glob("*.png"))[:48]
+        if not pngs:
+            continue
+        thumbs = []
+        for path in pngs:
+            with Image.open(path) as img:
+                thumbs.append(img.convert("RGBA").resize((64, 64), Image.Resampling.NEAREST))
+        cols = 8
+        rows = math.ceil(len(thumbs) / cols)
+        sheet = Image.new("RGBA", (cols * 64, rows * 80), (12, 10, 18, 255))
+        draw = ImageDraw.Draw(sheet)
+        for idx, thumb in enumerate(thumbs):
+            x = (idx % cols) * 64
+            y = (idx // cols) * 80
+            sheet.alpha_composite(thumb, (x, y))
+            draw.text((x + 3, y + 65), path.stem[:9], fill=(210, 205, 220, 255))
+        sheets.append(sheet)
+    if not sheets:
+        return
+    width = max(sheet.width for sheet in sheets)
+    height = sum(sheet.height for sheet in sheets)
+    combined = Image.new("RGBA", (width, height), (12, 10, 18, 255))
+    y = 0
+    for sheet in sheets:
+        combined.alpha_composite(sheet, (0, y))
+        y += sheet.height
+    combined.save(ASSET_DIR / "icon_preview_sheet.png", "PNG")
+    combined.resize((max(1, width // 2), max(1, height // 2)), Image.Resampling.NEAREST).save(ASSET_DIR / "icon_preview_ordered.png", "PNG")
+    combined.crop((0, 0, min(width, 512), min(height, 512))).resize((64, 64), Image.Resampling.NEAREST).save(ASSET_DIR / "icon_preview_64.png", "PNG")
+
+
+def main(
+    *,
+    include_creatures: bool = True,
+    manifest_path: Path | None = None,
+    backup: bool = False,
+) -> None:
+    existing_paths = _asset_pngs()
+    if manifest_path is not None:
+        _write_manifest(existing_paths, manifest_path)
+        print(f"manifest/{manifest_path.relative_to(ROOT_DIR).as_posix() if manifest_path.is_relative_to(ROOT_DIR) else manifest_path}")
+    if backup:
+        backup_root = _backup_assets(existing_paths)
+        print(f"backup/{backup_root.relative_to(ROOT_DIR).as_posix()}")
+
+    for key in WEAPON_TYPES:
         make_weapon(key)
 
     for rank, sigil in enumerate(SIGILS, start=1):
@@ -612,6 +1158,17 @@ def main(*, include_creatures: bool = True) -> None:
     make_crate("treasure", (152, 95, 34, 255), CYAN)
 
     passive_colors = {
+        "strength": (214, 86, 80, 255),
+        "magic": (130, 90, 235, 255),
+        "hp": (80, 210, 125, 255),
+        "wp": (70, 190, 230, 255),
+        "pr": (95, 135, 210, 255),
+        "mr": (130, 105, 220, 255),
+        "thorns": (90, 175, 95, 255),
+        "safeguard": (60, 145, 210, 255),
+        "regeneration": (70, 205, 120, 255),
+        "adaptation": (180, 160, 90, 255),
+        "sacrifice": (230, 70, 105, 255),
         "bleed": (194, 24, 91, 255),
         "burn": (245, 110, 24, 255),
         "poison": (108, 190, 72, 255),
@@ -619,9 +1176,17 @@ def main(*, include_creatures: bool = True) -> None:
         "shield": (45, 140, 220, 255),
         "heal": (70, 190, 100, 255),
         "crit": (178, 82, 230, 255),
+        "life_steal": (180, 40, 60, 255),
+        "mana_tap": (60, 160, 220, 255),
+        "soul_gain": (140, 100, 200, 255),
+        "gem_finder": (80, 220, 160, 255),
+        "xp_boost": (220, 180, 60, 255),
+        "rare_finder": (200, 160, 80, 255),
+        "energize": (60, 200, 240, 255),
+        "fear": (100, 80, 120, 255),
     }
-    for key, color in passive_colors.items():
-        make_passive(key, color)
+    for key in WEAPON_PASSIVES:
+        make_passive(key, passive_colors.get(key, _hash_color(key, 7)))
 
     status_colors = {
         "bleed": (194, 24, 91, 255),
@@ -648,9 +1213,14 @@ def main(*, include_creatures: bool = True) -> None:
             seen_creatures.add(key)
             make_creature(name, rarity)
 
+    _generate_existing_asset_keys(existing_paths, include_creatures=include_creatures)
+    _write_contact_sheets()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Abyssia pixel asset icons.")
     parser.add_argument("--skip-creatures", action="store_true", help="Regenerate only non-creature icon assets.")
+    parser.add_argument("--manifest", type=Path, default=ROOT_DIR / "tmp" / "data_asset_png_manifest.txt", help="Write a list of existing data asset PNG paths before regenerating.")
+    parser.add_argument("--backup", action="store_true", help="Back up current PNGs before overwriting them.")
     args = parser.parse_args()
-    main(include_creatures=not args.skip_creatures)
+    main(include_creatures=not args.skip_creatures, manifest_path=args.manifest, backup=args.backup)

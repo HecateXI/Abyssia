@@ -4,9 +4,9 @@
     "height": 1080
   },
   "background": {
-    "darken_factor": 0.60,
-    "blur_radius": 8,
-    "vignette_strength": 0.70,
+    "darken_factor": 0.38,
+    "blur_radius": 3,
+    "vignette_strength": 0.52,
     "vignette_radius": 1.2
   },
   "top_section": {

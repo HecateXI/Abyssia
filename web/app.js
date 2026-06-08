@@ -133,7 +133,7 @@ function assetThumb(item) {
   if (preview) {
     return `<img class="thumb" src="${escapeAttr(preview)}" alt="">`;
   }
-  return `<div class="thumb empty">PNG</div>`;
+  return `<div class="thumb empty">IMG</div>`;
 }
 
 function itemLabel(kind, item) {
@@ -363,6 +363,10 @@ function editorHtml(kind, item) {
       <label>Defense<input data-field="defense" type="number" value="${escapeAttr(inputValue(item, "defense"))}"></label>
       <label>HP<input data-field="hp" type="number" value="${escapeAttr(inputValue(item, "hp"))}"></label>
       <label>Speed<input data-field="speed" type="number" value="${escapeAttr(inputValue(item, "speed"))}"></label>
+      <label>MANA<input data-field="wp_stat" type="number" value="${escapeAttr(inputValue(item, "wp_stat", 1))}"></label>
+      <label>MAG<input data-field="mag_stat" type="number" value="${escapeAttr(inputValue(item, "mag_stat", 1))}"></label>
+      <label>RES<input data-field="mr_stat" type="number" value="${escapeAttr(inputValue(item, "mr_stat", 1))}"></label>
+      <label>Crit<input data-field="crit" type="number" value="${escapeAttr(inputValue(item, "crit", 5))}"></label>
       <label class="full">Ability<input data-field="ability" value="${escapeAttr(inputValue(item, "ability"))}"></label>
     </div>`;
   }
@@ -575,16 +579,16 @@ function assetEditorHtml(kind, item) {
   return `
     <h2>${escapeHtml(item.name || item.key)}</h2>
     <p class="muted">Key: ${escapeHtml(item.key)}</p>
-    ${preview ? `<img class="asset-preview" src="${escapeAttr(preview)}" alt="">` : `<div class="asset-preview thumb empty" style="height:220px">No PNG</div>`}
+    ${preview ? `<img class="asset-preview" src="${escapeAttr(preview)}" alt="">` : `<div class="asset-preview thumb empty" style="height:220px">No Image</div>`}
     <div class="form-grid" style="margin-top:14px">
-      <label class="full">PNG upload
-        <input id="assetFile" type="file" accept="image/png">
+      <label class="full">Image upload
+        <input id="assetFile" type="file" accept="image/png,image/jpeg">
       </label>
       <label class="full">External URL
         <input id="assetUrl" placeholder="https://cdn.example/item.png">
       </label>
       <div class="button-row full">
-        <button id="uploadAsset" type="button"><span class="btn-icon">U</span> Upload PNG</button>
+        <button id="uploadAsset" type="button"><span class="btn-icon">U</span> Upload Image</button>
         <button id="saveAssetUrl" type="button"><span class="btn-icon">L</span> Save URL</button>
         <button id="clearAsset" class="ghost" type="button"><span class="btn-icon">C</span> Clear</button>
       </div>
@@ -601,12 +605,15 @@ function bindAssetEditor(kind, item) {
 async function uploadAsset(kind, key) {
   const file = $("assetFile").files[0];
   if (!file) {
-    showNotice("Choose a PNG file.");
+    showNotice("Choose an image file.");
     return;
   }
-  const looksPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
-  if (!looksPng) {
-    showNotice("Only PNG files are accepted.");
+  const looksImage = file.type === "image/png" || file.type === "image/jpeg"
+    || file.name.toLowerCase().endsWith(".png")
+    || file.name.toLowerCase().endsWith(".jpg")
+    || file.name.toLowerCase().endsWith(".jpeg");
+  if (!looksImage) {
+    showNotice("Only PNG and JPEG files are accepted.");
     return;
   }
   try {
@@ -621,7 +628,7 @@ async function uploadAsset(kind, key) {
       body: JSON.stringify({ kind, key, data_url: dataUrl }),
     });
     const sync = result.emoji_sync || {};
-    showNotice(sync.message ? `PNG uploaded. ${sync.message}` : "PNG uploaded.");
+    showNotice(sync.message ? `Image uploaded. ${sync.message}` : "Image uploaded.");
     await loadCatalog();
   } catch (err) {
     showNotice("Upload failed: " + err.message, true);
@@ -948,8 +955,28 @@ function renderRuntime() {
         <code class="code-path">.\\.venv\\Scripts\\python.exe bot.py</code>
         <code class="code-path">.\\.venv\\Scripts\\python.exe web_admin.py</code>
       </section>
+      <section class="panel span-12">
+        <h2>Application Emoji Bank</h2>
+        <div class="form-grid">
+          <label>Scope
+            <select id="emojiSyncScope">
+              <option value="uploaded" selected>Uploaded Images</option>
+              <option value="all">All local image assets</option>
+            </select>
+          </label>
+          <label class="inline-check">
+            <input id="emojiReplaceExisting" type="checkbox" checked>
+            Replace existing application emojis
+          </label>
+          <div class="button-row full">
+            <button id="syncApplicationEmojis" type="button"><span class="btn-icon">S</span> Sync Emojis</button>
+          </div>
+          <code id="emojiSyncResult" class="code-path full"></code>
+        </div>
+      </section>
     </div>
   `;
+  $("syncApplicationEmojis").addEventListener("click", syncApplicationEmojis);
 }
 
 async function savePublicUrl() {
@@ -962,6 +989,33 @@ async function savePublicUrl() {
   });
   showNotice("Public asset base URL saved.");
   await loadCatalog();
+}
+
+async function syncApplicationEmojis() {
+  const resultBox = $("emojiSyncResult");
+  resultBox.textContent = "Syncing...";
+  try {
+    const result = await api("/api/emojis/sync", {
+      method: "POST",
+      body: JSON.stringify({
+        scope: $("emojiSyncScope").value,
+        replace_existing: $("emojiReplaceExisting").checked,
+      }),
+    });
+    const failed = (result.failed || []).slice(0, 8);
+    const skipped = (result.skipped || []).slice(0, 8);
+    const lines = [
+      result.message || "Emoji sync complete.",
+      `Total ${result.total || 0} | Uploaded ${result.uploaded || 0} | Created ${result.created || 0} | Replaced ${result.replaced || 0} | Existing ${result.existing || 0}`,
+    ];
+    if (failed.length) lines.push(`Failed: ${failed.join("; ")}`);
+    if (skipped.length) lines.push(`Skipped: ${skipped.join("; ")}`);
+    resultBox.textContent = lines.join("\n");
+    showNotice(result.message || "Emoji sync complete.", (result.failed || []).length > 0);
+  } catch (error) {
+    resultBox.textContent = error.message;
+    showNotice("Emoji sync failed: " + error.message, true);
+  }
 }
 
 async function loadCatalog() {

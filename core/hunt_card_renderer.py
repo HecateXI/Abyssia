@@ -24,7 +24,8 @@ _RARITY_COLORS: dict[str, tuple[int, int, int]] = {
     "Common": (139, 148, 158), "Uncommon": (74, 222, 128),
     "Rare": (56, 189, 248), "Epic": (167, 139, 250),
     "Legendary": (250, 204, 21), "Mythic": (251, 113, 133),
-    "Ancient": (249, 115, 22), "Divine": (254, 243, 199),
+    "Ancient": (249, 115, 22), "Patreon": (255, 66, 77),
+    "Divine": (254, 243, 199),
     "Eldritch": (34, 211, 238), "Abyssal": (130, 90, 200),
     "Prismatic": (16, 185, 129), "Ethereal": (96, 165, 250),
 }
@@ -33,7 +34,8 @@ _RARITY_GLOW_COLORS: dict[str, tuple[int, int, int]] = {
     "Common": (60, 65, 75), "Uncommon": (30, 140, 70),
     "Rare": (20, 100, 170), "Epic": (100, 60, 180),
     "Legendary": (180, 140, 10), "Mythic": (180, 50, 70),
-    "Ancient": (180, 80, 10), "Divine": (200, 180, 120),
+    "Ancient": (180, 80, 10), "Patreon": (170, 30, 70),
+    "Divine": (200, 180, 120),
     "Eldritch": (10, 140, 160), "Abyssal": (80, 40, 140),
 }
 
@@ -148,44 +150,44 @@ def _shadow_text(draw: ImageDraw.ImageDraw, x: int, y: int, text: str, font: Ima
 # ── Rarity ordering for priority comparisons ──────────────────
 _RARITY_ORDER: dict[str, int] = {
     "Common": 0, "Uncommon": 1, "Rare": 2, "Epic": 3, "Legendary": 4,
-    "Mythic": 5, "Ancient": 6, "Divine": 7, "Eldritch": 8, "Abyssal": 9,
+    "Mythic": 5, "Ancient": 6, "Patreon": 6, "Divine": 7, "Eldritch": 8, "Abyssal": 9,
     "Prismatic": 10, "Ethereal": 11, "Void Lord": 12, "Hidden": 13,
 }
 
 # ── Layout configs per multi-hunt tier ────────────────────────
 _LOOT_GRID_LAYOUT = {
     "card_width": 1600,
-    "header_height": 130,
-    "title_font": 34, "subtitle_font": 20, "count_font": 28,
-    "cell_normal": {"width": 260, "height": 320, "sprite_size": 100, "name_font": 18, "val_font": 16, "rarity_font": 13},
-    "cell_hero": {"width": 340, "height": 400, "sprite_size": 150, "name_font": 24, "val_font": 20, "rarity_font": 16},
-    "grid_cols": 3, "grid_pad_x": 60, "grid_pad_y": 24, "gap_x": 36, "gap_y": 28,
-    "summary_pad": 20, "summary_font": 22, "summary_label_font": 16,
+    "header_height": 140,
+    "title_font": 48, "subtitle_font": 24, "count_font": 36,
+    "cell_normal": {"width": 280, "height": 320, "sprite_size": 120, "name_font": 24, "val_font": 20, "rarity_font": 18},
+    "cell_hero": {"width": 340, "height": 380, "sprite_size": 150, "name_font": 28, "val_font": 24, "rarity_font": 20},
+    "grid_cols": 3, "grid_pad_x": 60, "grid_pad_y": 30, "gap_x": 40, "gap_y": 35,
+    "summary_pad": 20, "summary_font": 26, "summary_label_font": 20,
     "footer_height": 60,
 }
 
 _COMPACT_GRID_LAYOUT = {
     "card_width": 1600,
-    "header_height": 110,
-    "title_font": 30, "subtitle_font": 18, "count_font": 24,
-    "cell_normal": {"width": 210, "height": 250, "sprite_size": 75, "name_font": 15, "val_font": 14, "rarity_font": 12},
-    "cell_hero": {"width": 270, "height": 320, "sprite_size": 110, "name_font": 20, "val_font": 17, "rarity_font": 14},
-    "grid_cols": 5, "grid_pad_x": 50, "grid_pad_y": 18, "gap_x": 24, "gap_y": 20,
-    "summary_pad": 16, "summary_font": 20, "summary_label_font": 14,
+    "header_height": 130,
+    "title_font": 44, "subtitle_font": 22, "count_font": 34,
+    "cell_normal": {"width": 240, "height": 280, "sprite_size": 100, "name_font": 22, "val_font": 18, "rarity_font": 16},
+    "cell_hero": {"width": 300, "height": 340, "sprite_size": 130, "name_font": 26, "val_font": 22, "rarity_font": 18},
+    "grid_cols": 5, "grid_pad_x": 50, "grid_pad_y": 25, "gap_x": 30, "gap_y": 28,
+    "summary_pad": 18, "summary_font": 24, "summary_label_font": 18,
     "footer_height": 50,
 }
 
 _MASS_HUNT_LAYOUT = {
     "card_width": 1600,
-    "header_height": 100,
-    "title_font": 28, "subtitle_font": 16, "count_font": 22,
-    "row_height": 56, "icon_size": 44, "row_pad_x": 60,
-    "name_font": 18, "val_font": 16, "rarity_font": 14,
-    "hero_row_height": 72, "hero_icon_size": 60,
-    "hero_name_font": 22, "hero_val_font": 18, "hero_rarity_font": 16,
-    "summary_pad": 16, "summary_font": 20, "summary_label_font": 14,
+    "header_height": 130,
+    "title_font": 44, "subtitle_font": 22, "count_font": 34,
+    "row_height": 65, "icon_size": 48, "row_pad_x": 60,
+    "name_font": 26, "val_font": 22, "rarity_font": 18,
+    "hero_row_height": 80, "hero_icon_size": 60,
+    "hero_name_font": 30, "hero_val_font": 26, "hero_rarity_font": 22,
+    "summary_pad": 18, "summary_font": 24, "summary_label_font": 18,
     "footer_height": 50,
-    "max_height": 1200,
+    "max_height": 1400,
 }
 
 
@@ -200,17 +202,18 @@ class HuntCardRenderer:
         if p.exists():
             return json.loads(p.read_text("utf-8"))
         return {
-            "card": {"width": 1920, "height": 1080},
-            "background": {"darken_factor": 0.55, "blur_radius": 8, "vignette_strength": 0.75, "vignette_radius": 1.2},
-            "top_section": {"height": 90, "title_font_size": 32, "title_color": [255, 252, 245], "zone_icon_size": [40, 40], "separator_color": [90, 70, 110]},
-            "monster_portrait": {"x_center": 960, "y_center": 460, "size": 420, "border_width": 4, "glow_spread": 60, "shadow_offset": 8, "depth_layers": 3},
-            "monster_info": {"x": 960, "y": 680, "name_font_size": 36, "label_font_size": 16, "value_font_size": 28, "line_spacing": 36},
-            "collection_status": {"x": 960, "y": 860, "font_size": 24, "glow_radius": 30},
-            "rewards_section": {"x": 60, "y": 200, "width": 380, "header_font_size": 20, "item_font_size": 16, "icon_size": [24, 24], "line_spacing": 30, "panel_padding": 16, "panel_radius": 10},
-            "special_drop": {"x": 60, "y": 550, "width": 380, "height": 160, "header_font_size": 18, "item_font_size": 24, "panel_radius": 12, "border_width": 3, "glow_color": [250, 204, 21]},
-            "player_section": {"x": 60, "y": 920, "name_font_size": 24, "rank_font_size": 16, "streak_font_size": 16, "line_spacing": 28},
-            "drop_info": {"x": 1480, "y": 920, "width": 380, "label_font_size": 14, "value_font_size": 18, "line_spacing": 24, "panel_padding": 14, "panel_radius": 8},
-            "ultra_rare": {"vignette_strength": 0.9, "vignette_radius": 1.5, "distortion_amount": 4, "energy_particle_count": 60, "banner_y": 140, "banner_height": 70, "banner_font_size": 28, "encounter_font_size": 20, "encounter_y": 210},
+            "card": {"width": 1600, "height": 1000},
+            "background": {"darken_factor": 0.45, "blur_radius": 8, "vignette_strength": 0.65, "vignette_radius": 1.2},
+            "top_section": {"height": 100, "y_offset": 0, "title_font_size": 42, "title_color": [255, 252, 245], "zone_icon_size": [50, 50], "separator_color": [90, 70, 110]},
+            "monster_portrait": {"x_center": 800, "y_center": 420, "size": 480, "border_width": 5, "glow_spread": 70, "shadow_offset": 8, "depth_layers": 3, "radial_glow_radius": 240, "radial_glow_layers": 2, "nearest_scale": 4},
+            "monster_info": {"x": 800, "y": 700, "name_font_size": 46, "label_font_size": 20, "value_font_size": 34, "line_spacing": 42},
+            "rarity_section": {"y_offset": 130, "font_size": 32, "banner_height": 45},
+            "stat_panel": {"x_center": 800, "y": 780, "spacing": 200, "label_font_size": 22, "value_font_size": 30},
+            "rewards_section": {"x": 60, "y": 220, "width": 420, "header_font_size": 24, "item_font_size": 20, "souls_font_size": 26, "icon_size": [28, 28], "souls_icon_size": [38, 38], "line_spacing": 36, "panel_padding": 20, "panel_radius": 12},
+            "special_drop": {"x": 60, "y": 580, "width": 420, "height": 180, "header_font_size": 22, "item_font_size": 28, "panel_radius": 14, "border_width": 3, "glow_color": [250, 204, 21]},
+            "player_section": {"x": 60, "y": 920, "name_font_size": 28, "rank_font_size": 20, "streak_font_size": 20, "line_spacing": 32},
+            "drop_info": {"x": 1120, "y": 820, "width": 420, "label_font_size": 18, "value_font_size": 22, "line_spacing": 30, "panel_padding": 18, "panel_radius": 10},
+            "ultra_rare": {"vignette_strength": 0.85, "vignette_radius": 1.5, "distortion_amount": 4, "energy_particle_count": 60, "banner_y": 150, "banner_height": 80, "banner_font_size": 34, "encounter_font_size": 24, "encounter_y": 230},
         }
 
     # ── Public API ─────────────────────────────────────────────
@@ -233,10 +236,10 @@ class HuntCardRenderer:
         
         self._draw_top_section(draw, str(data.get("zone_name", "Unknown Zone")), str(data.get("zone_key", "forgotten_woods")), img, "Common")
         
-        font_main = _font(48, bold=True)
+        font_main = _font(56, bold=True)
         text = "Nothing was found in the shadows..."
         tw = _tw(draw, text, font_main)
-        draw.text((W//2 - tw//2, H//2 - 24), text, font=font_main, fill=_TEXT_MUTED)
+        draw.text((W//2 - tw//2, H//2 - 28), text, font=font_main, fill=_TEXT_MUTED)
         
         self._draw_player_section(draw, str(data.get("hunter_name", "")), str(data.get("hunter_rank", "Unknown")))
         
@@ -273,7 +276,7 @@ class HuntCardRenderer:
         darken = Image.new("RGB", (W, H), (0, 0, 0))
         factor = bg_cfg["darken_factor"]
         if ultra:
-            factor = min(1.0, factor + 0.25)
+            factor = min(1.0, factor + 0.20)
         bg = Image.blend(bg, darken, factor)
         blur_r = bg_cfg["blur_radius"]
         if ultra:
@@ -281,8 +284,8 @@ class HuntCardRenderer:
         if blur_r > 0:
             bg = bg.filter(ImageFilter.GaussianBlur(radius=blur_r))
         vignette = self._make_vignette(W, H,
-            strength=bg_cfg["vignette_strength"] * (1.3 if ultra else 1.0),
-            radius=bg_cfg["vignette_radius"] * (1.4 if ultra else 1.0),
+            strength=bg_cfg["vignette_strength"] * (1.2 if ultra else 1.0),
+            radius=bg_cfg["vignette_radius"] * (1.3 if ultra else 1.0),
         )
         bg.paste(vignette, (0, 0), vignette)
         frame = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -336,15 +339,15 @@ class HuntCardRenderer:
     def _draw_top_section(self, draw: ImageDraw.ImageDraw, zone_name: str, zone_key: str, img: Image.Image, rarity: str) -> None:
         cfg = self.layout["top_section"]
         W = self.layout["card"]["width"]
-        y = cfg["y_offset"]
+        y = cfg.get("y_offset", 0)
         h = cfg["height"]
         rc = _col(rarity)
         bg_rect = Image.new("RGBA", (W, h), (0, 0, 0, 0))
         brd = ImageDraw.Draw(bg_rect)
         for i in range(h):
             t = i / max(1, h - 1)
-            alpha = int(max(0, 50 - i * 2) * (1 - t * 0.5))
-            color = _lerp_color((0, 0, 0), rc, 0.06)
+            alpha = int(max(0, 60 - i * 2) * (1 - t * 0.5))
+            color = _lerp_color((0, 0, 0), rc, 0.08)
             brd.line((0, i, W, i), fill=(*color, alpha))
         img.paste(bg_rect, (0, y), bg_rect)
 
@@ -353,12 +356,12 @@ class HuntCardRenderer:
     def _draw_encounter_text(self, draw: ImageDraw.ImageDraw, rarity: str) -> None:
         cfg = self.layout.get("encounter_text", {})
         W = self.layout["card"]["width"]
-        y = cfg.get("y_offset", 72)
-        fsize = cfg.get("font_size", 18)
-        color = tuple(cfg.get("color", (200, 195, 185)))
+        y = cfg.get("y_offset", 80)
+        fsize = cfg.get("font_size", 22)
+        color = tuple(cfg.get("color", (210, 205, 195)))
         if rarity in _ULTRA_RARITIES:
             flavor = "A legendary presence emerges..."
-        elif rarity in ("Legendary", "Mythic", "Ancient"):
+        elif rarity in ("Legendary", "Mythic", "Ancient", "Patreon"):
             flavor = "A powerful creature reveals itself..."
         elif rarity in ("Rare", "Epic"):
             flavor = "An unusual presence stirs..."
@@ -369,7 +372,7 @@ class HuntCardRenderer:
         font = _font(fsize, bold=False, fantasy=False)
         tw = _tw(draw, flavor, font)
         x = (W - tw) // 2
-        _shadow_text(draw, x, y, flavor, font, color)
+        _shadow_text(draw, x, y, flavor, font, color, offset=2)
 
     # ── Rarity Display (above monster, always visible) ─────────
 
@@ -382,19 +385,19 @@ class HuntCardRenderer:
         font = _font(cfg["font_size"], bold=True, fantasy=False)
         tw = _tw(draw, text, font)
         x = (W - tw) // 2
-        sym_size = 12
-        sym_gap = 16
-        sym_y = y + 14
+        sym_size = 16
+        sym_gap = 20
+        sym_y = y + 18
         left_sym_x = x - sym_gap - sym_size
         right_sym_x = x + tw + sym_gap
         for cx in (left_sym_x, right_sym_x):
             draw.ellipse((cx, sym_y, cx + sym_size, sym_y + sym_size), fill=rc)
-        _shadow_text(draw, x, y + 8, text, font, _TEXT_BRIGHT, shadow_color=(0, 0, 0), offset=3)
-        bar_color = _lerp_color(rc, (255, 255, 255), 0.3)
+        _shadow_text(draw, x, y + 10, text, font, _TEXT_BRIGHT, shadow_color=(0, 0, 0), offset=3)
+        bar_color = _lerp_color(rc, (255, 255, 255), 0.35)
         bar_y = y + cfg["banner_height"]
-        for i in range(3):
-            draw.rectangle((x - 20 + i, bar_y + i, x + tw + 20 - i, bar_y + i + 1),
-                          fill=(*bar_color, max(1, 80 - i * 25)))
+        for i in range(4):
+            draw.rectangle((x - 24 + i, bar_y + i, x + tw + 24 - i, bar_y + i + 1),
+                          fill=(*bar_color, max(1, 90 - i * 25)))
 
     # ── Monster Portrait ───────────────────────────────────────
 
@@ -470,20 +473,20 @@ class HuntCardRenderer:
         font_name = _font(cfg["name_font_size"], bold=True)
         name_text = name.upper()
         nw = _tw(draw, name_text, font_name)
-        for dx, dy in [(3, 3), (2, 2), (1, 1)]:
-            draw.text((x - nw // 2 + dx, y + dy), name_text, font=font_name, fill=(0, 0, 0, 160 - dx * 40))
+        for dx, dy in [(4, 4), (3, 3), (2, 2), (1, 1)]:
+            draw.text((x - nw // 2 + dx, y + dy), name_text, font=font_name, fill=(0, 0, 0, 180 - dx * 40))
         draw.text((x - nw // 2, y), name_text, font=font_name, fill=_TEXT_BRIGHT)
 
     # ── Stat Panel (Level / Trait / Value) ─────────────────────
 
     def _draw_stat_panel(self, draw: ImageDraw.ImageDraw, level: int, trait: str, value: int, rarity: str) -> None:
         cfg = self.layout.get("stat_panel", {})
-        xc = cfg.get("x_center", 960)
-        y = cfg.get("y", 740)
-        spacing = cfg.get("spacing", 160)
+        xc = cfg.get("x_center", 800)
+        y = cfg.get("y", 780)
+        spacing = cfg.get("spacing", 200)
         rc = _col(rarity)
-        font_label = _font(cfg.get("label_font_size", 20), bold=True)
-        font_value = _font(cfg.get("value_font_size", 26), bold=True)
+        font_label = _font(cfg.get("label_font_size", 22), bold=True)
+        font_value = _font(cfg.get("value_font_size", 30), bold=True)
         labels = [("LEVEL", str(level), _TEXT_BRIGHT),
                   ("TRAIT", trait if trait else "--", rc if trait else _TEXT_MUTED),
                   ("VALUE", f"{value:,}", _GOLD)]
@@ -492,57 +495,12 @@ class HuntCardRenderer:
             lw = _tw(draw, label, font_label)
             draw.text((lx - lw // 2, y), label, font=font_label, fill=_TEXT_MUTED)
             vw = _tw(draw, val, font_value)
-            _shadow_text(draw, lx - vw // 2, y + 26, val, font_value, vc)
+            _shadow_text(draw, lx - vw // 2, y + 30, val, font_value, vc, offset=2)
 
     # ── Collection Status (below name + stats) ─────────────────
 
     def _draw_collection_status(self, draw: ImageDraw.ImageDraw, img: Image.Image, status: str, rarity: str) -> None:
-        cfg = self.layout["collection_status"]
-        x = cfg["x"]
-        y = cfg["y"]
-        rc = _col(rarity)
-        if status == CollectionStatus.NEW.value:
-            text = "NEW DISCOVERY"
-            font = _font(cfg["font_size"], bold=True, fantasy=False)
-            tw = _tw(draw, text, font)
-            gx = x - tw // 2 - 20
-            gy = y - 8
-            glow_img = Image.new("RGBA", (tw + 60, 60), (0, 0, 0, 0))
-            gd = ImageDraw.Draw(glow_img)
-            for r in range(20, 0, -3):
-                a = max(1, 25 - r)
-                gd.rounded_rectangle((30 - r, 8 - r, tw + 30 + r, 52 + r), radius=r + 5, fill=(*rc, a))
-            img.paste(glow_img, (gx - 10, gy - 8), glow_img)
-            draw.rounded_rectangle((gx - 5, gy, gx + tw + 50, gy + 44), radius=8,
-                                  fill=(*rc, 30), outline=(*rc, 200), width=2)
-            _shadow_text(draw, x - tw // 2, y + 6, text, font, _TEXT_BRIGHT, offset=2)
-            for _ in range(8):
-                px = x + random.randint(-80, 80)
-                py = y + random.randint(-15, 40)
-                s = random.randint(2, 4)
-                a = random.randint(60, 160)
-                p = Image.new("RGBA", (s * 2, s * 2), (0, 0, 0, 0))
-                pd = ImageDraw.Draw(p)
-                pd.ellipse((0, 0, s * 2, s * 2), fill=(*rc, a))
-                img.paste(p, (px, py), p)
-        elif status == CollectionStatus.DUPLICATE.value:
-            text = "DUPLICATE"
-            font = _font(cfg["font_size"], bold=True)
-            tw = _tw(draw, text, font)
-            pad_h = 6
-            pad_w = 16
-            bw = tw + pad_w * 2 + 4
-            bh = cfg["font_size"] + pad_h * 2 + 4
-            badge = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
-            bd = ImageDraw.Draw(badge)
-            bd.rounded_rectangle((0, 0, bw - 1, bh - 1), radius=6, fill=(*_PANEL2, 220), outline=(80, 75, 70), width=1)
-            img.paste(badge, (x - bw // 2, y), badge)
-            draw.text((x - tw // 2, y + pad_h), text, font=font, fill=_TEXT_MUTED)
-        else:
-            text = "COLLECTION COMPLETE"
-            font = _font(cfg["font_size"], bold=True)
-            tw = _tw(draw, text, font)
-            _shadow_text(draw, x - tw // 2, y + 6, text, font, _GOLD)
+        pass
 
     # ── Rewards Section ────────────────────────────────────────
 
@@ -555,18 +513,18 @@ class HuntCardRenderer:
         if not rewards:
             return
         item_h = cfg["line_spacing"]
-        header_h = 36
+        header_h = 42
         total_h = header_h + len(rewards) * item_h + pad * 2
         panel = Image.new("RGBA", (w, total_h), (0, 0, 0, 0))
         pd = ImageDraw.Draw(panel)
-        pd.rounded_rectangle((0, 0, w - 1, total_h - 1), radius=r, fill=(*_PANEL, 200), outline=_BORDER)
+        pd.rounded_rectangle((0, 0, w - 1, total_h - 1), radius=r, fill=(*_PANEL, 220), outline=_BORDER, width=2)
         img.paste(panel, (x, y), panel)
         font_header = _font(cfg["header_font_size"], bold=True)
         draw.text((x + pad, y + pad), "REWARDS", font=font_header, fill=_GOLD)
         cy = y + pad + header_h
         icon_size = tuple(cfg["icon_size"])
-        souls_icon_size = tuple(cfg.get("souls_icon_size", (34, 34)))
-        souls_fsize = cfg.get("souls_font_size", 22)
+        souls_icon_size = tuple(cfg.get("souls_icon_size", (38, 38)))
+        souls_fsize = cfg.get("souls_font_size", 26)
         for reward in rewards:
             label = str(reward.get("label", ""))
             amount = reward.get("amount", 0)
@@ -581,7 +539,7 @@ class HuntCardRenderer:
                 icon = self._load_asset(icon_kind, icon_key, cur_icon_size)
                 if icon:
                     img.paste(icon, (x + pad, cy + 2), icon)
-                    draw.text((x + pad + cur_icon_size[0] + 8, cy + 2), line, font=item_font, fill=color)
+                    draw.text((x + pad + cur_icon_size[0] + 10, cy + 2), line, font=item_font, fill=color)
                 else:
                     draw.text((x + pad, cy + 2), line, font=item_font, fill=color)
             else:
@@ -603,7 +561,7 @@ class HuntCardRenderer:
         panel = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         pd = ImageDraw.Draw(panel)
         pd.rounded_rectangle((0, 0, w - 1, h - 1), radius=cfg["panel_radius"],
-                            fill=(*_PANEL2, 230), outline=rc, width=cfg["border_width"])
+                            fill=(*_PANEL2, 240), outline=rc, width=cfg["border_width"])
         img.paste(panel, (x, y), panel)
         font_h = _font(cfg["header_font_size"], bold=True)
         font_n = _font(cfg["item_font_size"], bold=True, fantasy=False)
@@ -614,9 +572,9 @@ class HuntCardRenderer:
         else:
             header = "SPECIAL DROP"
         hw = _tw(draw, header, font_h)
-        draw.text((x + (w - hw) // 2, y + 14), header, font=font_h, fill=rc)
+        draw.text((x + (w - hw) // 2, y + 18), header, font=font_h, fill=rc)
         nw = _tw(draw, drop_name, font_n)
-        draw.text((x + (w - nw) // 2, y + 60), drop_name, font=font_n, fill=_TEXT_BRIGHT)
+        draw.text((x + (w - nw) // 2, y + 68), drop_name, font=font_n, fill=_TEXT_BRIGHT)
 
     # ── Player Section ─────────────────────────────────────────
 
@@ -625,8 +583,8 @@ class HuntCardRenderer:
         x, y = cfg["x"], cfg["y"]
         font_name = _font(cfg["name_font_size"], bold=True)
         font_other = _font(cfg["rank_font_size"])
-        _shadow_text(draw, x, y, name, font_name, _TEXT_BRIGHT)
-        _shadow_text(draw, x, y + cfg["line_spacing"], rank, font_other, _GOLD)
+        _shadow_text(draw, x, y, name, font_name, _TEXT_BRIGHT, offset=2)
+        _shadow_text(draw, x, y + cfg["line_spacing"], rank, font_other, _GOLD, offset=1)
 
     # ── Streak Badge ───────────────────────────────────────────
 
@@ -634,8 +592,8 @@ class HuntCardRenderer:
         cfg = self.layout.get("streak_badge", {})
         if streak <= 0:
             return
-        x, y = cfg.get("x", 430), cfg.get("y", 930)
-        fsize = cfg.get("font_size", 20)
+        x, y = cfg.get("x", 480), cfg.get("y", 940)
+        fsize = cfg.get("font_size", 24)
         if streak >= 50:
             label = "LEGENDARY"
             fg = (255, 200, 50); bg = (80, 50, 10); border = (255, 200, 50)
@@ -648,17 +606,17 @@ class HuntCardRenderer:
         text = f"{streak}x STREAK" if not label else f"{label} {streak}x"
         font = _font(fsize, bold=True)
         tw = _tw(draw, text, font)
-        pad = 10
-        bw = tw + pad * 2 + 4
-        bh = fsize + pad + 6
-        rr = cfg.get("panel_radius", 6)
-        shadow = Image.new("RGBA", (bw + 4, bh + 4), (0, 0, 0, 0))
+        pad = 12
+        bw = tw + pad * 2 + 6
+        bh = fsize + pad + 8
+        rr = cfg.get("panel_radius", 8)
+        shadow = Image.new("RGBA", (bw + 6, bh + 6), (0, 0, 0, 0))
         sd = ImageDraw.Draw(shadow)
-        sd.rounded_rectangle((2, 2, bw + 2, bh + 2), radius=rr, fill=(0, 0, 0, 80))
-        img.paste(shadow, (x - 2, y - 2), shadow)
+        sd.rounded_rectangle((3, 3, bw + 3, bh + 3), radius=rr, fill=(0, 0, 0, 90))
+        img.paste(shadow, (x - 3, y - 3), shadow)
         badge = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
         bd = ImageDraw.Draw(badge)
-        bd.rounded_rectangle((0, 0, bw - 1, bh - 1), radius=rr, fill=(*bg, 210), outline=border, width=1)
+        bd.rounded_rectangle((0, 0, bw - 1, bh - 1), radius=rr, fill=(*bg, 220), outline=border, width=2)
         img.paste(badge, (x, y), badge)
         draw.text((x + pad, y + pad // 2), text, font=font, fill=fg)
 
@@ -677,10 +635,10 @@ class HuntCardRenderer:
             ("Rarity", rarity, rc),
             ("Zone", zone_name, _TEXT_MUTED),
         ]
-        total_h = pad * 2 + len(items) * cfg["line_spacing"] + 10
+        total_h = pad * 2 + len(items) * cfg["line_spacing"] + 14
         panel = Image.new("RGBA", (w, total_h), (0, 0, 0, 0))
         pd = ImageDraw.Draw(panel)
-        pd.rounded_rectangle((0, 0, w - 1, total_h - 1), radius=r, fill=(*_PANEL, 200), outline=_BORDER)
+        pd.rounded_rectangle((0, 0, w - 1, total_h - 1), radius=r, fill=(*_PANEL, 220), outline=_BORDER, width=2)
         img.paste(panel, (x, y), panel)
         font_label = _font(cfg["label_font_size"])
         font_value = _font(cfg["value_font_size"], bold=True)
@@ -776,7 +734,7 @@ class HuntCardRenderer:
                 ad.ellipse((cx - r, cy - r, cx + r, cy + r), outline=(80, 20, 30, a), width=12)
             img.paste(aura, (0, 0), aura)
             self._add_particles_simple(img, W, H, _RED, count=20)
-        elif rarity == "Ancient":
+        elif rarity in ("Ancient", "Patreon"):
             self._add_particles_simple(img, W, H, _GOLD, count=20)
         elif rarity == "Divine":
             aura = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -845,121 +803,113 @@ class HuntCardRenderer:
 
         shade = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         sd = ImageDraw.Draw(shade)
-        sd.rectangle((0, 0, W, H), fill=(0, 0, 0, 38 if ultra else 22))
-        sd.rectangle((0, 0, 520, H), fill=(0, 0, 0, 68))
-        sd.rectangle((W - 430, 0, W, H), fill=(0, 0, 0, 50))
+        sd.rectangle((0, 0, W, H), fill=(0, 0, 0, 30 if ultra else 18))
+        sd.rectangle((0, 0, 460, H), fill=(0, 0, 0, 55))
+        sd.rectangle((W - 460, 0, W, H), fill=(0, 0, 0, 45))
         img.paste(shade, (0, 0), shade)
 
-        frame_w = 4 if _RARITY_ORDER.get(rarity, 0) >= 5 else 2
-        draw.rectangle((28, 28, W - 28, H - 28), outline=(*rc, 150), width=frame_w)
-        draw.line((W // 2 - 260, 116, W // 2 + 260, 116), fill=(*rc, 120), width=2)
+        frame_w = 5 if _RARITY_ORDER.get(rarity, 0) >= 5 else 3
+        draw.rectangle((24, 24, W - 24, H - 24), outline=(*rc, 160), width=frame_w)
+        draw.line((W // 2 - 300, 120, W // 2 + 300, 120), fill=(*rc, 130), width=2)
 
         status = str(data.get("collection_status", CollectionStatus.DUPLICATE.value))
-        title = rarity.upper() + (" DISCOVERY" if status == CollectionStatus.NEW.value or ultra else " ENCOUNTER")
-        title_font = _font(34 if ultra else 28, bold=True, fantasy=False)
+        title = rarity.upper() + " ENCOUNTER"
+        title_font = _font(40 if ultra else 34, bold=True, fantasy=False)
         title_w = _tw(draw, title, title_font)
-        _shadow_text(draw, (W - title_w) // 2, 58, title, title_font, rc, offset=2)
-        zone_font = _font(17, bold=True)
+        _shadow_text(draw, (W - title_w) // 2, 50, title, title_font, rc, offset=2)
+        zone_font = _font(22, bold=True)
         zone_text = zone_name.upper()
         zone_w = _tw(draw, zone_text, zone_font)
-        draw.text(((W - zone_w) // 2, 100), zone_text, font=zone_font, fill=_TEXT_MUTED)
+        draw.text(((W - zone_w) // 2, 95), zone_text, font=zone_font, fill=_TEXT_MUTED)
 
-        art_size = 560 if ultra or _RARITY_ORDER.get(rarity, 0) >= 5 else 500
+        art_size = 580 if ultra or _RARITY_ORDER.get(rarity, 0) >= 5 else 520
         art_x = W // 2 - art_size // 2
-        art_y = 178 if ultra else 205
-        glow = Image.new("RGBA", (art_size + 180, art_size + 180), (0, 0, 0, 0))
+        art_y = 170 if ultra else 190
+        glow = Image.new("RGBA", (art_size + 200, art_size + 200), (0, 0, 0, 0))
         gd = ImageDraw.Draw(glow)
-        max_r = (art_size + 150) // 2
+        max_r = (art_size + 170) // 2
         for r in range(max_r, 40, -24):
             t = r / max(1, max_r)
-            a = int((34 if ultra else 24) * (1 - t))
-            gd.ellipse(((art_size + 180) // 2 - r, (art_size + 180) // 2 - r,
-                        (art_size + 180) // 2 + r, (art_size + 180) // 2 + r),
+            a = int((38 if ultra else 28) * (1 - t))
+            gd.ellipse(((art_size + 200) // 2 - r, (art_size + 200) // 2 - r,
+                        (art_size + 200) // 2 + r, (art_size + 200) // 2 + r),
                        fill=(*rc, max(0, a)))
-        glow = glow.filter(ImageFilter.GaussianBlur(18))
-        img.paste(glow, (W // 2 - glow.width // 2, art_y - 72), glow)
+        glow = glow.filter(ImageFilter.GaussianBlur(20))
+        img.paste(glow, (W // 2 - glow.width // 2, art_y - 80), glow)
         portrait = self._load_creature_asset(normalize_key(str(monster.get("name", ""))), art_size)
         if portrait:
             img.paste(portrait, (art_x, art_y), portrait)
 
         name = str(monster.get("name", "Unknown Spirit")).upper()
-        name_font = _font(46 if len(name) < 18 else 38, bold=True, fantasy=False)
-        if _tw(draw, name, name_font) > W - 520:
+        name_font = _font(52 if len(name) < 18 else 44, bold=True, fantasy=False)
+        if _tw(draw, name, name_font) > W - 560:
             name = name[:24] + "..."
         name_w = _tw(draw, name, name_font)
-        name_y = 760
+        name_y = 780
         _shadow_text(draw, (W - name_w) // 2, name_y, name, name_font, _TEXT_BRIGHT, offset=3)
 
         trait = str(monster.get("trait", ""))
         level = int(monster.get("level", 1))
         value = int(monster.get("value", 0))
-        meta_font = _font(16, bold=True)
+        meta_font = _font(22, bold=True)
         meta = [f"LEVEL {level}", trait.upper() if trait else "WILD", f"{value:,} SOULS"]
-        meta_y = name_y + 62
-        total_w = sum(_tw(draw, m, meta_font) for m in meta) + 52 * (len(meta) - 1)
+        meta_y = name_y + 70
+        total_w = sum(_tw(draw, m, meta_font) for m in meta) + 60 * (len(meta) - 1)
         meta_x = W // 2 - total_w // 2
         for idx, item in enumerate(meta):
             draw.text((meta_x, meta_y), item, font=meta_font, fill=rc if idx == 1 else _TEXT_MUTED)
-            meta_x += _tw(draw, item, meta_font) + 52
-
-        status_color = _GREEN if status == CollectionStatus.NEW.value else _TEXT_MUTED
-        status_font = _font(20, bold=True)
-        status_text = status.upper()
-        sw = _tw(draw, status_text, status_font)
-        draw.rounded_rectangle((W // 2 - sw // 2 - 18, meta_y + 40, W // 2 + sw // 2 + 18, meta_y + 72),
-                               radius=8, fill=(10, 9, 16), outline=status_color)
-        draw.text((W // 2 - sw // 2, meta_y + 46), status_text, font=status_font, fill=status_color)
+            meta_x += _tw(draw, item, meta_font) + 60
 
         rewards = list(data.get("rewards", []))[:5]
-        panel_x, panel_y, panel_w = 62, 190, 360
+        panel_x, panel_y, panel_w = 50, 200, 400
         if rewards:
-            draw.text((panel_x, panel_y), "REWARDS", font=_font(17, bold=True), fill=_TEXT_MUTED)
-            cy = panel_y + 34
+            draw.text((panel_x, panel_y), "REWARDS", font=_font(22, bold=True), fill=_TEXT_MUTED)
+            cy = panel_y + 40
             for rw in rewards:
                 label = str(rw.get("label", "Reward"))
                 amount = rw.get("amount", 0)
                 color = tuple(rw.get("color", _GOLD))
                 text = f"+{amount:,} {label}" if isinstance(amount, int) else f"+{amount} {label}"
-                draw.text((panel_x, cy), _fit_text(draw, text, panel_w, _font(16, bold=True)), font=_font(16, bold=True), fill=color)
-                cy += 30
+                draw.text((panel_x, cy), _fit_text(draw, text, panel_w, _font(20, bold=True)), font=_font(20, bold=True), fill=color)
+                cy += 36
 
         drop = data.get("special_drop")
         if drop:
-            drop_y = 515
+            drop_y = 540
             drop_rarity = str(drop.get("rarity", rarity))
             dc = _col(drop_rarity)
-            draw.rounded_rectangle((panel_x, drop_y, panel_x + panel_w, drop_y + 112), radius=10,
+            draw.rounded_rectangle((panel_x, drop_y, panel_x + panel_w, drop_y + 130), radius=12,
                                    fill=(10, 9, 16), outline=dc, width=2)
-            draw.text((panel_x + 18, drop_y + 18), "SPECIAL DROP", font=_font(13, bold=True), fill=dc)
+            draw.text((panel_x + 22, drop_y + 22), "SPECIAL DROP", font=_font(16, bold=True), fill=dc)
             drop_name = str(drop.get("name", "Unknown Drop"))
-            draw.text((panel_x + 18, drop_y + 50), _fit_text(draw, drop_name, panel_w - 36, _font(19, bold=True)),
-                      font=_font(19, bold=True), fill=_TEXT_BRIGHT)
+            draw.text((panel_x + 22, drop_y + 58), _fit_text(draw, drop_name, panel_w - 44, _font(24, bold=True)),
+                      font=_font(24, bold=True), fill=_TEXT_BRIGHT)
 
-        right_x, right_y = W - 376, 782
+        right_x, right_y = W - 420, 800
         info = [
             ("Catch", f"{float(data.get('catch_chance', 100)):.0f}%"),
             ("Rarity", rarity),
             ("Zone", zone_name),
         ]
-        draw.rounded_rectangle((right_x, right_y, W - 62, right_y + 118), radius=8, fill=(10, 9, 16), outline=(54, 48, 66))
-        cy = right_y + 18
+        draw.rounded_rectangle((right_x, right_y, W - 50, right_y + 140), radius=10, fill=(10, 9, 16), outline=(54, 48, 66))
+        cy = right_y + 22
         for label, value in info:
-            draw.text((right_x + 18, cy), label, font=_font(13), fill=_TEXT_MUTED)
-            value_font = _font(14, bold=True)
-            value_text = _fit_text(draw, value, 170, value_font)
-            draw.text((W - 80 - _tw(draw, value_text, value_font), cy), value_text,
+            draw.text((right_x + 22, cy), label, font=_font(16), fill=_TEXT_MUTED)
+            value_font = _font(18, bold=True)
+            value_text = _fit_text(draw, value, 200, value_font)
+            draw.text((W - 70 - _tw(draw, value_text, value_font), cy), value_text,
                       font=value_font, fill=rc if label == "Rarity" else _TEXT_BRIGHT)
-            cy += 32
+            cy += 38
 
         hunter = str(data.get("hunter_name", ""))
         rank = str(data.get("hunter_rank", "Hunter"))
-        draw.text((62, H - 112), hunter, font=_font(19, bold=True), fill=_TEXT_BRIGHT)
-        draw.text((62, H - 84), rank, font=_font(13), fill=_TEXT_MUTED)
+        draw.text((50, H - 120), hunter, font=_font(24, bold=True), fill=_TEXT_BRIGHT)
+        draw.text((50, H - 88), rank, font=_font(16), fill=_TEXT_MUTED)
         streak = int(data.get("hunt_streak", 0))
         if streak:
             streak_text = f"STREAK {streak}"
-            draw.text((W // 2 - _tw(draw, streak_text, _font(14, bold=True)) // 2, H - 82),
-                      streak_text, font=_font(14, bold=True), fill=_GOLD)
+            draw.text((W // 2 - _tw(draw, streak_text, _font(18, bold=True)) // 2, H - 86),
+                      streak_text, font=_font(18, bold=True), fill=_GOLD)
         return self._save(img)
 
     def _render_ultra_rare(self, data: dict[str, Any]) -> BytesIO:
@@ -977,10 +927,10 @@ class HuntCardRenderer:
         """Create a blurred, darkened zone background for multi-hunt cards."""
         img = self._get_zone_background(zone_key, W, H)
         darken = Image.new("RGB", (W, H), (0, 0, 0))
-        img = Image.blend(img, darken, 0.58)
+        img = Image.blend(img, darken, 0.45)  # Less darkening for better visibility
         img = img.filter(ImageFilter.GaussianBlur(radius=6))
         # Subtle vignette
-        vignette = self._make_vignette(W, H, strength=0.5, radius=1.3)
+        vignette = self._make_vignette(W, H, strength=0.4, radius=1.3)
         img = img.convert("RGBA")
         img = Image.alpha_composite(img, vignette)
         img = img.convert("RGB")
@@ -1002,7 +952,8 @@ class HuntCardRenderer:
         return best_idx
 
     def _draw_multi_header(self, draw: ImageDraw.ImageDraw, img: Image.Image,
-                           W: int, zone_name: str, count: int, lcfg: dict) -> int:
+                           W: int, zone_name: str, count: int, lcfg: dict,
+                           displayed_count: int | None = None) -> int:
         """Draw zone title + monster count header. Returns y position after header."""
         hh = lcfg["header_height"]
         # Header background bar
@@ -1021,17 +972,24 @@ class HuntCardRenderer:
         _shadow_text(draw, (W - tw) // 2, 20, zone_text, font_title, _TEXT_BRIGHT, offset=2)
 
         # Separator line
-        sep_y = 58
-        draw.line((W // 4, sep_y, W * 3 // 4, sep_y), fill=(*_GOLD, 120), width=1)
+        sep_y = 70
+        draw.line((W // 4, sep_y, W * 3 // 4, sep_y), fill=(*_GOLD, 120), width=2)
 
         # Monster count
         font_count = _font(lcfg["count_font"], bold=True)
         count_text = f"{count} MONSTER{'S' if count != 1 else ''} FOUND"
         cw = _tw(draw, count_text, font_count)
-        _shadow_text(draw, (W - cw) // 2, 68, count_text, font_count, _GOLD, offset=2)
+        _shadow_text(draw, (W - cw) // 2, 80, count_text, font_count, _GOLD, offset=2)
+
+        # Show "SHOWING X OF Y" if truncated
+        if displayed_count is not None and displayed_count < count:
+            font_showing = _font(lcfg["count_font"] - 6, bold=False)
+            showing_text = f"SHOWING {displayed_count} OF {count}"
+            sw = _tw(draw, showing_text, font_showing)
+            _shadow_text(draw, (W - sw) // 2, 80 + lcfg["count_font"] + 8, showing_text, font_showing, _TEXT_MUTED, offset=1)
 
         # Subtitle separator
-        sep_y2 = 102
+        sep_y2 = 120
         draw.line((W // 3, sep_y2, W * 2 // 3, sep_y2), fill=(*_BORDER, 100), width=1)
 
         return hh + 10
@@ -1069,15 +1027,15 @@ class HuntCardRenderer:
         border_w = 2 if rarity_rank < 4 else 3 if rarity_rank < 7 else 4
         cell = Image.new("RGBA", (cell_w, cell_h), (0, 0, 0, 0))
         cd = ImageDraw.Draw(cell)
-        # Fill with slightly tinted panel
-        fill_r = _lerp_color(_PANEL, rc, 0.06)
+        # Fill with lighter tinted panel for better visibility
+        fill_r = _lerp_color(_PANEL, rc, 0.12)  # More tinting for visibility
         cd.rounded_rectangle((0, 0, cell_w - 1, cell_h - 1), radius=12,
-                            fill=(*fill_r, 210), outline=rc, width=border_w)
+                            fill=(*fill_r, 230), outline=rc, width=border_w)  # Higher alpha
 
         # Inner highlight at top
         for i in range(min(20, cell_h // 4)):
-            a = max(0, 20 - i * 2)
-            cd.line((4, i + 4, cell_w - 4, i + 4), fill=(*rc, a))
+            a = max(0, 35 - i * 2)
+            cd.line((4, i, cell_w - 4, i), fill=(*rc, a))
 
         img.paste(cell, (cx - cell_w // 2, cy - cell_h // 2), cell)
 
@@ -1114,7 +1072,7 @@ class HuntCardRenderer:
 
         # ── Name ──
         font_name = _font(cell_cfg["name_font"], bold=True)
-        display_name = name[:18] if len(name) > 18 else name
+        display_name = _fit_text(draw, name, cell_w - 20, font_name)
         nw = _tw(draw, display_name, font_name)
         name_y = cy + sprite_sz // 2 - (cell_h // 12)
         _shadow_text(draw, cx - nw // 2, name_y, display_name, font_name, _TEXT_BRIGHT, offset=1)
@@ -1123,43 +1081,20 @@ class HuntCardRenderer:
         font_val = _font(cell_cfg["val_font"], bold=True)
         val_text = f"+{value:,} Souls"
         vw = _tw(draw, val_text, font_val)
-        draw.text((cx - vw // 2, name_y + cell_cfg["name_font"] + 6), val_text,
+        draw.text((cx - vw // 2, name_y + cell_cfg["name_font"] + 8), val_text,
                  font=font_val, fill=_GOLD)
 
         # ── Rarity tag ──
         font_rarity = _font(cell_cfg["rarity_font"], bold=True)
-        rarity_text = rarity.upper()
-        rw = _tw(draw, rarity_text, font_rarity)
-        rarity_y = name_y + cell_cfg["name_font"] + cell_cfg["val_font"] + 12
-        # Rarity pill background
-        pill_w = rw + 16
-        pill_h = cell_cfg["rarity_font"] + 8
-        pill_x = cx - pill_w // 2
-        pill = Image.new("RGBA", (pill_w, pill_h), (0, 0, 0, 0))
-        pld = ImageDraw.Draw(pill)
-        pld.rounded_rectangle((0, 0, pill_w - 1, pill_h - 1), radius=pill_h // 2,
-                             fill=(*rc, 40), outline=(*rc, 150), width=1)
-        img.paste(pill, (pill_x, rarity_y), pill)
-        draw.text((cx - rw // 2, rarity_y + 3), rarity_text, font=font_rarity, fill=rc)
-
-        # ── Collection status badge ──
-        badge_y = rarity_y + pill_h + 8
-        if status == "NEW DISCOVERY" or status == "NEW":
-            badge_text = "✨ NEW"
-            badge_font = _font(cell_cfg["rarity_font"], bold=True)
-            bw = _tw(draw, badge_text, badge_font)
-            # Sparkle badge with glow
-            badge_bg = Image.new("RGBA", (bw + 14, cell_cfg["rarity_font"] + 10), (0, 0, 0, 0))
-            bd = ImageDraw.Draw(badge_bg)
-            bd.rounded_rectangle((0, 0, bw + 13, cell_cfg["rarity_font"] + 9), radius=6,
-                                fill=(*_GREEN, 50), outline=(*_GREEN, 180), width=1)
-            img.paste(badge_bg, (cx - (bw + 14) // 2, badge_y), badge_bg)
-            draw.text((cx - bw // 2, badge_y + 4), badge_text, font=badge_font, fill=_GREEN)
+        rarity_y = name_y + cell_cfg["name_font"] + cell_cfg["val_font"] + 16
+        pill_h = cell_cfg["rarity_font"] + 20
+        rarity_icon = self._load_asset("rarity", normalize_key(rarity), (pill_h, pill_h))
+        if rarity_icon:
+            img.paste(rarity_icon, (cx - pill_h // 2, rarity_y - 4), rarity_icon)
         else:
-            badge_text = "DUPLICATE"
-            badge_font = _font(max(10, cell_cfg["rarity_font"] - 1), bold=False)
-            bw = _tw(draw, badge_text, badge_font)
-            draw.text((cx - bw // 2, badge_y + 2), badge_text, font=badge_font, fill=_TEXT_MUTED)
+            rarity_text = rarity[:3].upper()
+            rw = _tw(draw, rarity_text, font_rarity)
+            draw.text((cx - rw // 2, rarity_y + 4), rarity_text, font=font_rarity, fill=rc)
 
     def _draw_summary_panel(self, draw: ImageDraw.ImageDraw, img: Image.Image,
                             W: int, y: int, data: dict[str, Any], lcfg: dict) -> int:
@@ -1174,20 +1109,20 @@ class HuntCardRenderer:
         special_drop = data.get("special_drop")
 
         # Calculate panel height
-        line_h = lcfg["summary_label_font"] + 10
+        line_h = lcfg["summary_label_font"] + 14
         reward_lines = len(rewards) if rewards else 0
         special_lines = 3 if special_drop else 0
-        content_h = 40 + reward_lines * line_h + special_lines * line_h + pad * 2
-        panel_w = min(W - 80, 800)
+        content_h = 50 + reward_lines * line_h + special_lines * line_h + pad * 2
+        panel_w = min(W - 100, 900)
         panel_x = (W - panel_w) // 2
 
         # Panel background
         panel = Image.new("RGBA", (panel_w, content_h), (0, 0, 0, 0))
         pd = ImageDraw.Draw(panel)
-        pd.rounded_rectangle((0, 0, panel_w - 1, content_h - 1), radius=12,
-                            fill=(*_PANEL, 220), outline=_BORDER, width=1)
+        pd.rounded_rectangle((0, 0, panel_w - 1, content_h - 1), radius=14,
+                            fill=(*_PANEL, 230), outline=_BORDER, width=2)
         # Top accent line
-        pd.line((12, 3, panel_w - 12, 3), fill=(*_GOLD, 80), width=1)
+        pd.line((14, 4, panel_w - 14, 4), fill=(*_GOLD, 90), width=2)
         img.paste(panel, (panel_x, y), panel)
 
         # Header
@@ -1196,7 +1131,7 @@ class HuntCardRenderer:
         _shadow_text(draw, (W - hw) // 2, y + pad, header, font_header, _GOLD, offset=1)
 
         # Rewards list
-        cy = y + pad + 34
+        cy = y + pad + 42
         if rewards:
             for rw in rewards:
                 label = str(rw.get("label", ""))
@@ -1215,11 +1150,11 @@ class HuntCardRenderer:
 
         # Special drop section
         if special_drop:
-            cy += 6
+            cy += 8
             sep_w = panel_w // 2
             draw.line(((W - sep_w) // 2, cy, (W + sep_w) // 2, cy),
-                     fill=(*_BORDER, 120), width=1)
-            cy += 8
+                     fill=(*_BORDER, 130), width=2)
+            cy += 10
 
             drop_type = str(special_drop.get("type", ""))
             drop_name = str(special_drop.get("name", ""))
@@ -1249,13 +1184,16 @@ class HuntCardRenderer:
         lcfg = _LOOT_GRID_LAYOUT
         W = lcfg["card_width"]
         monsters: list[dict] = data.get("monsters", [])
-        count = len(monsters)
+        total_count = len(monsters)
+        max_display = 9
+        display_monsters = monsters[:max_display]
+        displayed_count = len(display_monsters)
         zone_key = str(data.get("zone_key", "forgotten_woods"))
         zone_name = str(data.get("zone_name", zone_key.replace("_", " ").title()))
 
         # Determine hero (rarest) monster
-        hero_idx = self._find_hero(monsters)
-        hero_rarity_rank = _RARITY_ORDER.get(str(monsters[hero_idx].get("rarity", "Common")), 0)
+        hero_idx = self._find_hero(display_monsters)
+        hero_rarity_rank = _RARITY_ORDER.get(str(display_monsters[hero_idx].get("rarity", "Common")), 0)
         has_hero = hero_rarity_rank >= 2  # Rare+ gets hero treatment
 
         # Calculate grid dimensions
@@ -1268,7 +1206,7 @@ class HuntCardRenderer:
         # Build row structure
         rows: list[list[tuple[int, bool]]] = []  # list of rows, each row = list of (monster_idx, is_hero)
         current_row: list[tuple[int, bool]] = []
-        for i in range(count):
+        for i in range(displayed_count):
             is_hero = (i == hero_idx and has_hero)
             current_row.append((i, is_hero))
             if len(current_row) >= cols:
@@ -1286,8 +1224,11 @@ class HuntCardRenderer:
             grid_h += rh + gap_y
         grid_h -= gap_y  # remove last gap
 
+        # Add footer space if truncated
+        footer_h = lcfg["footer_height"] if displayed_count < total_count else 0
+
         # Tight fit around the grid
-        total_h = header_y + lcfg["grid_pad_y"] + grid_h + lcfg["grid_pad_y"]
+        total_h = header_y + lcfg["grid_pad_y"] + grid_h + lcfg["grid_pad_y"] + footer_h
         H = min(1800, total_h)
 
         img = self._multi_bg(zone_key, W, H)
@@ -1296,8 +1237,8 @@ class HuntCardRenderer:
         # Ambient particles
         self._draw_ambient_effects(draw, img, zone_key)
 
-        # Header
-        self._draw_multi_header(draw, img, W, zone_name, count, lcfg)
+        # Header with truncation info
+        self._draw_multi_header(draw, img, W, zone_name, total_count, lcfg, displayed_count)
 
         # Draw monster grid
         cy = header_y + lcfg["grid_pad_y"]
@@ -1317,10 +1258,18 @@ class HuntCardRenderer:
                 cw = c["width"]
                 ccx = rx + cw // 2
                 ccy = cy + rh // 2
-                self._draw_monster_cell(draw, img, ccx, ccy, monsters[mi], c, is_hero)
+                self._draw_monster_cell(draw, img, ccx, ccy, display_monsters[mi], c, is_hero)
                 rx += cw + gap_x
 
             cy += rh + gap_y
+
+        # Draw footer if truncated
+        if displayed_count < total_count:
+            remaining = total_count - displayed_count
+            font_footer = _font(24, bold=True)
+            footer_text = f"... and {remaining} more monster{'s' if remaining != 1 else ''}"
+            fw = _tw(draw, footer_text, font_footer)
+            _shadow_text(draw, (W - fw) // 2, cy + 10, footer_text, font_footer, _TEXT_MUTED, offset=1)
 
         return self._save(img)
 
@@ -1330,12 +1279,15 @@ class HuntCardRenderer:
         lcfg = _COMPACT_GRID_LAYOUT
         W = lcfg["card_width"]
         monsters: list[dict] = data.get("monsters", [])
-        count = len(monsters)
+        total_count = len(monsters)
+        max_display = 10
+        display_monsters = monsters[:max_display]
+        displayed_count = len(display_monsters)
         zone_key = str(data.get("zone_key", "forgotten_woods"))
         zone_name = str(data.get("zone_name", zone_key.replace("_", " ").title()))
 
-        hero_idx = self._find_hero(monsters)
-        hero_rarity_rank = _RARITY_ORDER.get(str(monsters[hero_idx].get("rarity", "Common")), 0)
+        hero_idx = self._find_hero(display_monsters)
+        hero_rarity_rank = _RARITY_ORDER.get(str(display_monsters[hero_idx].get("rarity", "Common")), 0)
         has_hero = hero_rarity_rank >= 2
 
         cell_n = lcfg["cell_normal"]
@@ -1347,7 +1299,7 @@ class HuntCardRenderer:
         # Build rows
         rows: list[list[tuple[int, bool]]] = []
         current_row: list[tuple[int, bool]] = []
-        for i in range(count):
+        for i in range(displayed_count):
             is_hero = (i == hero_idx and has_hero)
             current_row.append((i, is_hero))
             if len(current_row) >= cols:
@@ -1364,13 +1316,16 @@ class HuntCardRenderer:
             grid_h += rh + gap_y
         grid_h -= gap_y
 
-        total_h = header_y + lcfg["grid_pad_y"] + grid_h + lcfg["grid_pad_y"]
+        # Add footer space if truncated
+        footer_h = lcfg["footer_height"] if displayed_count < total_count else 0
+
+        total_h = header_y + lcfg["grid_pad_y"] + grid_h + lcfg["grid_pad_y"] + footer_h
         H = min(1600, total_h)
 
         img = self._multi_bg(zone_key, W, H)
         draw = ImageDraw.Draw(img)
         self._draw_ambient_effects(draw, img, zone_key)
-        self._draw_multi_header(draw, img, W, zone_name, count, lcfg)
+        self._draw_multi_header(draw, img, W, zone_name, total_count, lcfg, displayed_count)
 
         cy = header_y + lcfg["grid_pad_y"]
         for row in rows:
@@ -1388,10 +1343,18 @@ class HuntCardRenderer:
                 cw = c["width"]
                 ccx = rx + cw // 2
                 ccy = cy + rh // 2
-                self._draw_monster_cell(draw, img, ccx, ccy, monsters[mi], c, is_hero)
+                self._draw_monster_cell(draw, img, ccx, ccy, display_monsters[mi], c, is_hero)
                 rx += cw + gap_x
 
             cy += rh + gap_y
+
+        # Draw footer if truncated
+        if displayed_count < total_count:
+            remaining = total_count - displayed_count
+            font_footer = _font(22, bold=True)
+            footer_text = f"... and {remaining} more monster{'s' if remaining != 1 else ''}"
+            fw = _tw(draw, footer_text, font_footer)
+            _shadow_text(draw, (W - fw) // 2, cy + 10, footer_text, font_footer, _TEXT_MUTED, offset=1)
 
         return self._save(img)
 
@@ -1401,7 +1364,7 @@ class HuntCardRenderer:
         lcfg = _MASS_HUNT_LAYOUT
         W = lcfg["card_width"]
         monsters: list[dict] = data.get("monsters", [])
-        count = len(monsters)
+        total_count = len(monsters)
         zone_key = str(data.get("zone_key", "forgotten_woods"))
         zone_name = str(data.get("zone_name", zone_key.replace("_", " ").title()))
 
@@ -1411,7 +1374,7 @@ class HuntCardRenderer:
         header_h = lcfg["header_height"] + 10
         row_h = lcfg["row_height"]
         hero_h = lcfg["hero_row_height"]
-        rows_h = (count - 1) * row_h + hero_h + 16  # 16 for hero separator
+        rows_h = (total_count - 1) * row_h + hero_h + 16  # 16 for hero separator
         
         # Remove summary space
         total_h = header_h + 20 + rows_h + 20
@@ -1420,12 +1383,25 @@ class HuntCardRenderer:
         img = self._multi_bg(zone_key, W, H)
         draw = ImageDraw.Draw(img)
         self._draw_ambient_effects(draw, img, zone_key)
-        self._draw_multi_header(draw, img, W, zone_name, count, lcfg)
 
         # Sort by rarity for display
         sorted_monsters = self._sort_by_rarity(monsters)
         pad_x = lcfg["row_pad_x"]
         list_w = W - pad_x * 2
+
+        # First pass: count how many we can actually display
+        cy_test = header_h + 20
+        displayed_count = 0
+        for idx, mon in enumerate(sorted_monsters):
+            is_hero = (mon is monsters[hero_idx])
+            rh = lcfg["hero_row_height"] if is_hero else lcfg["row_height"]
+            if cy_test + rh > H - 20:
+                break
+            displayed_count += 1
+            cy_test += rh + 3
+
+        # Draw header with truncation info
+        self._draw_multi_header(draw, img, W, zone_name, total_count, lcfg, displayed_count)
 
         cy = header_h + 20
         for idx, mon in enumerate(sorted_monsters):
@@ -1453,9 +1429,9 @@ class HuntCardRenderer:
 
             if cy + rh > H - 20:
                 # Overflow: draw "and X more..." line
-                remaining = count - idx
+                remaining = total_count - idx
                 more_font = _font(lcfg["name_font"], bold=True)
-                more_text = f"... and {remaining} more monsters"
+                more_text = f"... and {remaining} more monster{'s' if remaining != 1 else ''}"
                 mw = _tw(draw, more_text, more_font)
                 draw.text(((W - mw) // 2, cy + 8), more_text, font=more_font, fill=_TEXT_MUTED)
                 cy += rh
@@ -1464,11 +1440,11 @@ class HuntCardRenderer:
             # Row background
             row_bg = Image.new("RGBA", (list_w, rh), (0, 0, 0, 0))
             rd = ImageDraw.Draw(row_bg)
-            fill_alpha = 180 if is_hero else 140
-            fill_color = _lerp_color(_PANEL, rc, 0.08 if is_hero else 0.03)
+            fill_alpha = 200 if is_hero else 170  # Higher alpha for visibility
+            fill_color = _lerp_color(_PANEL, rc, 0.12 if is_hero else 0.06)  # More tinting
             rd.rounded_rectangle((0, 0, list_w - 1, rh - 1), radius=8,
                                 fill=(*fill_color, fill_alpha),
-                                outline=(*rc, 120 if is_hero else 50),
+                                outline=(*rc, 140 if is_hero else 70),  # Stronger outline
                                 width=2 if is_hero else 1)
 
             # Glow for hero row
@@ -1493,40 +1469,28 @@ class HuntCardRenderer:
                 img.paste(sprite, (icon_x, icon_y_center - icon_sz // 2), sprite)
 
             # Name
-            name_x = icon_x + icon_sz + 14
-            display_name = name[:24] if len(name) > 24 else name
+            name_x = icon_x + icon_sz + 18
+            display_name = _fit_text(draw, name, 400, fn)
             nw = _tw(draw, display_name, fn)
             _shadow_text(draw, name_x, icon_y_center - fn.size // 2 - 2,
                         display_name, fn, _TEXT_BRIGHT, offset=1)
 
             # Rarity tag
-            rarity_x = name_x + nw + 16
-            rarity_text = rarity.upper()
-            rw_text = _tw(draw, rarity_text, fr)
-            # Small pill
-            pill_w = rw_text + 12
-            pill_h = fr.size + 6
+            rarity_x = name_x + nw + 20
+            pill_h = fr.size + 18
             pill_y = icon_y_center - pill_h // 2
-            pill = Image.new("RGBA", (pill_w, pill_h), (0, 0, 0, 0))
-            pld = ImageDraw.Draw(pill)
-            pld.rounded_rectangle((0, 0, pill_w - 1, pill_h - 1), radius=pill_h // 2,
-                                 fill=(*rc, 35), outline=(*rc, 120), width=1)
-            img.paste(pill, (rarity_x, pill_y), pill)
-            draw.text((rarity_x + 6, pill_y + 2), rarity_text, font=fr, fill=rc)
+            rarity_icon = self._load_asset("rarity", normalize_key(rarity), (pill_h, pill_h))
+            if rarity_icon:
+                img.paste(rarity_icon, (rarity_x, pill_y), rarity_icon)
+            else:
+                rarity_text = rarity[:3].upper()
+                draw.text((rarity_x + 8, pill_y + 3), rarity_text, font=fr, fill=rc)
 
             # Value (right-aligned)
             val_text = f"+{value:,}"
             vw = _tw(draw, val_text, fv)
-            val_x = pad_x + list_w - vw - 16
+            val_x = pad_x + list_w - vw - 20
             draw.text((val_x, icon_y_center - fv.size // 2 - 2), val_text, font=fv, fill=_GOLD)
-
-            # Collection status (right of value area, small)
-            if status in ("NEW DISCOVERY", "NEW"):
-                stat_text = "✨"
-                stat_font = _font(max(10, lcfg["rarity_font"] - 2), bold=True)
-                stw = _tw(draw, stat_text, stat_font)
-                draw.text((val_x - stw - 10, icon_y_center - stat_font.size // 2),
-                         stat_text, font=stat_font, fill=_GREEN)
 
             cy += rh + 3
 
@@ -1552,20 +1516,30 @@ class HuntCardRenderer:
         if path and path.exists():
             try:
                 a = Image.open(path).convert("RGBA")
-                default_scale = int(self.layout["monster_portrait"].get("nearest_scale", 4))
-                scale_factor = max(default_scale, max(1, target_size // max(1, max(a.width, a.height))))
-                nearest_w = a.width * scale_factor
-                nearest_h = a.height * scale_factor
-                if nearest_w > target_size * 2:
-                    scale_factor = max(1, target_size // max(a.width, a.height))
-                    nearest_w = a.width * scale_factor
-                    nearest_h = a.height * scale_factor
-                upscaled = a.resize((nearest_w, nearest_h), Image.NEAREST)
-                c = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
-                ox = (target_size - upscaled.width) // 2
-                oy = (target_size - upscaled.height) // 2
-                c.alpha_composite(upscaled, (ox, oy))
-                return c
+                src_w, src_h = a.size
+
+                # Maximum dimension the sprite can be (with padding inside the canvas)
+                max_dim = max(1, int(target_size * 0.80))
+
+                if src_w <= max_dim and src_h <= max_dim:
+                    # Source fits — upscale with nearest neighbor for pixel art
+                    scale = max(1, max_dim // max(src_w, src_h))
+                    new_w = src_w * scale
+                    new_h = src_h * scale
+                    sprite = a.resize((new_w, new_h), Image.NEAREST)
+                else:
+                    # Source is too big — scale down to fit
+                    scale = max_dim / max(src_w, src_h)
+                    new_w = max(1, int(src_w * scale))
+                    new_h = max(1, int(src_h * scale))
+                    sprite = a.resize((new_w, new_h), Image.LANCZOS)
+
+                # Center sprite in a transparent canvas of exactly target_size
+                canvas = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+                ox = (target_size - sprite.width) // 2
+                oy = (target_size - sprite.height) // 2
+                canvas.alpha_composite(sprite, (ox, oy))
+                return canvas
             except OSError:
                 pass
         return None
@@ -1574,6 +1548,11 @@ class HuntCardRenderer:
 
     def _save(self, img: Image.Image) -> BytesIO:
         b = BytesIO()
-        img.save(b, format="PNG")
+        if img.width > 1600 or img.height > 1200:
+            scale = min(1600 / img.width, 1200 / img.height)
+            new_w = max(1, int(img.width * scale))
+            new_h = max(1, int(img.height * scale))
+            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+        img.save(b, format="PNG", optimize=True)
         b.seek(0)
         return b

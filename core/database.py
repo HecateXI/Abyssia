@@ -85,12 +85,19 @@ class BotDatabase:
                 user_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 rarity TEXT NOT NULL,
-                attack INTEGER NOT NULL,
-                defense INTEGER NOT NULL,
+                attack INTEGER NOT NULL DEFAULT 0,
+                defense INTEGER NOT NULL DEFAULT 0,
                 hp INTEGER NOT NULL,
-                speed INTEGER NOT NULL,
+                speed INTEGER NOT NULL DEFAULT 1,
                 crit INTEGER NOT NULL DEFAULT 5,
-                mana INTEGER NOT NULL DEFAULT 50,
+                mana INTEGER NOT NULL DEFAULT 200,
+                str_stat INTEGER NOT NULL DEFAULT 1,
+                pr_stat INTEGER NOT NULL DEFAULT 1,
+                wp_stat INTEGER NOT NULL DEFAULT 1,
+                mag_stat INTEGER NOT NULL DEFAULT 1,
+                mr_stat INTEGER NOT NULL DEFAULT 1,
+                spd INTEGER NOT NULL DEFAULT 1,
+                role TEXT NOT NULL DEFAULT 'Balanced',
                 ability TEXT NOT NULL,
                 value INTEGER NOT NULL DEFAULT 10,
                 image TEXT,
@@ -209,6 +216,13 @@ class BotDatabase:
                 charges_remaining INTEGER NOT NULL DEFAULT 0,
                 activated_at INTEGER NOT NULL,
                 PRIMARY KEY (user_id, buff_key)
+            );
+            CREATE TABLE IF NOT EXISTS rpg_profile_cosmetics (
+                user_id INTEGER NOT NULL PRIMARY KEY,
+                background_key TEXT NOT NULL DEFAULT '',
+                accent_color TEXT NOT NULL DEFAULT '',
+                about TEXT NOT NULL DEFAULT '',
+                updated_at INTEGER NOT NULL DEFAULT 0
             );
             """
         )
@@ -424,7 +438,7 @@ class BotDatabase:
                     hp INTEGER NOT NULL,
                     speed INTEGER NOT NULL,
                     crit INTEGER NOT NULL DEFAULT 5,
-                    mana INTEGER NOT NULL DEFAULT 50,
+                    mana INTEGER NOT NULL DEFAULT 200,
                     ability TEXT NOT NULL,
                     value INTEGER NOT NULL DEFAULT 10,
                     image TEXT,
@@ -491,9 +505,16 @@ class BotDatabase:
             creature_columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(rpg_creatures)").fetchall()}
             additions = {
                 "crit": "INTEGER NOT NULL DEFAULT 5",
-                "mana": "INTEGER NOT NULL DEFAULT 50",
+                "mana": "INTEGER NOT NULL DEFAULT 200",
                 "value": "INTEGER NOT NULL DEFAULT 10",
                 "image": "TEXT",
+                "str_stat": "INTEGER NOT NULL DEFAULT 1",
+                "pr_stat": "INTEGER NOT NULL DEFAULT 1",
+                "wp_stat": "INTEGER NOT NULL DEFAULT 1",
+                "mag_stat": "INTEGER NOT NULL DEFAULT 1",
+                "mr_stat": "INTEGER NOT NULL DEFAULT 1",
+                "spd": "INTEGER NOT NULL DEFAULT 1",
+                "role": "TEXT NOT NULL DEFAULT 'Balanced'",
             }
             for column, ddl in additions.items():
                 if column not in creature_columns:
@@ -542,6 +563,8 @@ class BotDatabase:
                 "mana_cost": "INTEGER NOT NULL DEFAULT 3",
                 "wear": "TEXT NOT NULL DEFAULT 'Unknown'",
                 "passive": "TEXT",
+                "stat_rolls": "TEXT",
+                "is_favorite": "INTEGER NOT NULL DEFAULT 0",
             }
             for column, ddl in weapon_additions.items():
                 if column not in weapon_columns:
@@ -597,7 +620,7 @@ class BotDatabase:
                     hp INTEGER NOT NULL,
                     speed INTEGER NOT NULL,
                     crit INTEGER NOT NULL DEFAULT 5,
-                    mana INTEGER NOT NULL DEFAULT 50,
+                    mana INTEGER NOT NULL DEFAULT 200,
                     ability TEXT NOT NULL,
                     level INTEGER NOT NULL,
                     weapon_id INTEGER,
@@ -648,6 +671,21 @@ class BotDatabase:
                     discount_pct INTEGER NOT NULL DEFAULT 0,
                     purchased INTEGER NOT NULL DEFAULT 0,
                     UNIQUE(user_id, date, slot)
+                )
+            """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS rpg_profile_cosmetics (
+                    user_id INTEGER NOT NULL PRIMARY KEY,
+                    background_key TEXT NOT NULL DEFAULT '',
+                    accent_color TEXT NOT NULL DEFAULT '',
+                    about TEXT NOT NULL DEFAULT '',
+                    updated_at INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS rpg_user_prefs (
+                    user_id INTEGER NOT NULL PRIMARY KEY,
+                    battle_log INTEGER NOT NULL DEFAULT 0
                 )
             """)
             await self._migrate_to_global()

@@ -7,6 +7,7 @@ import time
 from hashlib import sha256
 from datetime import datetime, timezone
 
+from core.battle_engine import Ability
 from core.content_config import balancing_value
 from core.database import BotDatabase
 from core.rpg_data import (
@@ -25,6 +26,7 @@ from core.rpg_data import (
     WEAPON_AFFIX_COUNTS,
     WEAPON_BASE_ATTACK,
     WEAPON_BASE_DEFENSE,
+    WEAPON_BASE_STATS,
     WEAPON_NAME_PREFIX,
     WEAPON_NAME_SUFFIX,
     WEAPON_PASSIVES,
@@ -37,10 +39,22 @@ from core.rpg_data import (
     ZONES,
     Charm,
     CreatureTemplate,
+    determine_role,
     Sigil,
     Zone,
+    creature_asset_key,
     normalize_key,
 )
+from core.theme import material_label
+
+
+def _json_obj(raw: Any, fallback: Any) -> Any:
+    if not raw:
+        return fallback
+    try:
+        return json.loads(str(raw))
+    except Exception:
+        return fallback
 
 
 def now_ts() -> int:
@@ -98,6 +112,17 @@ HUNT_AUTOHUNT_ROLLS_PER_HOUR = _balance_int("hunt.autohunt_rolls_per_hour", 3)
 HUNT_AUTOHUNT_MAX_ROLLS = _balance_int("hunt.autohunt_max_rolls", 48)
 HUNT_SWORD_DURATION_SECONDS = _balance_int("hunt.hunt_sword_duration_seconds", 1200)
 HUNT_SWORD_EXTRA_ROLLS = _balance_int("hunt.hunt_sword_extra_rolls", 1)
+
+_DEFAULT_WEAPON_AFFIX_COUNTS = [0, 0, 1, 1, 2, 2, 3, 3, 3, 4, 4, 3, 4, 4]
+_DEFAULT_WEAPON_BASE_ATTACK = [5, 10, 18, 28, 40, 55, 72, 90, 110, 135, 160, 100, 140, 180]
+_DEFAULT_WEAPON_BASE_DEFENSE = [3, 5, 8, 12, 16, 22, 28, 35, 42, 50, 60, 38, 52, 65]
+
+
+def _tier_value(values: list[int] | tuple[int, ...], defaults: list[int], rarity_index: int) -> int:
+    source = list(values or defaults)
+    if not source:
+        source = defaults
+    return int(source[min(max(0, rarity_index), len(source) - 1)])
 
 
 def xp_for_level(level: int) -> int:
@@ -306,9 +331,17 @@ async def claim_daily_checklist_reward(db: BotDatabase, user_id: int) -> dict[st
 
 def choose_rarity(zone: Zone, luck: int, rarity_bonus: float = 0.0) -> str:
     max_index = RARITY_INDEX[zone.max_rarity]
-    choices = list(RARITIES[: max_index + 1])
+    available_rarities = {creature.rarity for creature in CREATURES}
+    choices = [
+        rarity
+        for rarity in RARITIES
+        if RARITY_INDEX.get(rarity.name, 0) <= max_index and rarity.name in available_rarities
+    ]
+    if not choices:
+        choices = [RARITY_BY_NAME["Common"]]
     adjusted_weights: list[float] = []
-    for index, rarity in enumerate(choices):
+    for rarity in choices:
+        index = RARITY_INDEX.get(rarity.name, 0)
         bonus = 1.0 + rarity_bonus + (luck * 0.012 * index)
         adjusted_weights.append(max(1.0, rarity.weight * bonus / (1 + max(0, index - 2) * 0.18)))
     return random.choices([rarity.name for rarity in choices], weights=adjusted_weights, k=1)[0]
@@ -321,40 +354,52 @@ def choose_creature_template(rarity: str) -> CreatureTemplate:
     return random.choice(pool)
 
 
-def roll_creature_stats(template: CreatureTemplate, hunter_level: int) -> dict[str, int | str]:
+def calculate_creature_stats(template: CreatureTemplate, level: int, *, variance: float = 1.0) -> dict[str, int | str]:
     rarity = RARITY_BY_NAME[template.rarity]
     rarity_index = RARITY_INDEX[template.rarity]
-    level = max(1, min(100, random.randint(max(1, hunter_level - 2), hunter_level + 2)))
-    scaling = rarity.stat_multiplier * (1 + (level - 1) * 0.08)
-    variance = random.uniform(0.90, 1.15)
-    attack = max(1, round(template.attack * scaling * variance))
-    defense = max(1, round(template.defense * scaling * variance))
-    hp = max(1, round(template.hp * scaling * variance))
-    speed = max(1, round(template.speed * scaling * variance))
-    value = max(10, round((attack * 5 + defense * 4 + hp * 1.8 + speed * 5) * (1 + rarity_index * 0.38)))
+    level = max(1, min(100, int(level)))
+    rarity_tilt = rarity.stat_multiplier
+
+    hp = max(1, round((120 + template.hp * (12 + level * 1.85)) * rarity_tilt * variance))
+    str_score = max(1, round((18 + template.attack * (3.2 + level * 0.62)) * rarity_tilt * variance))
+    pr_score = max(1, round((12 + template.defense * (2.6 + level * 0.50)) * rarity_tilt * variance))
+    wp_score = max(1, round((100 + template.wp_stat * (5 + level * 0.8)) * rarity_tilt * variance))
+    mag_score = max(1, round((18 + template.mag_stat * (3.2 + level * 0.62)) * rarity_tilt * variance))
+    mr_score = max(1, round((12 + template.mr_stat * (2.6 + level * 0.50)) * rarity_tilt * variance))
+    spd = max(1, round((8 + template.speed * (1.5 + level * 0.22)) * rarity_tilt * variance))
+    value = max(10, round((str_score * 1.5 + mag_score * 1.5 + pr_score * 1.2 + mr_score * 1.2 + hp * 0.55 + spd * 4.0 + wp_score * 0.8) * (1 + rarity_index * 0.06)))
+    role = determine_role(template)
+
     return {
         "name": template.name, "rarity": template.rarity,
-        "attack": attack, "defense": defense, "hp": hp, "speed": speed,
-        "crit": min(45, 5 + rarity_index * 2 + speed // 24),
-        "mana": 35 + rarity_index * 8 + level,
+        "attack": str_score, "defense": pr_score, "hp": hp, "speed": spd,
+        "crit": min(30, 4 + template.speed // 2 + rarity_index // 3 + spd // 60),
+        "mana": 200,
+        "str_stat": str_score, "pr_stat": pr_score, "wp_stat": wp_score,
+        "mag_stat": mag_score, "mr_stat": mr_score, "spd": spd,
+        "role": role,
         "ability": template.ability, "value": value,
-        "image": normalize_key(template.name), "level": level,
+        "image": creature_asset_key(template.name), "level": level,
     }
+
+
+def roll_creature_stats(template: CreatureTemplate, hunter_level: int) -> dict[str, int | str]:
+    return calculate_creature_stats(template, 1, variance=random.uniform(0.94, 1.08))
 
 
 async def create_creature(db: BotDatabase, user_id: int, stats: dict[str, int | str]) -> int:
     return await db.insert(
-        """INSERT INTO rpg_creatures (user_id, name, rarity, attack, defense, hp, speed, crit, mana, ability, value, image, level, xp, caught_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
-        (user_id, stats["name"], stats["rarity"], stats["attack"], stats["defense"],
-         stats["hp"], stats["speed"], stats["crit"], stats["mana"], stats["ability"],
-         stats["value"], stats["image"], stats["level"], now_ts()),
+        """INSERT INTO rpg_creatures (user_id, name, rarity, attack, defense, hp, speed, crit, mana, str_stat, pr_stat, wp_stat, mag_stat, mr_stat, spd, role, ability, value, image, level, xp, caught_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
+        (user_id, stats["name"], stats["rarity"], stats.get("attack", 0), stats.get("defense", 0), stats["hp"], stats.get("speed", 1), stats["crit"], stats["mana"],
+         stats["str_stat"], stats["pr_stat"], stats["wp_stat"], stats["mag_stat"], stats["mr_stat"], stats["spd"], stats["role"],
+         stats["ability"], stats["value"], stats["image"], stats["level"], now_ts()),
     )
 
 
 async def top_creatures(db: BotDatabase, user_id: int, limit: int = 3) -> list[sqlite3.Row]:
     return await db.fetchall(
-        "SELECT * FROM rpg_creatures WHERE user_id = ? ORDER BY level DESC, attack + defense + hp + speed DESC, id ASC LIMIT ?",
+        "SELECT * FROM rpg_creatures WHERE user_id = ? ORDER BY level DESC, str_stat + pr_stat + hp + spd DESC, id ASC LIMIT ?",
         (user_id, limit),
     )
 
@@ -407,20 +452,95 @@ def _clamp(value: int, low: int, high: int) -> int:
     return max(low, min(high, int(value)))
 
 
+WEAPON_QUALITY_RARITY_TIERS: tuple[tuple[int, int, str], ...] = (
+    (0, 10, "Common"),
+    (11, 20, "Uncommon"),
+    (21, 30, "Rare"),
+    (31, 40, "Epic"),
+    (41, 50, "Legendary"),
+    (51, 60, "Mythic"),
+    (61, 70, "Ancient"),
+    (71, 80, "Divine"),
+    (81, 85, "Eldritch"),
+    (86, 90, "Abyssal"),
+    (91, 120, "Prismatic"),
+    (121, 135, "Ethereal"),
+    (136, 145, "Void Lord"),
+    (146, 150, "Hidden"),
+)
+
+
+def weapon_quality_rarity(quality_pct: int) -> str:
+    quality = _clamp(quality_pct, 0, 150)
+    for low, high, rarity in WEAPON_QUALITY_RARITY_TIERS:
+        if low <= quality <= high:
+            return rarity
+    return "Common"
+
+
+def weapon_quality_range_for_rarity(rarity: str) -> tuple[int, int]:
+    normalized = str(rarity or "Common")
+    for low, high, tier in WEAPON_QUALITY_RARITY_TIERS:
+        if tier == normalized:
+            return low, high
+    return 0, 10
+
+
 def _quality_label(quality_pct: int) -> str:
-    if quality_pct >= 95:
-        return "Ancient"
-    if quality_pct >= 85:
-        return "Masterwork"
-    if quality_pct >= 70:
-        return "Superior"
-    if quality_pct >= 55:
-        return "Fine"
-    return "Normal"
+    return weapon_quality_rarity(quality_pct)
 
 
 def _quality_multiplier(quality_pct: int) -> float:
-    return 0.65 + _clamp(quality_pct, 1, 100) * 0.009
+    return 0.65 + _clamp(quality_pct, 0, 150) * 0.006
+
+
+def calculate_weapon_roll_quality(row) -> int:
+    """Calculate quality_pct (0-150) from core non-stat rolls only:
+    active damage %, MANA cost, and passive_roll. Ignores all base stat rolls.
+    """
+    wtype_key = str(row_get(row, "weapon_type", "sword"))
+    ability = Ability.for_weapon_type(wtype_key)
+    sr_raw = row_get(row, "stat_rolls", "{}")
+    try:
+        sr = json.loads(str(sr_raw)) if isinstance(sr_raw, str) else sr_raw
+    except Exception:
+        sr = {}
+    if not isinstance(sr, dict):
+        sr = {}
+
+    weighted_sum = 0.0
+    total_weight = 0.0
+
+    # Active damage percent (higher is better)
+    active_roll = int(sr.get("active", 50))
+    active_range = ability.multiplier_max - ability.multiplier_min
+    if active_range > 0:
+        active_pct = ability.multiplier_min + active_range * active_roll / 100.0
+        active_score = (active_pct - ability.multiplier_min) / active_range
+        weighted_sum += max(0.0, min(1.0, active_score)) * 45
+        total_weight += 45
+
+    # MANA cost (lower is better)
+    wp_roll = int(sr.get("wp_cost", 50))
+    cost_range = ability.wp_cost_max - ability.wp_cost_min
+    if cost_range > 0:
+        mana_cost = ability.wp_cost_max - cost_range * wp_roll / 100.0
+        mana_score = (ability.wp_cost_max - mana_cost) / cost_range
+        weighted_sum += max(0.0, min(1.0, mana_score)) * 25
+        total_weight += 25
+
+    # Passive roll (higher is better)
+    passive = int(sr.get("passive_1", -1))
+    if passive >= 0:
+        passive_score = passive / 100.0
+        weighted_sum += max(0.0, min(1.0, passive_score)) * 30
+        total_weight += 30
+
+    if total_weight <= 0:
+        return 50
+
+    avg = weighted_sum / total_weight
+    return max(0, min(150, round(avg * 150)))
 
 
 def _roll_wear() -> str:
@@ -435,37 +555,43 @@ def _degrade_wear(wear: str) -> str:
 
 
 def _roll_quality_pct(wear: str) -> int:
-    tier = _roll_quality()
     ranges = {
-        "Normal": (35, 60),
-        "Fine": (55, 74),
-        "Superior": (70, 86),
-        "Masterwork": (82, 95),
-        "Ancient": (92, 100),
+        "Pristine": (100, 150),
+        "Fine": (70, 125),
+        "Decent": (35, 95),
+        "Worn": (10, 65),
+        "Unknown": (0, 80),
     }
-    low, high = ranges.get(str(tier["name"]), (35, 60))
-    return _clamp(random.randint(low, high) + WEAPON_WEAR_BONUS.get(wear, 0), 1, 100)
+    low, high = ranges.get(wear, (0, 80))
+    return _clamp(random.randint(low, high) + WEAPON_WEAR_BONUS.get(wear, 0), 0, 150)
 
 
 def _roll_mana_cost(rarity_index: int, quality_pct: int) -> int:
-    base = max(1, 6 - min(4, rarity_index // 3))
-    quality_discount = 1 if quality_pct >= 85 else 0
-    return _clamp(base + random.randint(-1, 2) - quality_discount, 1, 7)
+    quality = _clamp(quality_pct, 0, 150) / 150.0
+    high = 240 - min(40, rarity_index * 3)
+    low = max(90, high - 100)
+    return _clamp(round(high - (high - low) * quality), low, high)
 
 
 def _roll_affixes(rarity_index: int, quality_mult: float, affix_keys: list[str] | None = None) -> list[dict[str, object]]:
     if affix_keys is None:
-        keys = list(WEAPON_AFFIXES.keys())
+        battle_pool = {
+            "strength", "magic", "hp", "wp", "pr", "mr", "thorns", "regeneration",
+            "safeguard", "adaptation", "crit", "life_steal", "attack_pct",
+            "defense_pct", "bleed", "burn", "stun", "shield", "poison",
+        }
+        keys = [key for key in WEAPON_AFFIXES if key in battle_pool]
         random.shuffle(keys)
-        keys = keys[:WEAPON_AFFIX_COUNTS[rarity_index]]
+        keys = keys[:_tier_value(WEAPON_AFFIX_COUNTS, _DEFAULT_WEAPON_AFFIX_COUNTS, rarity_index)]
     else:
         keys = [key for key in affix_keys if key in WEAPON_AFFIXES]
 
     affixes: list[dict[str, object]] = []
     for key in keys:
         af = WEAPON_AFFIXES[key]
+        roll = random.randint(0, 150)
         val = max(1, int(random.randint(int(af["min"]), int(af["max"])) * quality_mult))
-        affixes.append({"stat": key, "value": val, "fmt": str(af["fmt"]).format(val)})
+        affixes.append({"stat": key, "value": val, "roll": roll, "fmt": str(af["fmt"]).format(val)})
     return affixes
 
 
@@ -525,27 +651,128 @@ def _roll_weapon(
     wear: str | None = None,
 ) -> dict[str, object]:
     rarity_index = RARITY_INDEX.get(rarity, 0)
-    wtype_key = wtype_key if wtype_key in WEAPON_TYPES else random.choice(list(WEAPON_TYPES.keys()))
+    if wtype_key and wtype_key in WEAPON_TYPES:
+        pass
+    else:
+        wtype_keys = list(WEAPON_TYPES.keys())
+        wtype_weights = [int(WEAPON_TYPES[k].get("crate_weight", 10)) for k in wtype_keys]
+        wtype_key = random.choices(wtype_keys, weights=wtype_weights, k=1)[0]
     wtype = WEAPON_TYPES[wtype_key]
     if name is None:
         prefix = random.choice(WEAPON_NAME_PREFIX)
         suffix = random.choice(WEAPON_NAME_SUFFIX.get(wtype_key, ["Blade"]))
         name = f"{prefix} {suffix}"
     wear = wear if wear in WEAPON_WEAR_STAGES else _roll_wear()
-    quality_pct = _roll_quality_pct(wear)
+    stat_rolls: dict[str, int] = {
+        "active": random.randint(*weapon_quality_range_for_rarity(rarity)),
+        "wp_cost": random.randint(*weapon_quality_range_for_rarity(rarity)),
+    }
+    passive_slots = 0 if wtype_key == "rune" else (2 if wtype_key == "orb" else 1)
+    for slot in range(passive_slots):
+        stat_rolls[f"passive_{slot + 1}"] = random.randint(*weapon_quality_range_for_rarity(rarity))
+
+    passive = None if keep_no_passive and passive_key is None else _roll_passive(wtype_key, rarity_index, passive_key)
+    affixes = [] if wtype_key == "rune" else _roll_affixes(rarity_index, 1.0, affix_keys)
+    for index, affix in enumerate(affixes, start=1):
+        roll_value = random.randint(*weapon_quality_range_for_rarity(rarity))
+        affix["roll"] = roll_value
+        stat_rolls[f"affix_{index}"] = roll_value
+    quality_pct = max(1, round(sum(stat_rolls.values()) / max(1, len(stat_rolls))))
+    if passive and "passive_1" in stat_rolls:
+        passive["roll"] = stat_rolls["passive_1"]
+    if passive and wtype_key == "orb":
+        pool = [key for key in list(wtype.get("passive_pool", [])) if key != passive.get("key")]
+        extra_key = random.choice(pool) if pool else None
+        extra = _roll_passive(wtype_key, rarity_index, extra_key) if extra_key else None
+        if extra:
+            extra["roll"] = stat_rolls.get("passive_2", random.randint(*weapon_quality_range_for_rarity(rarity)))
+            passive["extra"] = [extra]
     quality_mult = _quality_multiplier(quality_pct)
+    for affix in affixes:
+        stat = str(affix.get("stat", ""))
+        af = WEAPON_AFFIXES.get(stat)
+        if not af:
+            continue
+        val = max(1, round(int(af["min"]) + (int(af["max"]) - int(af["min"])) * (_clamp(quality_pct, 0, 150) / 150.0)))
+        affix["value"] = val
+        affix["fmt"] = str(af["fmt"]).format(val)
 
     base_atk = random.randint(int(wtype["atk_range"][0]), int(wtype["atk_range"][1]))
     base_def = random.randint(int(wtype["def_range"][0]), int(wtype["def_range"][1]))
-    atk = max(1, int((base_atk + WEAPON_BASE_ATTACK[rarity_index] * 0.6) * quality_mult))
-    defense = max(0, int((base_def + WEAPON_BASE_DEFENSE[rarity_index] * 0.6) * quality_mult))
-    passive = None if keep_no_passive and passive_key is None else _roll_passive(wtype_key, rarity_index, passive_key)
-    affixes = _roll_affixes(rarity_index, quality_mult, affix_keys)
+    base_hp = random.randint(1, 6)
+    base_wp = random.randint(1, 4)
+    base_mag = random.randint(1, max(2, int(wtype["atk_range"][1]) // 2))
+    base_mr = random.randint(1, max(2, int(wtype["def_range"][1]) // 2))
+    base_spd = random.randint(1, 4)
+    scale_stat = str(wtype.get("scale_stat", "STR")).upper()
+    qm = 0.70 + quality_pct / 150.0
+    active_score = round((base_atk + rarity_index * 2) * qm)
+    guard_score = round((base_def + rarity_index) * qm)
+
+    str_val = max(0, active_score if scale_stat == "STR" else active_score // 3)
+    mag_val = max(0, active_score if scale_stat == "MAG" else active_score // 3)
+    pr_val = max(0, guard_score if scale_stat in {"DEF", "HP", "RES", "MANA"} else guard_score)
+    mr_val = max(0, guard_score // 3)
+
+    if scale_stat == "HP":
+        hp_val = max(0, round((base_def + base_hp) * qm))
+    elif scale_stat == "STR":
+        hp_val = max(0, round((base_hp + base_atk * 0.3) * qm))
+    elif scale_stat == "MAG":
+        hp_val = max(0, round(base_hp * qm * 0.8))
+    else:
+        hp_val = max(0, round(base_hp * qm))
+
+    if scale_stat == "MAG":
+        wp_val = max(0, round((base_wp + base_atk * 0.2) * qm))
+    else:
+        wp_val = max(0, round(base_wp * qm * 0.7))
+
+    if scale_stat == "STR":
+        spd_val = max(0, round((base_spd + base_atk * 0.2) * qm))
+    elif scale_stat == "MAG":
+        spd_val = max(0, round(base_spd * qm * 0.8))
+    else:
+        spd_val = max(0, round(base_spd * qm))
+
+    base_hp_final = hp_val
+    base_wp_final = wp_val
+    base_mag_final = mag_val
+    base_mr_final = mr_val
+    base_spd_final = spd_val
+
+    allowed = WEAPON_BASE_STATS.get(wtype_key, WEAPON_BASE_STATS["sword"])
+
+    if "str_stat" in allowed:
+        stat_rolls["base_str"] = base_atk
+    if "pr_stat" in allowed:
+        stat_rolls["base_pr"] = base_def
+    if "hp" in allowed:
+        stat_rolls["base_hp"] = base_hp_final
+        stat_rolls["hp"] = base_hp_final
+    if "wp_stat" in allowed:
+        stat_rolls["base_wp"] = base_wp_final
+        stat_rolls["wp_stat"] = base_wp_final
+    if "mag_stat" in allowed:
+        stat_rolls["base_mag"] = base_mag_final
+        stat_rolls["mag_stat"] = base_mag_final
+    if "mr_stat" in allowed:
+        stat_rolls["base_mr"] = base_mr_final
+        stat_rolls["mr_stat"] = base_mr_final
+    if "spd" in allowed:
+        stat_rolls["base_spd"] = base_spd_final
+        stat_rolls["spd"] = base_spd_final
+
+    atk = str_val if "str_stat" in allowed else 0
+    defense = pr_val if "pr_stat" in allowed else 0
+    for affix in affixes:
+        if int(affix.get("roll", 0)) <= 0:
+            affix["roll"] = random.randint(*weapon_quality_range_for_rarity(rarity))
 
     return {
         "user_id": user_id,
         "name": name,
-        "rarity": rarity,
+        "rarity": weapon_quality_rarity(quality_pct),
         "weapon_type": wtype_key,
         "quality": _quality_label(quality_pct),
         "quality_pct": quality_pct,
@@ -556,6 +783,7 @@ def _roll_weapon(
         "passive": json.dumps(passive) if passive else None,
         "affixes": json.dumps(affixes),
         "affixes_list": affixes,
+        "stat_rolls": json.dumps(stat_rolls),
         "created_at": now_ts(),
     }
 
@@ -575,24 +803,27 @@ def _roll_quality() -> dict[str, object]:
 
 
 def weapon_display_name(weapon_row) -> str:
-    quality = str(row_get(weapon_row, "quality", "Normal"))
-    name = str(row_get(weapon_row, "name", "?"))
-    if quality == "Normal":
-        return name
-    return f"{quality} {name}"
+    quality_pct = int(row_get(weapon_row, "quality_pct", 50))
+    quality = weapon_quality_rarity(quality_pct)
+    wtype = str(row_get(weapon_row, "weapon_type", "sword"))
+    type_data = WEAPON_TYPES.get(wtype, {})
+    type_name = str(type_data.get("name", wtype.replace("_", " ").title()))
+    if quality == "Common":
+        return type_name
+    return f"{quality} {type_name}"
 
 
 async def insert_weapon(db: BotDatabase, weapon: dict[str, object]) -> int:
     return await db.insert(
         """INSERT INTO weapons
            (user_id, name, rarity, weapon_type, quality, quality_pct, mana_cost, wear,
-            attack_bonus, defense_bonus, passive, affixes, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            attack_bonus, defense_bonus, passive, affixes, stat_rolls, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (weapon["user_id"], weapon["name"], weapon["rarity"],
          weapon.get("weapon_type", "sword"), weapon.get("quality", "Normal"),
          weapon.get("quality_pct", 50), weapon.get("mana_cost", 3), weapon.get("wear", "Unknown"),
          weapon["attack_bonus"], weapon["defense_bonus"],
-         weapon.get("passive"), weapon["affixes"], weapon["created_at"]),
+         weapon.get("passive"), weapon["affixes"], weapon.get("stat_rolls"), weapon["created_at"]),
     )
 
 
@@ -600,7 +831,7 @@ async def ensure_weapon_passives(db: BotDatabase) -> int:
     rows = await db.fetchall("SELECT * FROM weapons WHERE passive IS NULL OR passive = ''")
     updated = 0
     for row in rows:
-        rarity = str(row_get(row, "rarity", "Common"))
+        rarity = weapon_quality_rarity(int(row_get(row, "quality_pct", 50)))
         rarity_index = RARITY_INDEX.get(rarity, 0)
         wtype_key = str(row_get(row, "weapon_type", "sword"))
         passive = _roll_passive(wtype_key, rarity_index)
@@ -615,18 +846,22 @@ async def ensure_weapon_passives(db: BotDatabase) -> int:
 
 
 async def player_weapons(db: BotDatabase, user_id: int) -> list[sqlite3.Row]:
-    return await db.fetchall("SELECT * FROM weapons WHERE user_id = ? ORDER BY rarity DESC, id DESC", (user_id,))
+    return await db.fetchall("SELECT * FROM weapons WHERE user_id = ? ORDER BY quality_pct DESC, id DESC", (user_id,))
 
 
 def weapon_salvage_shards(weapon_row) -> int:
-    rarity_index = RARITY_INDEX.get(str(row_get(weapon_row, "rarity", "Common")), 0)
     quality_pct = int(row_get(weapon_row, "quality_pct", 50))
+    rarity_index = RARITY_INDEX.get(weapon_quality_rarity(quality_pct), 0)
     base = [5, 8, 14, 24, 40, 65, 100, 150, 220, 320, 450, 550, 700, 900]
     return base[min(rarity_index, len(base) - 1)] + max(0, quality_pct // 20)
 
 
+OWO_REROLL_COST = 100
+
+
 def weapon_reroll_cost(weapon_row, mode: str) -> int:
-    rarity_index = RARITY_INDEX.get(str(row_get(weapon_row, "rarity", "Common")), 0)
+    quality_pct = int(row_get(weapon_row, "quality_pct", 50))
+    rarity_index = RARITY_INDEX.get(weapon_quality_rarity(quality_pct), 0)
     mode_key = normalize_key(mode)
     if mode_key in {"stat", "stats"}:
         return 10 + rarity_index * 5
@@ -647,7 +882,8 @@ async def reroll_weapon(db: BotDatabase, user_id: int, weapon_id: int, mode: str
     if owned < cost:
         raise ValueError(f"Need {cost} Weapon Shards. You have {owned}.")
 
-    rarity = str(row_get(row, "rarity", "Common"))
+    quality_pct_current = int(row_get(row, "quality_pct", 50))
+    rarity = weapon_quality_rarity(quality_pct_current)
     rarity_index = RARITY_INDEX.get(rarity, 0)
     current_wear = str(row_get(row, "wear", "Unknown"))
     wear = _degrade_wear(current_wear) if random.random() < 0.35 else current_wear
@@ -665,11 +901,11 @@ async def reroll_weapon(db: BotDatabase, user_id: int, weapon_id: int, mode: str
         await add_item(db, user_id, "material", WEAPON_SHARD_KEY, -cost)
         await db.execute(
             """UPDATE weapons
-               SET quality = ?, quality_pct = ?, mana_cost = ?, wear = ?,
+               SET rarity = ?, quality = ?, quality_pct = ?, mana_cost = ?, wear = ?,
                    attack_bonus = ?, defense_bonus = ?, passive = ?, affixes = ?
                WHERE id = ? AND user_id = ?""",
             (
-                rolled["quality"], rolled["quality_pct"], rolled["mana_cost"], rolled["wear"],
+                rolled["rarity"], rolled["quality"], rolled["quality_pct"], rolled["mana_cost"], rolled["wear"],
                 rolled["attack_bonus"], rolled["defense_bonus"], rolled["passive"], rolled["affixes"],
                 weapon_id, user_id,
             ),
@@ -683,13 +919,14 @@ async def reroll_weapon(db: BotDatabase, user_id: int, weapon_id: int, mode: str
         choices = [key for key in pool if key != current] or pool
         passive = _roll_passive(wtype_key, rarity_index, random.choice(choices))
         quality_pct = _roll_quality_pct(wear)
+        quality_rarity = weapon_quality_rarity(quality_pct)
         await add_item(db, user_id, "material", WEAPON_SHARD_KEY, -cost)
         await db.execute(
             """UPDATE weapons
-               SET quality = ?, quality_pct = ?, mana_cost = ?, wear = ?, passive = ?
+               SET rarity = ?, quality = ?, quality_pct = ?, mana_cost = ?, wear = ?, passive = ?
                WHERE id = ? AND user_id = ?""",
             (
-                _quality_label(quality_pct), quality_pct, _roll_mana_cost(rarity_index, quality_pct),
+                quality_rarity, _quality_label(quality_pct), quality_pct, _roll_mana_cost(rarity_index, quality_pct),
                 wear, json.dumps(passive) if passive else None, weapon_id, user_id,
             ),
         )
@@ -698,17 +935,202 @@ async def reroll_weapon(db: BotDatabase, user_id: int, weapon_id: int, mode: str
         await add_item(db, user_id, "material", WEAPON_SHARD_KEY, -cost)
         await db.execute(
             """UPDATE weapons
-               SET name = ?, weapon_type = ?, quality = ?, quality_pct = ?, mana_cost = ?, wear = ?,
+               SET name = ?, rarity = ?, weapon_type = ?, quality = ?, quality_pct = ?, mana_cost = ?, wear = ?,
                    attack_bonus = ?, defense_bonus = ?, passive = ?, affixes = ?
                WHERE id = ? AND user_id = ?""",
             (
-                rolled["name"], rolled["weapon_type"], rolled["quality"], rolled["quality_pct"],
+                rolled["name"], rolled["rarity"], rolled["weapon_type"], rolled["quality"], rolled["quality_pct"],
                 rolled["mana_cost"], rolled["wear"], rolled["attack_bonus"], rolled["defense_bonus"],
                 rolled["passive"], rolled["affixes"], weapon_id, user_id,
             ),
         )
     else:
         raise ValueError("Reroll mode must be `stat`, `passive`, or `full`.")
+
+    updated = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
+    if updated is None:
+        raise RuntimeError("Weapon disappeared after reroll.")
+    return updated
+
+
+def _owo_map_roll(roll: float, min_val: float, max_val: float, higher_is_better: bool = True) -> float:
+    """Map a 0-100 OwO-style roll to the actual value within a range."""
+    if higher_is_better:
+        return min_val + (max_val - min_val) * _clamp(roll, 0, 100) / 100.0
+    else:
+        return max_val - (max_val - min_val) * _clamp(roll, 0, 100) / 100.0
+
+
+def _owo_generate_stat_rolls(wtype_key: str, affixes: list[dict]) -> dict[str, int]:
+    """Generate fresh 0-100 OwO-style stat rolls for a weapon type."""
+    allowed = WEAPON_BASE_STATS.get(wtype_key, WEAPON_BASE_STATS["sword"])
+    rolls: dict[str, int] = {
+        "active": random.randint(0, 100),
+        "wp_cost": random.randint(0, 100),
+    }
+    base_keys = {
+        "hp": "hp",
+        "str_stat": "str_stat",
+        "pr_stat": "pr_stat",
+        "wp_stat": "wp_stat",
+        "mag_stat": "mag_stat",
+        "mr_stat": "mr_stat",
+        "spd": "spd",
+    }
+    for short_key in base_keys:
+        if short_key in allowed:
+            rolls[short_key] = random.randint(0, 100)
+    passive_slots = 0 if wtype_key == "rune" else (2 if wtype_key == "orb" else 1)
+    for slot in range(passive_slots):
+        rolls[f"passive_{slot + 1}"] = random.randint(0, 100)
+    for idx, affix in enumerate(affixes, start=1):
+        rolls[f"affix_{idx}"] = random.randint(0, 100)
+    return rolls
+
+
+def _owo_quality_from_rolls(stat_rolls: dict[str, int]) -> int:
+    """Compute quality_pct (0-150 scale) from average of 0-100 stat rolls."""
+    avg = sum(stat_rolls.values()) / max(1, len(stat_rolls))
+    return max(0, min(150, round(avg * 150 / 100)))
+
+
+async def owo_reroll_stat(db: BotDatabase, user_id: int, weapon_id: int) -> sqlite3.Row:
+    """OwO-style stat reroll: reroll allowed base stats, active damage %, and MANA cost. Does NOT change passive or affixes."""
+    row = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
+    if row is None:
+        raise ValueError(f"No weapon with ID `{weapon_id}`.")
+
+    owned = await get_quantity(db, user_id, "material", WEAPON_SHARD_KEY)
+    if owned < OWO_REROLL_COST:
+        raise ValueError(f"You need **{OWO_REROLL_COST}** {material_label(WEAPON_SHARD_KEY)} to reroll. You have **{owned:,}**.")
+
+    wtype_key = str(row_get(row, "weapon_type", "sword"))
+    wtype = WEAPON_TYPES.get(wtype_key, WEAPON_TYPES["sword"])
+    allowed = WEAPON_BASE_STATS.get(wtype_key, WEAPON_BASE_STATS["sword"])
+
+    stat_rolls_raw = str(row_get(row, "stat_rolls", ""))
+    stat_rolls: dict[str, int] = _json_obj(stat_rolls_raw, {}) if stat_rolls_raw else {}
+
+    for stat_key in allowed:
+        roll = random.randint(0, 100)
+        stat_rolls[stat_key] = roll
+        if stat_key == "str_stat":
+            stat_rolls["base_str"] = roll
+        elif stat_key == "pr_stat":
+            stat_rolls["base_pr"] = roll
+        elif stat_key == "hp":
+            stat_rolls["base_hp"] = roll
+        elif stat_key == "wp_stat":
+            stat_rolls["base_wp"] = roll
+        elif stat_key == "mag_stat":
+            stat_rolls["base_mag"] = roll
+        elif stat_key == "mr_stat":
+            stat_rolls["base_mr"] = roll
+        elif stat_key == "spd":
+            stat_rolls["base_spd"] = roll
+
+    stat_rolls["active"] = random.randint(0, 100)
+    stat_rolls["wp_cost"] = random.randint(0, 100)
+
+    def _map_owostat(key: str, rmin: float, rmax: float) -> int:
+        return round(_owo_map_roll(stat_rolls.get(key, 50), rmin, rmax))
+
+    atk = _map_owostat("str_stat", float(wtype["atk_range"][0]), float(wtype["atk_range"][1])) if "str_stat" in allowed else 0
+    defense = _map_owostat("pr_stat", float(wtype["def_range"][0]), float(wtype["def_range"][1])) if "pr_stat" in allowed else 0
+
+    quality_pct = calculate_weapon_roll_quality({"weapon_type": wtype_key, "stat_rolls": json.dumps(stat_rolls)})
+
+    await add_item(db, user_id, "material", WEAPON_SHARD_KEY, -OWO_REROLL_COST)
+    await db.execute(
+        """UPDATE weapons
+           SET attack_bonus = ?, defense_bonus = ?, stat_rolls = ?,
+               quality_pct = ?, rarity = ?, quality = ?
+           WHERE id = ? AND user_id = ?""",
+        (
+            atk, defense, json.dumps(stat_rolls),
+            quality_pct, weapon_quality_rarity(quality_pct), _quality_label(quality_pct),
+            weapon_id, user_id,
+        ),
+    )
+
+    updated = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
+    if updated is None:
+        raise RuntimeError("Weapon disappeared after reroll.")
+    return updated
+
+
+async def owo_reroll_passive(db: BotDatabase, user_id: int, weapon_id: int) -> sqlite3.Row:
+    """OwO-style passive reroll: replace passive and recalculate quality from core rolls. Does NOT change base stats or affixes."""
+    row = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
+    if row is None:
+        raise ValueError(f"No weapon with ID `{weapon_id}`.")
+
+    wtype_key = str(row_get(row, "weapon_type", "sword"))
+    pool = list(WEAPON_TYPES.get(wtype_key, {}).get("passive_pool", []))
+    if not pool:
+        raise ValueError("This weapon type has no passive pool.")
+
+    owned = await get_quantity(db, user_id, "material", WEAPON_SHARD_KEY)
+    if owned < OWO_REROLL_COST:
+        raise ValueError(f"You need **{OWO_REROLL_COST}** {material_label(WEAPON_SHARD_KEY)} to reroll. You have **{owned:,}**.")
+
+    current_passive_key = str(row_get(row, "passive", "{}"))
+    try:
+        current_key = str(json.loads(current_passive_key).get("key", "")) if current_passive_key else ""
+    except (json.JSONDecodeError, TypeError, AttributeError):
+        current_key = ""
+
+    choices = [key for key in pool if key != current_key] or pool
+    new_key = random.choice(choices)
+
+    rarity_index = RARITY_INDEX.get(str(row_get(row, "rarity", "Common")), 0)
+    new_passive = _roll_passive(wtype_key, rarity_index, new_key)
+    if not new_passive:
+        raise ValueError("Failed to generate a new passive.")
+
+    stat_rolls_str = str(row_get(row, "stat_rolls", ""))
+    stat_rolls: dict[str, int] = _json_obj(stat_rolls_str, {}) if stat_rolls_str else {}
+
+    passive_roll = random.randint(0, 100)
+    stat_rolls["passive_1"] = passive_roll
+
+    if new_passive.get("key"):
+        p_data = WEAPON_PASSIVE_CHANCE.get(str(new_passive["key"]), {"min": 5, "max": 20})
+        p_value = round(_owo_map_roll(passive_roll, float(p_data["min"]), float(p_data["max"])))
+        new_passive["roll"] = passive_roll
+        new_passive["chance"] = p_value
+
+    if wtype_key == "orb":
+        pool2 = [key for key in pool if key != new_key] or pool
+        extra_key = random.choice(pool2) if pool2 else None
+        if extra_key:
+            extra_passive = _roll_passive(wtype_key, rarity_index, extra_key)
+            if extra_passive:
+                extra_roll = random.randint(0, 100)
+                stat_rolls["passive_2"] = extra_roll
+                e_data = WEAPON_PASSIVE_CHANCE.get(extra_key, {"min": 5, "max": 20})
+                e_value = round(_owo_map_roll(extra_roll, float(e_data["min"]), float(e_data["max"])))
+                extra_passive["roll"] = extra_roll
+                extra_passive["chance"] = e_value
+                new_passive["extra"] = [extra_passive]
+        if "passive_2" not in stat_rolls:
+            stat_rolls["passive_2"] = random.randint(0, 100)
+
+    quality_pct = calculate_weapon_roll_quality({"weapon_type": wtype_key, "stat_rolls": json.dumps(stat_rolls)})
+
+    await add_item(db, user_id, "material", WEAPON_SHARD_KEY, -OWO_REROLL_COST)
+    await db.execute(
+        """UPDATE weapons
+           SET passive = ?, stat_rolls = ?,
+               quality_pct = ?, rarity = ?, quality = ?
+           WHERE id = ? AND user_id = ?""",
+        (
+            json.dumps(new_passive) if new_passive.get("key") else None,
+            json.dumps(stat_rolls),
+            quality_pct, weapon_quality_rarity(quality_pct), _quality_label(quality_pct),
+            weapon_id, user_id,
+        ),
+    )
 
     updated = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
     if updated is None:
@@ -806,12 +1228,56 @@ def apply_charm(buffs: dict[str, int]) -> float:
     return bonus
 
 
+STAT_KEY_MAP: dict[str, str] = {
+    "hp": "hp",
+    "strength": "str_stat",
+    "str": "str_stat",
+    "str_stat": "str_stat",
+    "attack_flat": "str_stat",
+    "attack": "str_stat",
+    "def": "pr_stat",
+    "pr": "pr_stat",
+    "pr_stat": "pr_stat",
+    "defense_flat": "pr_stat",
+    "defense": "pr_stat",
+    "wp": "wp_stat",
+    "mana": "wp_stat",
+    "wp_stat": "wp_stat",
+    "magic": "mag_stat",
+    "mag": "mag_stat",
+    "mag_stat": "mag_stat",
+    "mr": "mr_stat",
+    "res": "mr_stat",
+    "mr_stat": "mr_stat",
+    "res_stat": "mr_stat",
+    "speed": "spd",
+    "spd": "spd",
+    "base_hp": "hp",
+    "base_str": "str_stat",
+    "base_pr": "pr_stat",
+    "base_wp": "wp_stat",
+    "base_mag": "mag_stat",
+    "base_mr": "mr_stat",
+    "base_spd": "spd",
+}
+
+
 def weapon_stats(weapon_row) -> dict[str, int]:
     if weapon_row is None:
-        return {"attack": 0, "defense": 0}
+        return {"hp": 0, "str_stat": 0, "pr_stat": 0, "wp_stat": 0, "mag_stat": 0, "mr_stat": 0, "spd": 0}
+
+    wtype_key = str(row_get(weapon_row, "weapon_type", "sword"))
+    allowed = WEAPON_BASE_STATS.get(wtype_key, WEAPON_BASE_STATS["sword"])
+
     atk = int(row_get(weapon_row, "attack_bonus", 0))
     df = int(row_get(weapon_row, "defense_bonus", 0))
-    stats = {"attack": atk, "defense": df}
+
+    stats: dict[str, int] = {"hp": 0, "str_stat": 0, "pr_stat": 0, "wp_stat": 0, "mag_stat": 0, "mr_stat": 0, "spd": 0}
+    if "str_stat" in allowed:
+        stats["str_stat"] = atk
+    if "pr_stat" in allowed:
+        stats["pr_stat"] = df
+
     affixes_raw = row_get(weapon_row, "affixes", "[]")
     try:
         affixes = json.loads(str(affixes_raw))
@@ -819,10 +1285,21 @@ def weapon_stats(weapon_row) -> dict[str, int]:
         affixes = []
     for a in affixes:
         s, v = str(a.get("stat", "")), int(a.get("value", 0))
-        if s == "attack_flat":
-            stats["attack"] = stats.get("attack", 0) + v
-        elif s == "defense_flat":
-            stats["defense"] = stats.get("defense", 0) + v
+        target = STAT_KEY_MAP.get(s)
+        if target and target in stats:
+            stats[target] = stats[target] + v
+
+    stat_rolls_raw = row_get(weapon_row, "stat_rolls")
+    if stat_rolls_raw:
+        try:
+            sr = json.loads(str(stat_rolls_raw))
+            if isinstance(sr, dict):
+                for raw_key, raw_val in sr.items():
+                    target = STAT_KEY_MAP.get(raw_key)
+                    if target and target in stats and target in allowed:
+                        stats[target] = stats[target] + int(raw_val)
+        except Exception:
+            pass
     return stats
 
 
@@ -837,7 +1314,12 @@ def weapon_effects(weapon_row) -> dict[str, int]:
         affixes = []
     for a in affixes:
         s, v = str(a.get("stat", "")), int(a.get("value", 0))
-        if s in ("crit", "life_steal", "bleed", "burn", "stun", "shield", "poison", "soul_gain", "gem_finder", "xp_boost", "attack_pct", "defense_pct", "rare_finder"):
+        if s in (
+            "strength", "magic", "hp", "wp", "pr", "mr", "thorns", "regeneration",
+            "safeguard", "adaptation", "crit", "life_steal", "bleed", "burn",
+            "stun", "shield", "poison", "soul_gain", "gem_finder", "xp_boost",
+            "attack_pct", "defense_pct", "rare_finder",
+        ):
             effects[s] = effects.get(s, 0) + v
     passive_raw = row_get(weapon_row, "passive")
     if passive_raw:
@@ -857,7 +1339,7 @@ def apply_weapon(creature: dict[str, object], weapon_row) -> dict[str, object]:
     cr["_weapon"] = {
         "id": row_get(weapon_row, "id"),
         "name": str(row_get(weapon_row, "name", "?")),
-        "rarity": str(row_get(weapon_row, "rarity", "Common")),
+        "rarity": weapon_quality_rarity(int(row_get(weapon_row, "quality_pct", 50))),
         "attack_bonus": int(row_get(weapon_row, "attack_bonus", 0)),
         "defense_bonus": int(row_get(weapon_row, "defense_bonus", 0)),
         "affixes": str(row_get(weapon_row, "affixes", "[]")),
@@ -868,16 +1350,8 @@ def apply_weapon(creature: dict[str, object], weapon_row) -> dict[str, object]:
         "wear": str(row_get(weapon_row, "wear", "Unknown")),
         "passive": row_get(weapon_row, "passive"),
     }
-    ws = weapon_stats(weapon_row)
-    for s in ("attack", "defense"):
-        cr[s] = int(cr.get(s, 0)) + ws.get(s, 0)
     for k, v in weapon_effects(weapon_row).items():
-        if k == "attack_pct":
-            cr["attack"] = int(cr.get("attack", 0)) * (100 + v) // 100
-        elif k == "defense_pct":
-            cr["defense"] = int(cr.get("defense", 0)) * (100 + v) // 100
-        else:
-            cr["_" + k] = v
+        cr["_" + k] = v
     return cr
 
 
@@ -911,6 +1385,15 @@ async def open_crate(db: BotDatabase, user_id: int, crate_key: str) -> dict[str,
     if swords:
         await add_item(db, user_id, "consumable", "hunt_sword", swords)
     return {"gold": gold, "gems": gems, "materials": materials, "swords": swords, "weapons": weapons}
+
+
+async def open_lootbox(db: BotDatabase, user_id: int) -> dict[str, object]:
+    """Open a hunt lootbox.
+
+    Lootboxes are stored separately from weapon crates in inventory, but they
+    use the same reward presentation as a small cache.
+    """
+    return await open_crate(db, user_id, "cache")
 
 
 # ── Battle System ──────────────────────────────────────────────────────
@@ -980,6 +1463,13 @@ def generate_npc_team(npc: NPCHunter) -> list[dict[str, object]]:
             "defense": nc.defense,
             "hp": nc.hp,
             "speed": nc.speed,
+            "str_stat": nc.str_stat or nc.attack,
+            "pr_stat": nc.pr_stat or nc.defense,
+            "wp_stat": nc.wp_stat or 0,
+            "mag_stat": nc.mag_stat or 0,
+            "mr_stat": nc.mr_stat or 0,
+            "spd": nc.spd or nc.speed,
+            "role": nc.role or "Balanced",
             "crit": nc.crit,
             "mana": nc.mana,
             "ability": nc.ability,
@@ -1050,8 +1540,8 @@ async def load_team_snapshot(db: BotDatabase, user_id: int) -> list[dict[str, ob
                 "passive": str(r["weapon_passive"]) if r["weapon_passive"] else None,
             }
             ws = weapon_stats(cr["_weapon"])
-            for s in ("attack", "defense"):
-                cr[s] = int(cr.get(s, 0)) + ws.get(s, 0)
+            cr["attack"] = int(cr.get("attack", 0)) + ws.get("str_stat", 0)
+            cr["defense"] = int(cr.get("defense", 0)) + ws.get("pr_stat", 0)
         team.append(cr)
     return team
 
@@ -1089,15 +1579,18 @@ async def record_battle_history(
 
 
 def calculate_battle_rewards(won: bool, player_level: int, streak: int, rating: int) -> dict[str, object]:
-    from core.rpg_data import streak_multiplier
-    mult = 1.0 + streak_multiplier(streak)
+    from core.rpg_data import streak_multiplier, get_streak_tier
+    base_mult = 1.0 + streak_multiplier(streak)
+    tier = get_streak_tier(streak)
+    xp_mult = base_mult * (1.0 + tier.xp_boost)
+    gold_mult = base_mult * (1.0 + tier.gold_boost)
     if won:
-        gold = round((160 + player_level * 12) * mult)
-        gems = max(1, round(3 * mult))
-        xp = round(75 * mult)
+        gold = round((160 + player_level * 12) * gold_mult)
+        gems = max(1, round(3 * base_mult))
+        xp = round(75 * xp_mult)
         return {"gold": gold, "gems": gems, "xp": xp}
     else:
-        gold = round((40 + player_level * 4) * mult)
+        gold = round((40 + player_level * 4) * gold_mult)
         return {"gold": gold, "gems": 0, "xp": 0}
 
 

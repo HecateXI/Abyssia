@@ -16,25 +16,83 @@
     },
     "buffs": {
       "abyssal_blood": {
-        "file": "buffs/abyssal_blood.png"
+        "file": "buffs/abyssal_blood.png",
+        "sha256": "080b19148b1e1fb8365eae01b9affa53591f6c6f9b54c9cb01940905206b5ac2",
+        "updated_at": 1780680328
+      },
+      "deep_void": {
+        "file": "buffs/deep_void.png",
+        "sha256": "2dd906bca4f682f19aea7521c4352e0f5f8fff681f8052ed3f1bf579ce8e1ffe",
+        "updated_at": 1780680399
+      },
+      "dread_blood": {
+        "file": "buffs/dread_blood.png",
+        "sha256": "a1760ce84f7a564345570fae113e8296746ba95c11741baeff549398f5dc3a50",
+        "updated_at": 1780680302
       },
       "eldritch_void": {
-        "file": "buffs/eldritch_void.png"
+        "file": "buffs/eldritch_void.png",
+        "sha256": "66f704ada76058bf0338938e2ae65600190eca50f989ef3e4dfbd5c258969967",
+        "updated_at": 1780680407
+      },
+      "greater_blood": {
+        "file": "buffs/greater_blood.png",
+        "sha256": "4b075f8d5a4edd4823ed8eae69c8d17ce21c62c3ea8f942acd4a8cee00ad539a",
+        "updated_at": 1780680290
       },
       "greater_void": {
-        "file": "buffs/greater_void.png"
+        "file": "buffs/greater_void.png",
+        "sha256": "a9f9bac4fd2ebfe1427c6e7de45f654aa33d16d15a426dbbab68652365e000d1",
+        "updated_at": 1780680379
       },
       "lesser_blood": {
         "file": "buffs/lesser_blood.png",
-        "updated_at": 1780613187
+        "sha256": "b76b44ba918d845a73325a95521aa1b6b6729f87609689df2dc2464d1fb006bd",
+        "updated_at": 1780680242
       },
       "lesser_void": {
-        "file": "buffs/lesser_void.png"
+        "file": "buffs/lesser_void.png",
+        "sha256": "69843100c20f31fc78348663967e046a73a1e5b7188af0db1bd2d9bfa441ddf9",
+        "updated_at": 1780680364
+      },
+      "singularity_void": {
+        "file": "buffs/singularity_void.png",
+        "sha256": "2fc7c78ec5ddfa18790ee7ae7b3faeca5defc6a7d074f535a8bb3d3483021a59",
+        "updated_at": 1780680416
+      },
+      "sovereign_blood": {
+        "file": "buffs/sovereign_blood.png",
+        "sha256": "affc356955aa12c8cfa657a8d3c321d1e4a20595d1c9da14f8d5ed9479a361cc",
+        "updated_at": 1780680340
       }
     },
     "consumable": {},
-    "crate": {},
+    "crate": {
+      "cache": {
+        "file": "crate/cache.png",
+        "sha256": "f92c4375657c5bcfdc4879a61fe7db361ca42a9c24c952d164fb27ec29d12f7c",
+        "updated_at": 1780680872
+      },
+      "relic": {
+        "file": "crate/relic.png",
+        "sha256": "5399389a31f44a98a14fba2165c203c13e795d925606402f1ef12d99ca272885",
+        "updated_at": 1780680885
+      },
+      "treasure": {
+        "file": "crate/treasure.png",
+        "sha256": "b974f16db3dabec7d35357085846948ba607370f9cb96a4040612d2abe4e591d",
+        "updated_at": 1780680895
+      }
+    },
     "creatures": {
+      "1": {
+        "file": "creatures/1.jpg",
+        "sha256": "878f0b8daabc97e207bf5152d2f0741d94a17e1aa8532137a63d7c998564955d",
+        "updated_at": 1780947265
+      },
+      "trixs_grumpy_cat": {
+        "file": "creatures/1.jpg"
+      },
       "abyssal_godling": {
         "file": "creatures/abyssal_godling.png"
       },
@@ -370,7 +428,33 @@
         "placeholder": true
       }
     },
-    "currency": {},
+    "currency": {
+      "corrupted_essence": {
+        "file": "currency/corrupted_essence.png",
+        "sha256": "d8bbc3d799ebd0f90f4a5a03595c3c41c7f529293142e1bd0f370e1785976c75",
+        "updated_at": 1780681405
+      },
+      "gems": {
+        "file": "currency/gems.png",
+        "sha256": "f95da8f481d05ee4ed1aca1a55633e8b016a03bd2cad3e71ee52994118188c5b",
+        "updated_at": 1780681097
+      },
+      "gold": {
+        "file": "currency/gold.png",
+        "sha256": "00926c5b4d226d46e196c88e8010015413ec8a508a17a1a769d4afee324e5c82",
+        "updated_at": 1780680946
+      },
+      "souls": {
+        "file": "currency/souls.png",
+        "sha256": "6493184a4b9e7275689a0acddb06144a3a9d3d15050e86f42b809d945f51ef68",
+        "updated_at": 1780681111
+      },
+      "void_crystals": {
+        "file": "currency/void_crystals.png",
+        "sha256": "71743a4bb8551bcf6d92aa850345b634b601f1abdf02dbfa6ba9bed0c319f8bd",
+        "updated_at": 1780681125
+      }
+    },
     "equipment": {
       "abyssal_cleaver": {
         "file": "equipment/abyssal_cleaver.png"
@@ -428,57 +512,140 @@
       },
       "void_crystals": {
         "file": "materials/void_crystals.png"
+      },
+      "weapon_shards": {
+        "file": "materials/weapon_shards.png",
+        "sha256": "a5e1c42984687aac1a301daaff37fcee27dde4f97c11cf504ebd900a26c106c7",
+        "updated_at": 1780680850
       }
     },
-    "passives": {},
+    "passives": {
+      "bleed": {
+        "file": "passives/bleed.png",
+        "sha256": "34099f3656b1ac871cf7592831f1048c5228a93e23ffcbd70d0d6b1cae52ed98",
+        "updated_at": 1780680824
+      },
+      "burn": {
+        "file": "passives/burn.png",
+        "sha256": "1d538c37e5eec701c11d959d0675b87458f482beca8e80a846a2100ccc6a7ff3",
+        "updated_at": 1780680653
+      },
+      "crit": {
+        "file": "passives/crit.png",
+        "sha256": "c2cc8b3b88f779a55ba3cf53074519214931baeae337ea35bb88a6961b594ba8",
+        "updated_at": 1780680756
+      },
+      "heal": {
+        "file": "passives/heal.png",
+        "sha256": "b173b2e8879244590131150d03e2157d23321b501ae9181b188776a82fee2e72",
+        "updated_at": 1780680728
+      },
+      "poison": {
+        "file": "passives/poison.png",
+        "sha256": "53e2c03584e88b2b93b520dc0991f61e1cb41a256a04586bbd3c019200a81e5e",
+        "updated_at": 1780680811
+      },
+      "shield": {
+        "file": "passives/shield.png",
+        "sha256": "a32e3db41210c24a5191a32a40eca133a624cb1aa2e3bb433df37e541ded2f4b",
+        "updated_at": 1780680767
+      },
+      "stun": {
+        "file": "passives/stun.png",
+        "sha256": "7e6e29a64d857bc6bf255bf240a4840fcee8528013d690cb311980c1cae2ccd7",
+        "updated_at": 1780680802
+      }
+    },
     "rarity": {},
     "status": {},
     "ui": {},
-    "weapons": {},
+    "weapons": {
+      "axe": {
+        "file": "weapons/axe.png",
+        "sha256": "eafbe479464779e7a23a1f48dbbf4604190e30930a17b3a7435d8e73adb6a058",
+        "updated_at": 1780680496
+      },
+      "dagger": {
+        "file": "weapons/dagger.png",
+        "sha256": "ce86402b2969373ed8e8d8f9354826ff4ddb668e1280d3b10826e1342355823b",
+        "updated_at": 1780680506
+      },
+      "hammer": {
+        "file": "weapons/hammer.png",
+        "sha256": "0b9a1afaa39209d0c6e4b8b70a4f9374887fdcfdf85beeb7eacb79f67461a56a",
+        "updated_at": 1780680551
+      },
+      "shield": {
+        "file": "weapons/shield.png",
+        "sha256": "b1bfdbe6c535f677ea0d3ac6ef0b3c874e288b83c3ae4c2e9e9feec0361bd0a5",
+        "updated_at": 1780680527
+      },
+      "staff": {
+        "file": "weapons/staff.png",
+        "sha256": "5c7118e1a6c8bb39038bf46fb3b85ccee167da8d6479be55ca284029cd37c113",
+        "updated_at": 1780680562
+      },
+      "sword": {
+        "file": "weapons/sword.png",
+        "sha256": "7ba1baf9b064bf699c6fbb6903dba0f3dc444583784c20f3ebb49d2dd6e411bf",
+        "updated_at": 1780680457
+      }
+    },
     "zones": {
       "abyssal_depths": {
         "file": "zones/abyssal_depths.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "ashen_wastes": {
         "file": "zones/ashen_wastes.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "black_sun_gate": {
         "file": "zones/black_sun_gate.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "bloodmoon_forest": {
         "file": "zones/bloodmoon_forest.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "cursed_sanctum": {
         "file": "zones/cursed_sanctum.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "forgotten_woods": {
         "file": "zones/forgotten_woods.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "grave_marsh": {
         "file": "zones/grave_marsh.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "infernal_catacombs": {
         "file": "zones/infernal_catacombs.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "starless_menagerie": {
         "file": "zones/starless_menagerie.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "throne_of_teeth": {
         "file": "zones/throne_of_teeth.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       },
       "void_realm": {
         "file": "zones/void_realm.png",
-        "generated": true
+        "generated": true,
+        "usage": "card_background"
       }
     }
   },
@@ -513,7 +680,7 @@
     },
     "patreon": {
       "tier_pets": {
-        "1": [],
+        "1": ["trixs_grumpy_cat"],
         "2": [],
         "3": [],
         "4": []
@@ -543,20 +710,21 @@
     },
     "rarity": {
       "catch_rates": {
-        "Abyssal": 0.0005,
-        "Ancient": 0.005,
-        "Common": 0.9,
-        "Divine": 0.002,
-        "Eldritch": 0.001,
-        "Epic": 0.05,
-        "Ethereal": 0.0002,
-        "Hidden": 1e-05,
-        "Legendary": 0.02,
-        "Mythic": 0.01,
-        "Prismatic": 0.0001,
-        "Rare": 0.15,
-        "Uncommon": 0.45,
-        "Void Lord": 3e-05
+        "Abyssal": 0.0008,
+        "Ancient": 0.008,
+        "Common": 0.497,
+        "Divine": 0.0038,
+        "Eldritch": 0.0018,
+        "Epic": 0.01,
+        "Ethereal": 0.0004,
+        "Hidden": 5e-06,
+        "Legendary": 0.036,
+        "Mythic": 0.016,
+        "Patreon": 0.008,
+        "Prismatic": 0.0002,
+        "Rare": 0.099,
+        "Uncommon": 0.298,
+        "Void Lord": 5e-05
       },
       "stat_multipliers": {},
       "weights": {}
@@ -574,7 +742,20 @@
     "buffs": {},
     "consumable": {},
     "crate": {},
-    "creatures": {},
+    "creatures": {
+      "1": {
+        "ability": "Shadow Cloak",
+        "attack": 18,
+        "defense": 2,
+        "hp": 4,
+        "name": "Trix's Grumpy Cat",
+        "rarity": "Patreon",
+        "speed": 6,
+        "wp_stat": 20,
+        "mag_stat": 20,
+        "mr_stat": 20
+      }
+    },
     "currency": {},
     "equipment": {},
     "materials": {},
@@ -589,6 +770,6 @@
     "auto_sync_application_emojis": true,
     "public_asset_base_url": ""
   },
-  "updated_at": 1780659952,
+  "updated_at": 1780947295,
   "version": 1
 }

@@ -5,10 +5,10 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any, Iterable
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 
 from core.content_config import ASSET_DIR, get_asset_file_path, get_creature_asset_path, safe_key
-from core.rpg_data import CHARMS, RARITY_BY_NAME, RARITY_INDEX, SIGILS, normalize_key
+from core.rpg_data import CHARMS, RARITY_BY_NAME, RARITY_INDEX, SIGILS, ZONES, arena_rank, normalize_key
 
 
 # ── Palette ──────────────────────────────────────────────────────
@@ -35,7 +35,8 @@ _RARITY = {
     "Common": (139, 148, 158), "Uncommon": (74, 222, 128),
     "Rare": (56, 189, 248), "Epic": (167, 139, 250),
     "Legendary": (250, 204, 21), "Mythic": (251, 113, 133),
-    "Ancient": (249, 115, 22), "Divine": (254, 243, 199),
+    "Ancient": (249, 115, 22), "Patreon": (255, 66, 77),
+    "Divine": (254, 243, 199),
     "Eldritch": (34, 211, 238), "Abyssal": (130, 90, 200),
     "Prismatic": (16, 185, 129), "Ethereal": (96, 165, 250),
     "Void Lord": (30, 80, 130), "Hidden": (147, 51, 234),
@@ -380,12 +381,13 @@ def render_team_card(display_name: str, team: Iterable[Any], *, team_power: int,
 
         stats_y = gy + 252
         stat_w = (gw - 44) // 3
-        for si, (lab, key, sc) in enumerate([("HP", "hp", _RED), ("ATK", "attack", _GOLD), ("DEF", "defense", _BLUE)]):
-            sv = int(_get(cr, key, 0))
+        from core.battle_engine import compute_display_stats
+        bstats = compute_display_stats(cr)
+        for si, (lab, val, sc) in enumerate([("HP", bstats["HP"], _RED), ("STR", bstats["STR"], _GOLD), ("MANA", bstats["MANA"], _PURPLE)]):
             sx = gx + 14 + si * (stat_w + 8)
             draw.rounded_rectangle((sx, stats_y, sx + stat_w, stats_y + 50), radius=7, fill=_PANEL, outline=(*sc, 120))
             draw.text((sx + 9, stats_y + 7), lab, font=F10, fill=_TEXT_MUTED)
-            draw.text((sx + 9, stats_y + 22), str(sv), font=F16, fill=sc)
+            draw.text((sx + 9, stats_y + 22), str(val), font=F16, fill=sc)
 
         if weapons:
             cid = int(_get(cr, "id", 0))
@@ -459,9 +461,9 @@ def render_battle_card(left_name, right_name, left_team, right_team, *, left_hp=
             _rarity_badge(draw, tx, y + 44, str(_get(cr, "rarity", "Common")))
             rl = str(_get(cr, "rarity", ""))[:3].upper()
             draw.text((tx + _tw(draw, rl, F10) + 18, y + 44), f"Lv.{lv}  |  {_get(cr, 'ability', '')}", font=F14, fill=_TEXT_MUTED)
-            draw.text((tx, y + 76), f"ATK {_get(cr, 'attack', 0)}", font=F15, fill=_RED)
-            draw.text((tx + 100, y + 76), f"DEF {_get(cr, 'defense', 0)}", font=F15, fill=_BLUE)
-            draw.text((tx + 200, y + 76), f"SPD {_get(cr, 'speed', 0)}", font=F15, fill=_GREEN)
+            draw.text((tx, y + 76), f"STR {_get(cr, 'str_stat', 0)}", font=F15, fill=_GOLD)
+            draw.text((tx + 100, y + 76), f"DEF {_get(cr, 'pr_stat', 0)}", font=F15, fill=_BLUE)
+            draw.text((tx + 200, y + 76), f"SPD {_get(cr, 'spd', _get(cr, 'speed', 0))}", font=F15, fill=_GREEN)
             _bar(draw, tx, y + 106, pw - 220, 20, max(0, hp), mhp, _RED)
             y += rh + 16
         return y
@@ -474,73 +476,331 @@ def render_battle_card(left_name, right_name, left_team, right_team, *, left_hp=
 # ══════════════════════════════════════════════════════════════════
 #  PROFILE CARD
 # ══════════════════════════════════════════════════════════════════
-def render_profile_card(display_name, player, *, collection_count, weapon_name, xp_needed, active_buffs: dict[str, int] | None = None):
-    W, H = 980, 560
-    img, draw = _bg(W, H, particle_count=260)
-    top = _header(draw, "HUNTER PROFILE", display_name, W, _PURPLE)
-    _panel(img, draw, (28, top, W - 28, H - 22), r=10, outline=_PURPLE)
-    cx = 52
-    cy = top + 26
+_PROFILE_ZONE_STYLES: dict[str, dict[str, Any]] = {
+    "forgotten_woods": {"sky": (84, 133, 168), "mid": (37, 78, 76), "ground": (42, 103, 49), "accent": (86, 190, 106), "trees": True},
+    "grave_marsh": {"sky": (99, 117, 111), "mid": (47, 63, 58), "ground": (66, 82, 49), "accent": (130, 168, 92), "fog": True},
+    "bloodmoon_forest": {"sky": (99, 34, 46), "mid": (45, 19, 28), "ground": (51, 70, 42), "accent": (230, 74, 74), "trees": True, "moon": True},
+    "ashen_wastes": {"sky": (123, 111, 89), "mid": (66, 62, 54), "ground": (104, 91, 63), "accent": (221, 165, 91), "fog": True},
+    "infernal_catacombs": {"sky": (104, 43, 30), "mid": (45, 17, 13), "ground": (75, 43, 27), "accent": (245, 112, 56), "glow": True},
+    "abyssal_depths": {"sky": (29, 54, 89), "mid": (8, 18, 38), "ground": (16, 42, 58), "accent": (55, 225, 210), "stars": True, "fog": True},
+    "void_realm": {"sky": (41, 31, 83), "mid": (13, 9, 35), "ground": (32, 21, 54), "accent": (170, 95, 245), "stars": True},
+    "cursed_sanctum": {"sky": (71, 43, 93), "mid": (25, 15, 45), "ground": (54, 33, 66), "accent": (192, 108, 230), "glow": True},
+    "starless_menagerie": {"sky": (40, 55, 106), "mid": (12, 17, 47), "ground": (26, 33, 73), "accent": (96, 165, 250), "stars": True},
+    "throne_of_teeth": {"sky": (103, 74, 78), "mid": (42, 25, 31), "ground": (82, 58, 50), "accent": (235, 195, 80), "fog": True},
+    "black_sun_gate": {"sky": (27, 24, 67), "mid": (6, 5, 25), "ground": (20, 20, 42), "accent": (250, 204, 21), "stars": True, "gate": True},
+}
+
+
+def _profile_color(raw: Any, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
+    text = str(raw or "").strip().lstrip("#")
+    if len(text) == 6:
+        try:
+            return tuple(int(text[i:i + 2], 16) for i in (0, 2, 4))
+        except ValueError:
+            pass
+    return fallback
+
+
+def _profile_seed(text: str) -> int:
+    return sum((idx + 1) * ord(ch) for idx, ch in enumerate(text)) or 17
+
+
+def _profile_panel(img: Image.Image, box, fill, *, radius: int = 0, outline=None, width: int = 1) -> None:
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    if radius:
+        d.rounded_rectangle(box, radius=radius, fill=fill, outline=outline, width=width)
+    else:
+        d.rectangle(box, fill=fill, outline=outline, width=width)
+    img.alpha_composite(layer)
+
+
+def _profile_text(draw: ImageDraw.ImageDraw, xy, text: str, font, fill,
+                  *, shadow=(0, 0, 0, 150), offset: int = 2) -> None:
+    x, y = xy
+    draw.text((x + offset, y + offset), text, font=font, fill=shadow)
+    draw.text((x, y), text, font=font, fill=fill)
+
+
+def _profile_background(W: int, H: int, zone_key: str, accent: tuple[int, int, int]) -> Image.Image:
+    style = _PROFILE_ZONE_STYLES.get(zone_key, _PROFILE_ZONE_STYLES["void_realm"])
+    sky = tuple(style["sky"])
+    mid = tuple(style["mid"])
+    ground = tuple(style["ground"])
+    horizon = int(H * 0.55)
+    img = Image.new("RGB", (W, H), sky)
+    draw = ImageDraw.Draw(img)
+    for y in range(H):
+        if y < horizon:
+            t = y / max(1, horizon)
+            color = _lerp_color(sky, mid, t)
+        else:
+            t = (y - horizon) / max(1, H - horizon)
+            color = _lerp_color(mid, ground, min(1, t * 1.3))
+        draw.line((0, y, W, y), fill=color)
+
+    rng = __import__("random").Random(_profile_seed(zone_key))
+    if style.get("stars"):
+        for _ in range(110):
+            x = rng.randint(0, W - 1)
+            y = rng.randint(10, horizon - 35)
+            b = rng.randint(130, 238)
+            r = 1 if rng.random() < 0.82 else 2
+            draw.ellipse((x, y, x + r, y + r), fill=(b, b, min(255, b + 16)))
+
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    glow_color = tuple(style.get("accent", accent))
+    if style.get("moon"):
+        gd.ellipse((W - 195, 38, W - 92, 141), fill=(*glow_color, 82))
+        gd.ellipse((W - 176, 55, W - 110, 121), fill=(245, 214, 196, 115))
+    elif style.get("glow") or style.get("stars"):
+        cx, cy = W - 150, 80
+        for r in range(170, 12, -18):
+            gd.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(*glow_color, max(2, 44 - r // 5)))
+    img = Image.alpha_composite(img.convert("RGBA"), glow).convert("RGB")
+    draw = ImageDraw.Draw(img)
+
+    ridge = []
+    for x in range(-40, W + 80, 90):
+        y = horizon - rng.randint(10, 86)
+        ridge.append((x, y))
+    draw.polygon([(0, horizon + 34), *ridge, (W, horizon + 60), (W, H), (0, H)],
+                 fill=_lerp_color(mid, (0, 0, 0), 0.28))
+
+    if style.get("gate"):
+        gx = W - 210
+        draw.rectangle((gx, horizon - 108, gx + 28, horizon + 42), fill=(7, 7, 18))
+        draw.rectangle((gx + 112, horizon - 108, gx + 140, horizon + 42), fill=(7, 7, 18))
+        draw.rectangle((gx + 22, horizon - 108, gx + 118, horizon - 82), fill=(7, 7, 18))
+        draw.ellipse((gx + 42, horizon - 65, gx + 98, horizon - 9), outline=(*accent, 150), width=4)
+
+    if style.get("trees"):
+        for _ in range(26):
+            x = rng.randint(-30, W)
+            h = rng.randint(70, 170)
+            trunk_w = rng.randint(6, 14)
+            base = horizon + rng.randint(-10, 54)
+            trunk = _lerp_color(ground, (0, 0, 0), 0.55)
+            leaf = _lerp_color(ground, tuple(style.get("accent", accent)), 0.16)
+            draw.rectangle((x, base - h, x + trunk_w, H), fill=trunk)
+            draw.ellipse((x - 32, base - h - 34, x + trunk_w + 34, base - h + 46), fill=leaf)
+
+    for _ in range(130):
+        x = rng.randint(0, W - 1)
+        y = rng.randint(horizon + 35, H - 8)
+        h = rng.randint(10, 38)
+        blade = _lerp_color(ground, tuple(style.get("accent", accent)), rng.random() * 0.38)
+        draw.line((x, y, x + rng.randint(-5, 5), max(horizon, y - h)), fill=blade, width=1)
+
+    if style.get("fog"):
+        fog = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        fd = ImageDraw.Draw(fog)
+        fog_color = _lerp_color(tuple(style.get("accent", accent)), (230, 230, 230), 0.55)
+        for _ in range(9):
+            fx = rng.randint(-180, W - 80)
+            fy = rng.randint(horizon - 30, H - 80)
+            fw = rng.randint(180, 380)
+            fh = rng.randint(34, 72)
+            fd.ellipse((fx, fy, fx + fw, fy + fh), fill=(*fog_color, rng.randint(18, 34)))
+        fog = fog.filter(ImageFilter.GaussianBlur(18))
+        img = Image.alpha_composite(img.convert("RGBA"), fog).convert("RGB")
+
+    noise = Image.effect_noise((W, H), 13).convert("L").point(lambda p: p // 18)
+    img = Image.blend(img, Image.merge("RGB", (noise, noise, noise)), 0.10)
+    return img
+
+
+def _profile_avatar(display_name: str, avatar_bytes: bytes | None, size: int,
+                    accent: tuple[int, int, int]) -> Image.Image:
+    if avatar_bytes:
+        try:
+            avatar = Image.open(BytesIO(avatar_bytes)).convert("RGBA")
+            return ImageOps.fit(avatar, (size, size), Image.Resampling.LANCZOS)
+        except Exception:
+            pass
+    avatar = Image.new("RGBA", (size, size), (*_lerp_color(accent, (255, 255, 255), 0.18), 255))
+    d = ImageDraw.Draw(avatar)
+    for y in range(size):
+        t = y / max(1, size - 1)
+        d.line((0, y, size, y), fill=(*_lerp_color(accent, (12, 16, 24), t), 255))
+    initials = "".join(part[:1] for part in str(display_name).split()[:2]).upper()[:2] or "A"
+    font = _font(max(32, size // 3), bold=True)
+    b = d.textbbox((0, 0), initials, font=font)
+    d.text(((size - (b[2] - b[0])) // 2, (size - (b[3] - b[1])) // 2 - 4),
+           initials, font=font, fill=(255, 255, 255, 235))
+    return avatar
+
+
+def _profile_bar(draw: ImageDraw.ImageDraw, x: int, y: int, w: int, h: int,
+                 current: int, needed: int, color: tuple[int, int, int]) -> None:
+    needed = max(1, int(needed))
+    pct = max(0.0, min(1.0, int(current) / needed))
+    draw.rectangle((x, y, x + w, y + h), fill=(46, 53, 58, 210))
+    fill_w = max(2, int(w * pct))
+    for i in range(fill_w):
+        t = i / max(1, fill_w - 1)
+        draw.line((x + i, y + 1, x + i, y + h - 1), fill=_lerp_color(color, (225, 244, 255), t * 0.32))
+    draw.rectangle((x, y, x + w, y + h), outline=(220, 232, 235, 100), width=1)
+
+
+def _profile_metric(img: Image.Image, draw: ImageDraw.ImageDraw, x: int, y: int, w: int,
+                    label: str, value: str, icon: tuple[str, str], color) -> None:
+    icon_img = _art(icon[0], icon[1], (30, 30))
+    img.paste(icon_img, (x + 2, y + 2), icon_img)
+    draw.text((x + 38, y - 2), _fit(draw, value, w - 50, F22), font=F22, fill=color)
+    draw.text((x + 38, y + 27), label, font=F12, fill=(224, 229, 230, 205))
+    draw.line((x + w - 4, y + 3, x + w - 4, y + 46), fill=(255, 255, 255, 36))
+
+
+def _profile_lines(draw: ImageDraw.ImageDraw, text: str, max_w: int, font, max_lines: int) -> list[str]:
+    words = str(text or "").replace("\n", " ").split()
+    if not words:
+        return []
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = word if not current else f"{current} {word}"
+        if _tw(draw, candidate, font) <= max_w:
+            current = candidate
+            continue
+        if current:
+            lines.append(current)
+        current = word
+        if len(lines) >= max_lines:
+            break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+    if words and len(lines) == max_lines:
+        joined = " ".join(lines)
+        if len(joined) < len(" ".join(words)):
+            lines[-1] = _fit(draw, lines[-1] + "...", max_w, font)
+    return [_fit(draw, line, max_w, font) for line in lines]
+
+
+def render_profile_card(display_name, player, *, collection_count, weapon_name, xp_needed,
+                        active_buffs: dict[str, int] | None = None,
+                        profile_cosmetics: dict[str, Any] | None = None,
+                        avatar_bytes: bytes | None = None,
+                        win_streak: int = 0, best_streak: int = 0):
+    W, H = 900, 540
+    cosmetics = profile_cosmetics or {}
+    zone_key = str(cosmetics.get("background_key") or _get(player, "current_zone", "void_realm") or "void_realm")
+    if zone_key not in ZONES:
+        zone_key = "void_realm"
+    zone = ZONES.get(zone_key)
+    zone_style = _PROFILE_ZONE_STYLES.get(zone_key, _PROFILE_ZONE_STYLES["void_realm"])
+    accent = _profile_color(cosmetics.get("accent_color"), tuple(zone_style.get("accent", _PURPLE)))
+    about = str(cosmetics.get("about") or (zone.flavor if zone else "No bio set yet.")).strip()[:140]
+
+    bg = _profile_background(W, H, zone_key, accent).convert("RGBA")
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    mask = Image.new("L", (W, H), 0)
+    md = ImageDraw.Draw(mask)
+    md.rounded_rectangle((0, 0, W - 1, H - 1), radius=14, fill=255)
+    img.paste(bg, (0, 0), mask)
+
+    _profile_panel(img, (0, 0, W, H), (0, 0, 0, 28))
+    _profile_panel(img, (0, 160, W, 324), (18, 24, 30, 170))
+    _profile_panel(img, (0, 324, W, H), (13, 17, 21, 105))
+    _profile_panel(img, (0, 0, W - 1, H - 1), (0, 0, 0, 0), radius=14, outline=(*accent, 185), width=2)
+    draw = ImageDraw.Draw(img)
+
+    avatar_size = 152
+    avatar_x, avatar_y = 42, 35
+    draw.rounded_rectangle((avatar_x - 5, avatar_y - 5, avatar_x + avatar_size + 5, avatar_y + avatar_size + 5),
+                           radius=5, fill=(0, 0, 0, 72))
+    draw.rounded_rectangle((avatar_x - 2, avatar_y - 2, avatar_x + avatar_size + 2, avatar_y + avatar_size + 2),
+                           radius=3, fill=(255, 255, 255, 245))
+    avatar = _profile_avatar(str(display_name), avatar_bytes, avatar_size, accent)
+    img.paste(avatar, (avatar_x, avatar_y), avatar)
+
+    name_x = avatar_x + avatar_size + 28
     nm = str(_get(player, "hunter_name", display_name))
-    ti = str(_get(player, "title", "Void Hunter"))
-    draw.text((cx, cy), _fit(draw, nm, 480, F30), font=F30, fill=_TEXT_BRIGHT)
-    _pill(draw, cx, cy + 42, ti, _GOLD, F12)
-    lv = int(_get(player, "level", 1))
+    title = str(_get(player, "title", "Void Hunter"))
+    name_font = _font(43)
+    subtitle_font = _font(22)
+    _profile_text(draw, (name_x, 47), _fit(draw, nm, W - name_x - 36, name_font),
+                  name_font, (255, 255, 255, 245), offset=2)
+    subtitle = _fit(draw, f"An Abyssia Hunter - {title}", W - name_x - 36, subtitle_font)
+    _profile_text(draw, (name_x + 3, 96), subtitle,
+                  subtitle_font, (229, 236, 238, 210), offset=1)
+
+    brand = "ABYSSIA"
+    draw.text((W - 34 - _tw(draw, brand, F16), 23), brand, font=F16, fill=(*accent, 235))
+    if zone:
+        zone_label = _fit(draw, zone.name.upper(), 210, F12)
+        draw.text((W - 34 - _tw(draw, zone_label, F12), 47), zone_label, font=F12, fill=(235, 240, 242, 160))
+
+    level = int(_get(player, "level", 1))
     xp = int(_get(player, "xp", 0))
-    xp_y = cy + 86
-    draw.text((cx, xp_y - 24), f"LEVEL {lv}", font=F18, fill=_GOLD)
-    _bar(draw, cx, xp_y, 500, 22, xp, xp_needed, _GREEN)
-    xp_text = f"{xp:,}/{xp_needed:,} XP"
-    draw.text((cx + 500 - _tw(draw, xp_text, F12) - 8, xp_y + 3), xp_text, font=F12, fill=_TEXT_BRIGHT)
+    rating = int(_get(player, "arena_rating", 1000))
+    draw.text((62, 224), "Level", font=F16, fill=(229, 236, 238, 190))
+    draw.text((132, 203), str(level), font=_font(54, bold=True), fill=(255, 255, 255, 245))
 
-    wx = W - 360
-    _draw_stat_tile(img, draw, wx, top + 26, 140, 76, "SOULS", f"{int(_get(player, 'gold', 0)):,}", _GOLD, ("currency", "souls"))
-    _draw_stat_tile(img, draw, wx + 154, top + 26, 140, 76, "GEMS", f"{int(_get(player, 'gems', 0)):,}", _CYAN, ("currency", "gems"))
+    rank_text = f"Rank: {arena_rank(rating)}"
+    xp_text = f"XP: {xp:,}/{int(xp_needed):,}"
+    bar_x, bar_y = 252, 226
+    draw.text((bar_x, bar_y - 26), _fit(draw, rank_text, 260, F16), font=F16, fill=(235, 240, 242, 215))
+    draw.text((bar_x + 470 - _tw(draw, xp_text, F16), bar_y - 26), xp_text, font=F16, fill=(235, 240, 242, 215))
+    _profile_bar(draw, bar_x, bar_y + 2, 470, 15, xp, int(xp_needed), accent)
+    draw.text((bar_x + 210, bar_y + 24), f"rating {rating:,}", font=F12, fill=(226, 232, 235, 155))
 
-    grid_y = top + 190
-    tile_w = 208
-    tile_h = 84
-    stats = [
-        ("ARENA", f"{int(_get(player, 'arena_rating', 1000)):,}", _ORANGE, ("ui", "battle")),
-        ("COLLECTION", f"{collection_count:,}", _CYAN, ("ui", "inventory")),
-        ("HUNTS", f"{int(_get(player, 'hunts_done', 0)):,}", _GREEN, ("ui", "hunt")),
-        ("PRESTIGE", f"{int(_get(player, 'prestige', 0)):,}", _PURPLE, ("rarity", "mythic")),
+    metrics = [
+        ("Souls", f"{int(_get(player, 'gold', 0)):,}", ("currency", "souls"), _GOLD),
+        ("Gems", f"{int(_get(player, 'gems', 0)):,}", ("currency", "gems"), _CYAN),
+        ("Zoo", f"{int(collection_count):,}", ("ui", "inventory"), accent),
+        ("Hunts", f"{int(_get(player, 'hunts_done', 0)):,}", ("ui", "hunt"), _GREEN),
     ]
-    for idx, (label, value, color, icon) in enumerate(stats):
-        x = cx + (idx % 4) * (tile_w + 14)
-        y = grid_y + (idx // 4) * (tile_h + 14)
-        _draw_stat_tile(img, draw, x, y, tile_w, tile_h, label, value, color, icon)
+    metric_y = 278
+    for idx, metric in enumerate(metrics):
+        _profile_metric(img, draw, 66 + idx * 205, metric_y, 178, *metric)
 
-    gear_y = grid_y + tile_h + 32
-    _panel(img, draw, (cx, gear_y, W - 52, gear_y + 94), r=8, outline=_BORDER)
-    draw.text((cx + 18, gear_y + 16), "FEATURED WEAPON", font=F12, fill=_TEXT_MUTED)
-    weapon_icon = _art("weapons", "sword", (46, 46), colorize=_GOLD)
-    img.paste(weapon_icon, (cx + 18, gear_y + 38), weapon_icon)
-    draw.text((cx + 76, gear_y + 42), _fit(draw, weapon_name, W - cx - 170, F18), font=F18, fill=_TEXT_BRIGHT)
+    about_x, about_y = 44, 358
+    draw.text((about_x, about_y), "About me", font=F24, fill=(255, 255, 255, 238))
+    for idx, line in enumerate(_profile_lines(draw, about, 510, F16, 3)):
+        draw.text((about_x, about_y + 34 + idx * 23), line, font=F16, fill=(235, 240, 242, 218))
 
+    info_x, info_y = 598, 355
+    _profile_panel(img, (info_x, info_y, W - 36, H - 32), (13, 18, 24, 138),
+                   radius=10, outline=(255, 255, 255, 42))
+    draw = ImageDraw.Draw(img)
+    draw.text((info_x + 18, info_y + 16), "Featured weapon", font=F12, fill=(235, 240, 242, 150))
+    weapon_icon = _art("weapons", "sword", (44, 44), colorize=accent)
+    img.paste(weapon_icon, (info_x + 18, info_y + 40), weapon_icon)
+    draw.text((info_x + 72, info_y + 48), _fit(draw, weapon_name or "None", 216, F18),
+              font=F18, fill=(255, 255, 255, 235))
+
+    draw.text((info_x + 18, info_y + 98), "Active buffs", font=F12, fill=(235, 240, 242, 150))
+    buff_x = info_x + 18
+    buff_y = info_y + 121
+    drawn = 0
     if active_buffs:
-        buff_x = cx + 18
-        buff_y = gear_y + 104
-        draw.text((buff_x, buff_y), "ACTIVE BUFFS", font=F12, fill=_GOLD)
-        buff_x += 102
-        for bk, ch in active_buffs.items():
-            s = next((x for x in SIGILS if x.key == bk), None)
-            c = next((x for x in CHARMS if x.key == bk), None)
-            if s:
-                label = f"{s.name} {ch}"
-                color = _RED
-            elif c:
-                label = f"{c.name} {ch}"
-                color = _PURPLE
-            else:
+        for bk, charges in active_buffs.items():
+            if drawn >= 4:
+                break
+            sigil = next((x for x in SIGILS if x.key == bk), None)
+            charm = next((x for x in CHARMS if x.key == bk), None)
+            if not (sigil or charm):
                 continue
-            icon = _art("buffs", bk, (22, 22))
-            img.paste(icon, (buff_x, buff_y - 3), icon)
-            chip_w = _pill(draw, buff_x + 28, buff_y - 2, _fit(draw, label, 170, F11), color, F11)
-            buff_x += chip_w + 40
-            if buff_x > W - 210:
-                buff_x = cx + 120
-                buff_y += 28
+            icon = _art("buffs", bk, (28, 28))
+            img.paste(icon, (buff_x, buff_y), icon)
+            label = f"x{charges}"
+            draw.text((buff_x + 32, buff_y + 6), label, font=F12, fill=(255, 255, 255, 220))
+            buff_x += 62
+            drawn += 1
+    if drawn == 0:
+        draw.text((buff_x, buff_y + 6), "None active", font=F14, fill=(235, 240, 242, 165))
+
+    streak_y = max(buff_y + 38, info_y + 150)
+    draw.text((info_x + 18, streak_y), "Win Streak", font=F12, fill=(235, 240, 242, 150))
+    draw.text((info_x + 110, streak_y), str(win_streak), font=F16, fill=_GOLD)
+    draw.text((info_x + 110, streak_y + 22), f"Best: {best_streak}", font=F11, fill=(235, 240, 242, 165))
+
+    footer = "b profilecustomize"
+    draw.text((W - 28 - _tw(draw, footer, F11), H - 24), footer, font=F11, fill=(235, 240, 242, 128))
     return _save(img)
 
 
@@ -686,7 +946,8 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1,
     start = (page - 1) * items_per_page
     for wi, w in enumerate(weapons[start:start + items_per_page]):
         wid = _get(w, "id", 0)
-        rc = _col(str(_get(w, "rarity", "Common")))
+        wr = _weapon_rarity(w)
+        rc = _col(wr)
         bw = W - 120
         rh = 190
         _shadow(img, (cx, cy, cx + bw, cy + rh), r=10, blur=7, dy=4, opacity=34)
@@ -706,9 +967,8 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1,
         img.paste(type_icon, (icon_box[0] + 9, icon_box[1] + 9), type_icon)
         name_x = cx + 154
         wn = str(_get(w, "name", "?"))
-        wr = str(_get(w, "rarity", "Common"))
-        wq = str(_get(w, "quality", "Normal"))
         q_pct = int(_get(w, "quality_pct", 50))
+        wq = _weapon_quality_label(q_pct)
         mana_cost = int(_get(w, "mana_cost", 3))
         wear = str(_get(w, "wear", "Unknown"))
         wtype = str(_get(w, "weapon_type", "sword"))
@@ -723,7 +983,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1,
             "Epic": _PURPLE, "Legendary": _GOLD, "Mythic": (251, 113, 133),
             "Fine": _BLUE, "Superior": _PURPLE, "Masterwork": _GOLD, "Ancient": _ORANGE,
         }
-        q_color = q_colors.get(wq, _TEXT_MUTED)
+        q_color = _col(wq) if wq in _RARITY else q_colors.get(wq, _TEXT_MUTED)
         tag_y = cy + 58
         used = _pill(draw, name_x, tag_y, wr.upper(), rc, F13, h=26)
         used += _pill(draw, name_x + used + 10, tag_y, f"Q {q_pct}%", q_color, F13, h=26) + 10
@@ -733,7 +993,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1,
         ab = int(_get(w, "attack_bonus", 0))
         dbv = int(_get(w, "defense_bonus", 0))
         stat_x = cx + bw - 320
-        for si, (lab, val, color) in enumerate((("ATK", ab, _RED), ("DEF", dbv, _BLUE))):
+        for si, (lab, val, color) in enumerate((("STR", ab, _GOLD), ("DEF", dbv, _BLUE))):
             sx = stat_x + si * 140
             draw.rounded_rectangle((sx, cy + 28, sx + 118, cy + 95), radius=8,
                                    fill=(12, 10, 18), outline=_lerp_color(color, _BORDER, 0.35))
@@ -779,8 +1039,16 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1,
 #  CRATE OPENING CARD
 # ══════════════════════════════════════════════════════════════════
 def render_crate_open_card(display_name: str, crate_name: str, result: dict,
-                           *, weapons: list = None) -> BytesIO:
-    W, H = 860, 740
+                           *, weapons: list = None, compact: bool = False) -> BytesIO:
+    weapon_list = list(weapons or [])
+    compact_rows = len(weapon_list) if compact else 0
+    ROW_C = 38
+    MIN_H = 740
+    if compact:
+        H = max(MIN_H, 370 + compact_rows * (ROW_C + 6))
+    else:
+        H = MIN_H
+    W = 860
     img, draw = _bg(W, H, particle_count=120)
     top = _header(draw, "CRATE OPENING", crate_name, W, _ORANGE)
     mx, my = 26, top
@@ -791,47 +1059,48 @@ def render_crate_open_card(display_name: str, crate_name: str, result: dict,
     gems = int(result.get("gems", 0))
     swords = int(result.get("swords", 0))
 
-    weapon_list = list(weapons or [])
-    featured = max(weapon_list, key=lambda row: _rank(str(_get(row, "rarity", "Common"))), default=None)
-    if featured:
-        rc = _col(str(_get(featured, "rarity", "Common")))
-        wtype = str(_get(featured, "weapon_type", "sword"))
-        wq = str(_get(featured, "quality", "Normal"))
-        q_pct = int(_get(featured, "quality_pct", 50))
-        mana_cost = int(_get(featured, "mana_cost", 3))
-        wear = str(_get(featured, "wear", "Unknown"))
-        name = str(_get(featured, "name", "?"))
-        title = f"{wq} {name}" if wq != "Normal" else name
-        hero = (cx, cy, W - mx - 24, cy + 246)
-        _shadow(img, hero, r=12, blur=10, dy=5, opacity=42)
-        draw.rounded_rectangle(hero, radius=12, fill=_lerp_color(_PANEL2, rc, 0.055), outline=rc, width=3)
-        draw.rectangle((hero[0] + 2, hero[1] + 2, hero[2] - 2, hero[1] + 10), fill=rc)
-        icon_size = 156
-        icon = _art("weapons", wtype, (icon_size, icon_size), colorize=rc)
-        glow = Image.new("RGBA", (icon_size + 50, icon_size + 50), (0, 0, 0, 0))
-        gd = ImageDraw.Draw(glow)
-        gd.ellipse((0, 0, icon_size + 49, icon_size + 49), fill=(*rc, 46))
-        glow = glow.filter(ImageFilter.GaussianBlur(12))
-        img.paste(glow, (hero[0] + 42, hero[1] + 36), glow)
-        img.paste(icon, (hero[0] + 67, hero[1] + 61), icon)
-        tx = hero[0] + 250
-        draw.text((tx, hero[1] + 48), "FEATURED PULL", font=F13, fill=_TEXT_MUTED)
-        draw.text((tx, hero[1] + 76), _fit(draw, title, 470, F28), font=F28, fill=_TEXT_BRIGHT)
-        used = _pill(draw, tx, hero[1] + 118, str(_get(featured, "rarity", "Common")).upper(), rc, F12, h=26)
-        used += _pill(draw, tx + used + 10, hero[1] + 118, f"Q {q_pct}%", _GOLD, F12, h=26) + 10
-        used += _pill(draw, tx + used + 10, hero[1] + 118, f"MANA {mana_cost}", _CYAN, F12, h=26) + 10
-        _pill(draw, tx + used + 10, hero[1] + 118, wear.upper(), _TEXT_MUTED, F12, h=26)
-        passive_raw = _get(featured, "passive", None)
-        if passive_raw:
-            try:
-                passive = json.loads(str(passive_raw))
-                if isinstance(passive, dict) and passive.get("name"):
-                    draw.text((tx, hero[1] + 158),
-                              _fit(draw, f"{passive.get('name')} - {passive.get('chance', 0)}% trigger", 460, F15),
-                              font=F15, fill=_GOLD)
-            except Exception:
-                pass
-        cy += 270
+    if not compact:
+        featured = max(weapon_list, key=lambda row: _card_int(_get(row, "quality_pct", 50), 50), default=None)
+        if featured:
+            wr = _weapon_rarity(featured)
+            rc = _col(wr)
+            wtype = str(_get(featured, "weapon_type", "sword"))
+            q_pct = int(_get(featured, "quality_pct", 50))
+            wq = _weapon_quality_label(q_pct)
+            mana_cost = int(_get(featured, "mana_cost", 3))
+            wear = str(_get(featured, "wear", "Unknown"))
+            name = str(_get(featured, "name", "?"))
+            title = f"{wq} {name}" if wq != "Common" else name
+            hero = (cx, cy, W - mx - 24, cy + 246)
+            _shadow(img, hero, r=12, blur=10, dy=5, opacity=42)
+            draw.rounded_rectangle(hero, radius=12, fill=_lerp_color(_PANEL2, rc, 0.055), outline=rc, width=3)
+            draw.rectangle((hero[0] + 2, hero[1] + 2, hero[2] - 2, hero[1] + 10), fill=rc)
+            icon_size = 156
+            icon = _art("weapons", wtype, (icon_size, icon_size), colorize=rc)
+            glow = Image.new("RGBA", (icon_size + 50, icon_size + 50), (0, 0, 0, 0))
+            gd = ImageDraw.Draw(glow)
+            gd.ellipse((0, 0, icon_size + 49, icon_size + 49), fill=(*rc, 46))
+            glow = glow.filter(ImageFilter.GaussianBlur(12))
+            img.paste(glow, (hero[0] + 42, hero[1] + 36), glow)
+            img.paste(icon, (hero[0] + 67, hero[1] + 61), icon)
+            tx = hero[0] + 250
+            draw.text((tx, hero[1] + 48), "FEATURED PULL", font=F13, fill=_TEXT_MUTED)
+            draw.text((tx, hero[1] + 76), _fit(draw, title, 470, F28), font=F28, fill=_TEXT_BRIGHT)
+            used = _pill(draw, tx, hero[1] + 118, wr.upper(), rc, F12, h=26)
+            used += _pill(draw, tx + used + 10, hero[1] + 118, f"Q {q_pct}%", _GOLD, F12, h=26) + 10
+            used += _pill(draw, tx + used + 10, hero[1] + 118, f"MANA {mana_cost}", _CYAN, F12, h=26) + 10
+            _pill(draw, tx + used + 10, hero[1] + 118, wear.upper(), _TEXT_MUTED, F12, h=26)
+            passive_raw = _get(featured, "passive", None)
+            if passive_raw:
+                try:
+                    passive = json.loads(str(passive_raw))
+                    if isinstance(passive, dict) and passive.get("name"):
+                        draw.text((tx, hero[1] + 158),
+                                  _fit(draw, f"{passive.get('name')} - {passive.get('chance', 0)}% trigger", 460, F15),
+                                  font=F15, fill=_GOLD)
+                except Exception:
+                    pass
+            cy += 270
 
     tile_gap = 12
     tile_w = (W - 2 * mx - 48 - tile_gap * 2) // 3
@@ -840,49 +1109,79 @@ def render_crate_open_card(display_name: str, crate_name: str, result: dict,
     _draw_stat_tile(img, draw, cx + (tile_w + tile_gap) * 2, cy, tile_w, 72, "SWORDS", f"{swords:,}", _GREEN, ("consumable", "hunt_sword"))
     cy += 92
 
-    other_weapons = [w for w in weapon_list if w is not featured]
-    if other_weapons:
-        draw.text((cx, cy), "OTHER DROPS", font=F13, fill=_TEXT_MUTED)
-        cy += 26
-        for w in other_weapons[:3]:
-            rc = _col(str(_get(w, "rarity", "Common")))
+    if weapon_list:
+        if compact:
+            label = "ACQUIRED WEAPONS"
+        else:
+            label = "OTHER DROPS"
+            weapon_list = [w for w in weapon_list if w is not featured]
+        draw.text((cx, cy), label, font=F13, fill=_TEXT_MUTED)
+        cy += 24
+        for w in weapon_list:
+            wr = _weapon_rarity(w)
+            rc = _col(wr)
             wid = _get(w, "id", 0)
             wn = str(_get(w, "name", "?"))
-            wq = str(_get(w, "quality", "Normal"))
             q_pct = int(_get(w, "quality_pct", 50))
+            wq = _weapon_quality_label(q_pct)
             wtype = str(_get(w, "weapon_type", "sword"))
-            if wq != "Normal":
-                display = f"{wq} {wn}"
+            display = f"{wq} {wn}" if wq != "Common" else wn
+            if compact:
+                y0 = cy
+                _shadow(img, (cx, y0, W - 54, y0 + ROW_C), r=6, blur=4, dy=2, opacity=18)
+                draw.rounded_rectangle((cx, y0, W - 54, y0 + ROW_C), radius=6, fill=_PANEL2, outline=_lerp_color(rc, _BORDER, 0.15), width=1)
+                w_icon = _art("weapons", wtype, (26, 26), colorize=rc)
+                img.paste(w_icon, (cx + 8, y0 + 6), w_icon)
+                draw.text((cx + 42, y0 + 4), _fit(draw, f"#{wid}", 80, F11), font=F11, fill=_TEXT_MUTED)
+                draw.text((cx + 90, y0 + 4), _fit(draw, display, 280, F13), font=F13, fill=rc)
+                draw.text((cx + 380, y0 + 4), _fit(draw, wtype.replace("_", " ").title(), 110, F11), font=F11, fill=_TEXT_MUTED)
+                draw.text((cx + 500, y0 + 4), f"Q{q_pct}%", font=F12, fill=_GOLD)
+                passive_raw = _get(w, "passive", None)
+                if passive_raw:
+                    try:
+                        passive = json.loads(str(passive_raw))
+                        if isinstance(passive, dict) and passive.get("name"):
+                            draw.text((cx + 560, y0 + 5), _fit(draw, f"{passive.get('name')} {passive.get('chance', 0)}%", 250, F11), font=F11, fill=_GOLD)
+                    except Exception:
+                        pass
+                cy += ROW_C + 6
             else:
-                display = wn
-            row_h = 72
-            _shadow(img, (cx, cy, W - 54, cy + row_h), r=8, blur=5, dy=3, opacity=24)
-            draw.rounded_rectangle((cx, cy, W - 54, cy + row_h), radius=8, fill=_PANEL2, outline=_lerp_color(rc, _BORDER, 0.25), width=2)
-            w_icon = _art("weapons", wtype, (46, 46), colorize=rc)
-            img.paste(w_icon, (cx + 16, cy + 13), w_icon)
-            draw.text((cx + 78, cy + 12), _fit(draw, display, 430, F18), font=F18, fill=rc)
-            draw.text((cx + 78, cy + 42), f"#{wid} - {wtype.title()} - Q{q_pct}% {wq}", font=F11, fill=_TEXT_MUTED)
-            passive_raw = _get(w, "passive", None)
-            if passive_raw:
-                try:
-                    passive = json.loads(str(passive_raw))
-                    if isinstance(passive, dict) and passive.get("key"):
-                        p_name = passive.get("name", "")
-                        p_chance = passive.get("chance", 0)
-                        draw.text((W - 300, cy + 27), _fit(draw, f"{p_name} {p_chance}%", 230, F11), font=F11, fill=_GOLD)
-                except Exception:
-                    pass
-            cy += row_h + 10
+                row_h = 72
+                _shadow(img, (cx, cy, W - 54, cy + row_h), r=8, blur=5, dy=3, opacity=24)
+                draw.rounded_rectangle((cx, cy, W - 54, cy + row_h), radius=8, fill=_PANEL2, outline=_lerp_color(rc, _BORDER, 0.25), width=2)
+                w_icon = _art("weapons", wtype, (46, 46), colorize=rc)
+                img.paste(w_icon, (cx + 16, cy + 13), w_icon)
+                draw.text((cx + 78, cy + 12), _fit(draw, display, 430, F18), font=F18, fill=rc)
+                draw.text((cx + 78, cy + 42), f"#{wid} - {wtype.title()} - Q{q_pct}% {wq}", font=F11, fill=_TEXT_MUTED)
+                passive_raw = _get(w, "passive", None)
+                if passive_raw:
+                    try:
+                        passive = json.loads(str(passive_raw))
+                        if isinstance(passive, dict) and passive.get("key"):
+                            p_name = passive.get("name", "")
+                            p_chance = passive.get("chance", 0)
+                            draw.text((W - 300, cy + 27), _fit(draw, f"{p_name} {p_chance}%", 230, F11), font=F11, fill=_GOLD)
+                    except Exception:
+                        pass
+                cy += row_h + 10
     return _save(img)
 
 
 # ══════════════════════════════════════════════════════════════════
 #  CREATURE DEX CARD
 # ══════════════════════════════════════════════════════════════════
+def _format_rate(rate_pct: float) -> str:
+    if rate_pct >= 1:
+        return f"~{rate_pct:.1f}%"
+    if rate_pct >= 0.01:
+        return f"~{rate_pct:.2f}%"
+    return f"~{rate_pct:.4f}%"
+
+
 def _render_creature_card_legacy(
     creature_name: str, rarity: str, attack: int, defense: int, hp: int, speed: int,
     ability: str, level: int = 1, xp: int = 0, caught: bool = False,
-    player_name: str = "", catch_rate: float = 0.0,
+    player_name: str = "", catch_rate: float = 0.0, mana: int = 200, weight: float | int | None = None,
 ) -> BytesIO:
     W, H = 750, 520
     img, draw = _bg(W, H, particle_count=150)
@@ -928,8 +1227,8 @@ def _render_creature_card_legacy(
 
     # Stat grid (2x3)
     stats = [
-        ("HP", hp, _RED), ("ATK", attack, _GOLD), ("DEF", defense, _BLUE),
-        ("SPD", speed, _CYAN), ("CRIT", 5, _ORANGE), ("MANA", 50, _PURPLE),
+        ("HP", hp, _RED), ("STR", attack, _GOLD), ("DEF", defense, _BLUE),
+        ("SPD", speed, _CYAN), ("CRIT", 5, _ORANGE), ("MANA", mana, _PURPLE),
     ]
     sw = 120
     sh = 48
@@ -948,11 +1247,14 @@ def _render_creature_card_legacy(
     ry += sh * 2 + sg + 8
     draw.text((rx, ry), "CATCH RATE", font=F11, fill=_TEXT_MUTED)
     ry += 16
-    pct = int(min(95, max(1, catch_rate * 100)))
-    rate_color = _GREEN if pct >= 60 else (_GOLD if pct >= 30 else _RED)
-    draw.text((rx, ry), f"{pct}%", font=F28, fill=rate_color)
+    rate_pct = max(0.0, catch_rate * 100)
+    pct_text = _format_rate(rate_pct)
+    rate_color = _GREEN if rate_pct >= 30 else (_GOLD if rate_pct >= 1 else _RED)
+    draw.text((rx, ry), pct_text, font=F28, fill=rate_color)
     bar_x = rx + 80
-    _bar(draw, bar_x, ry + 4, 160, 18, pct, 100, rate_color)
+    _bar(draw, bar_x, ry + 4, 160, 18, max(1, int(rate_pct * 100)), 10000, rate_color)
+    if weight is not None:
+        draw.text((rx, ry + 34), f"Weight {weight:g}", font=F11, fill=_TEXT_MUTED)
 
     # Caught status at bottom
     bottom_y = H - 44
@@ -966,9 +1268,10 @@ def _render_creature_card_legacy(
 #  SIGILS & CHARMS CARD
 # ══════════════════════════════════════════════════════════════════
 def render_creature_card(
-    creature_name: str, rarity: str, attack: int, defense: int, hp: int, speed: int,
-    ability: str, level: int = 1, xp: int = 0, caught: bool = False,
-    player_name: str = "", catch_rate: float = 0.0,
+    creature_name: str, rarity: str, hp: int, str_stat: int, pr_stat: int,
+    wp_stat: int, mag_stat: int, mr_stat: int, speed: int,
+    role: str, ability: str, level: int = 1, xp: int = 0, caught: bool = False,
+    player_name: str = "", catch_rate: float = 0.0, mana: int = 200, weight: float | int | None = None,
 ) -> BytesIO:
     W, H = 900, 620
     img, draw = _bg(W, H, particle_count=220)
@@ -997,6 +1300,20 @@ def render_creature_card(
     _rarity_badge(draw, cx + 22, cy + 306, rarity)
     draw.text((cx + 102, cy + 306), f"Lv.{level}", font=F12, fill=_GOLD)
 
+    role_badge_w = 200
+    role_badge_h = 34
+    role_badge_x = cx + 130 - role_badge_w // 2
+    role_badge_y = cy + 340
+    role_bg = Image.new("RGBA", (role_badge_w, role_badge_h), (0, 0, 0, 0))
+    rbg = ImageDraw.Draw(role_bg)
+    rbg.rounded_rectangle((0, 0, role_badge_w - 1, role_badge_h - 1), radius=17, fill=(*rc, 90), outline=rc, width=2)
+    role_bg = role_bg.filter(ImageFilter.GaussianBlur(4))
+    img.paste(role_bg, (role_badge_x, role_badge_y), role_bg)
+    draw.rounded_rectangle((role_badge_x, role_badge_y, role_badge_x + role_badge_w, role_badge_y + role_badge_h),
+                           radius=17, fill=(*rc, 50), outline=rc, width=2)
+    draw.text((role_badge_x + role_badge_w // 2 - _tw(draw, role, F16) // 2, role_badge_y + 6),
+              role, font=F16, fill=_TEXT_BRIGHT)
+
     rx = cx + 292
     ry = cy
     draw.text((rx, ry), "ABILITY", font=F11, fill=_TEXT_MUTED)
@@ -1010,29 +1327,34 @@ def render_creature_card(
         draw.text((rx + 368, ry - 1), f"{xp}/100", font=F11, fill=_TEXT_MUTED)
     ry += 42
 
-    stats = [
-        ("HP", hp, _RED), ("ATK", attack, _GOLD), ("DEF", defense, _BLUE),
-        ("SPD", speed, _CYAN), ("CRIT", 5, _ORANGE), ("MANA", 50, _PURPLE),
+    stat_items = [
+        ("HP", hp, _RED), ("STR", str_stat, _GOLD), ("DEF", pr_stat, _BLUE),
+        ("MANA", wp_stat, _PURPLE), ("MAG", mag_stat, _ORANGE), ("RES", mr_stat, _CYAN),
+        ("SPD", speed, _GREEN),
     ]
-    sw = 150
-    sh = 62
-    sg = 10
-    for idx, (label, value, color) in enumerate(stats):
-        col, row = idx % 3, idx // 3
+    sw = 110
+    sh = 50
+    sg = 8
+    cols = 4
+    for idx, (label, value, color) in enumerate(stat_items):
+        col, row = idx % cols, idx // cols
         sx = rx + col * (sw + sg)
         sy = ry + row * (sh + sg)
-        _shadow(img, (sx, sy, sx + sw, sy + sh), r=7, blur=5, dy=3, opacity=28)
-        draw.rounded_rectangle((sx, sy, sx + sw, sy + sh), radius=7, fill=_PANEL2, outline=color)
-        draw.text((sx + 10, sy + 8), label, font=F10, fill=_TEXT_MUTED)
-        draw.text((sx + 10, sy + 28), str(value), font=F22, fill=color)
+        _shadow(img, (sx, sy, sx + sw, sy + sh), r=6, blur=4, dy=2, opacity=24)
+        draw.rounded_rectangle((sx, sy, sx + sw, sy + sh), radius=6, fill=_PANEL2, outline=color)
+        draw.text((sx + 8, sy + 6), label, font=F10, fill=_TEXT_MUTED)
+        draw.text((sx + 8, sy + 20), str(value), font=F18, fill=color)
 
-    ry += sh * 2 + sg + 8
+    ry += sh * 2 + sg + 10
     draw.text((rx, ry), "CATCH RATE", font=F11, fill=_TEXT_MUTED)
     ry += 16
-    pct = int(min(95, max(1, catch_rate * 100)))
-    rate_color = _GREEN if pct >= 60 else (_GOLD if pct >= 30 else _RED)
-    draw.text((rx, ry), f"{pct}%", font=F30, fill=rate_color)
-    _bar(draw, rx + 96, ry + 9, 300, 18, pct, 100, rate_color)
+    rate_pct = max(0.0, catch_rate * 100)
+    pct_text = _format_rate(rate_pct)
+    rate_color = _GREEN if rate_pct >= 30 else (_GOLD if rate_pct >= 1 else _RED)
+    draw.text((rx, ry), pct_text, font=F30, fill=rate_color)
+    _bar(draw, rx + 150, ry + 9, 246, 18, max(1, int(rate_pct * 100)), 10000, rate_color)
+    if weight is not None:
+        draw.text((rx, ry + 42), f"Weight {weight:g}", font=F12, fill=_TEXT_MUTED)
 
     status_color = _GREEN if caught else _RED
     status_text = f"Caught - {player_name}" if caught else "Not yet caught"
@@ -1312,15 +1634,32 @@ def _card_json(value: Any, default: Any) -> Any:
 
 
 def _weapon_quality_label(quality_pct: int) -> str:
-    if quality_pct >= 95:
-        return "Ancient"
-    if quality_pct >= 85:
-        return "Masterwork"
-    if quality_pct >= 70:
-        return "Superior"
-    if quality_pct >= 55:
-        return "Fine"
-    return "Normal"
+    quality = max(0, min(150, int(quality_pct)))
+    tiers = (
+        (0, 10, "Common"),
+        (11, 20, "Uncommon"),
+        (21, 30, "Rare"),
+        (31, 40, "Epic"),
+        (41, 50, "Legendary"),
+        (51, 60, "Mythic"),
+        (61, 70, "Ancient"),
+        (71, 80, "Patreon"),
+        (81, 90, "Divine"),
+        (91, 95, "Eldritch"),
+        (96, 99, "Abyssal"),
+        (100, 124, "Prismatic"),
+        (125, 139, "Ethereal"),
+        (140, 149, "Void Lord"),
+        (150, 150, "Hidden"),
+    )
+    for low, high, rarity in tiers:
+        if low <= quality <= high:
+            return rarity
+    return "Common"
+
+
+def _weapon_rarity(row: Any) -> str:
+    return _weapon_quality_label(_card_int(_get(row, "quality_pct", 50), 50))
 
 
 def _passive_summary(row: Any) -> str:
@@ -1378,7 +1717,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, tota
         draw.rounded_rectangle(empty, radius=8, fill=_PANEL2, outline=_BORDER)
         _center_text(draw, empty, "No weapons on this page", F24, _TEXT_MUTED)
     for weapon in page_weapons:
-        rarity = str(_get(weapon, "rarity", "Common") or "Common")
+        rarity = _weapon_rarity(weapon)
         rc = _col(rarity)
         row_box = (x, y, x + row_w, y + row_h)
         row_fill = _lerp_color(_PANEL2, rc, 0.08)
@@ -1402,7 +1741,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, tota
         _center_text(draw, (name_x, y + 56, name_x + id_w, y + 82), id_text, F14, rc)
 
         quality_pct = _card_int(_get(weapon, "quality_pct", 50), 50)
-        quality = str(_get(weapon, "quality", "") or _weapon_quality_label(quality_pct))
+        quality = _weapon_quality_label(quality_pct)
         mana_cost = _card_int(_get(weapon, "mana_cost", 3), 3)
         wear = str(_get(weapon, "wear", "Unknown") or "Unknown")
         meta = f"{rarity} {_weapon_type_label(weapon)} | Quality {quality_pct}% ({quality}) | Mana {mana_cost} | Wear {wear}"
@@ -1419,7 +1758,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, tota
 
         atk = _card_int(_get(weapon, "attack_bonus", 0))
         defense = _card_int(_get(weapon, "defense_bonus", 0))
-        _draw_stat_tile(img, draw, stat_x, y + 34, 112, 74, "ATK", f"+{atk}", _RED)
+        _draw_stat_tile(img, draw, stat_x, y + 34, 112, 74, "STR", f"+{atk}", _GOLD)
         _draw_stat_tile(img, draw, stat_x + 134, y + 34, 112, 74, "DEF", f"+{defense}", _BLUE)
         draw.text((stat_x, y + 126), "Reroll: b wrr <id> stat/passive", font=F13, fill=_TEXT_MUTED)
 
@@ -1430,14 +1769,59 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, tota
     return _save(img)
 
 
-def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, weapons: list = None) -> BytesIO:
-    W, H = 1000, 720
+def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, weapons: list = None, compact: bool = False) -> BytesIO:
+    weapon_list = list(weapons or [])
+    ROW_C = 38
+    MIN_H = 720
+    if compact and weapon_list:
+        H = max(MIN_H, 420 + len(weapon_list) * (ROW_C + 6))
+    else:
+        H = MIN_H
+    W = 1000
     img, draw = _bg(W, H, particle_count=150)
     top = _header(draw, "WEAPON CRATE", f"{display_name} opened {crate_name}", W, _ORANGE)
 
     panel = (28, top, W - 28, H - 22)
     _panel(img, draw, panel, r=8, outline=_ORANGE)
-    weapon_list = list(weapons or [])
+
+    if compact:
+        cy = top + 20
+        reward_w = 284
+        rewards = [
+            ("SOULS", f"{_card_int(result.get('gold', 0)):,}", "currency", "souls", _GOLD),
+            ("GEMS", f"{_card_int(result.get('gems', 0)):,}", "currency", "gems", _CYAN),
+            ("SWORDS", f"{_card_int(result.get('swords', 0)):,}", "consumable", "hunt_sword", _GREEN),
+        ]
+        for idx, (label, value, kind, key, color) in enumerate(rewards):
+            bx = 52 + idx * (reward_w + 18)
+            by = cy
+            draw.rounded_rectangle((bx, by, bx + reward_w, by + 72), radius=8, fill=_PANEL2, outline=color, width=1)
+            draw.text((bx + 18, by + 10), label, font=F12, fill=_TEXT_MUTED)
+            draw.text((bx + 18, by + 30), value, font=F22, fill=color)
+            icon = _art(kind, key, (36, 36))
+            img.paste(icon, (bx + reward_w - 52, by + 20), icon)
+        cy += 90
+
+        if weapon_list:
+            draw.text((52, cy), f"ACQUIRED WEAPONS ({len(weapon_list)})", font=F13, fill=_TEXT_MUTED)
+            cy += 22
+            for w in weapon_list:
+                rarity = _weapon_rarity(w)
+                rc = _col(rarity)
+                y0 = cy
+                draw.rounded_rectangle((52, y0, W - 52, y0 + ROW_C), radius=6, fill=_PANEL2, outline=_lerp_color(rc, _BORDER, 0.15), width=1)
+                icon = _art("weapons", _weapon_icon_key(w), (26, 26), colorize=rc)
+                img.paste(icon, (60, y0 + 6), icon)
+                draw.text((94, y0 + 4), _fit(draw, str(_get(w, "name", "?")), 320, F13), font=F13, fill=rc)
+                quality_pct = _card_int(_get(w, "quality_pct", 50), 50)
+                draw.text((430, y0 + 4), _fit(draw, _weapon_type_label(w), 130, F11), font=F11, fill=_TEXT_MUTED)
+                draw.text((570, y0 + 4), f"Q{quality_pct}%", font=F12, fill=_GOLD)
+                passive = _passive_summary(w)
+                if passive:
+                    draw.text((640, y0 + 5), _fit(draw, passive, 330, F11), font=F11, fill=_GOLD)
+                cy += ROW_C + 6
+        return _save(img)
+
     featured = weapon_list[0] if weapon_list else None
 
     hero = (52, top + 28, W - 52, top + 254)
@@ -1445,7 +1829,7 @@ def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, 
     draw.rectangle((hero[0], hero[1], hero[0] + 6, hero[3]), fill=_CYAN)
 
     if featured:
-        rarity = str(_get(featured, "rarity", "Common") or "Common")
+        rarity = _weapon_rarity(featured)
         rc = _col(rarity)
         icon_box = (hero[0] + 34, hero[1] + 38, hero[0] + 184, hero[1] + 188)
         draw.rounded_rectangle(icon_box, radius=8, fill=(9, 8, 15), outline=rc, width=2)
@@ -1456,7 +1840,7 @@ def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, 
         draw.text((tx, hero[1] + 42), "ACQUIRED WEAPON", font=F13, fill=_TEXT_MUTED)
         draw.text((tx, hero[1] + 72), _fit(draw, str(_get(featured, "name", "Weapon")), 470, F28), font=F28, fill=_TEXT_BRIGHT)
         quality_pct = _card_int(_get(featured, "quality_pct", 50), 50)
-        quality = str(_get(featured, "quality", "") or _weapon_quality_label(quality_pct))
+        quality = _weapon_quality_label(quality_pct)
         mana_cost = _card_int(_get(featured, "mana_cost", 3), 3)
         wear = str(_get(featured, "wear", "Unknown") or "Unknown")
         meta = f"{rarity} {_weapon_type_label(featured)} | Quality {quality_pct}% ({quality}) | Mana {mana_cost} | Wear {wear}"
@@ -1465,7 +1849,7 @@ def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, 
         draw.text((tx, hero[1] + 176), _fit(draw, _affix_summary(featured, limit=3), 570, F13), font=F13, fill=_TEXT_MUTED)
 
         stat_x = hero[2] - 232
-        _draw_stat_tile(img, draw, stat_x, hero[1] + 58, 96, 68, "ATK", f"+{_card_int(_get(featured, 'attack_bonus', 0))}", _RED)
+        _draw_stat_tile(img, draw, stat_x, hero[1] + 58, 96, 68, "STR", f"+{_card_int(_get(featured, 'attack_bonus', 0))}", _GOLD)
         _draw_stat_tile(img, draw, stat_x + 112, hero[1] + 58, 96, 68, "DEF", f"+{_card_int(_get(featured, 'defense_bonus', 0))}", _BLUE)
     else:
         _center_text(draw, hero, "Crate opened", F28, _TEXT_BRIGHT)

@@ -14,8 +14,10 @@ from core.rpg import (
     checklist_is_complete,
     claim_daily_checklist_reward,
     daily_reset_text,
+    ensure_arena_stats,
     ensure_daily_checklist,
     ensure_player,
+    get_zone,
     get_active_buffs,
     get_quantity,
     inventory_rows,
@@ -25,20 +27,127 @@ from core.rpg import (
     utc_day_start,
     xp_for_level,
 )
-from core.rpg_data import ACHIEVEMENTS, CREATURES, QUESTS, RARITY_INDEX, WEAPON_SHARD_KEY
+from core.rpg_data import ACHIEVEMENTS, CREATURES, QUESTS, RARITIES, RARITY_INDEX, WEAPON_SHARD_KEY, ZONES
 from core.theme import (
     DARK_COLOR,
     GOLD_COLOR,
     consumable_label,
+    creature_emoji,
     crate_emoji,
     crate_label,
     currency_label,
     dark_embed,
     equipment_label,
     material_label,
-    progress_bar,
+    rarity_emoji,
+    rarity_label,
     status_embed,
 )
+
+
+RARITY_ORDER = [r.name for r in RARITIES]
+
+
+_SUPERSCRIPT = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+
+
+def _superscript(n: int) -> str:
+    return str(n).translate(_SUPERSCRIPT)
+
+
+async def _build_dense_zoo(db, target_id: int, target_name: str, target_avatar_url: str) -> str:
+    """Build an OwO-style dense zoo display as plain text."""
+    caught_rows = await db.fetchall(
+        "SELECT name, rarity, COUNT(*) AS total, SUM(level) AS total_levels, SUM(value) AS total_value FROM rpg_creatures WHERE user_id = ? GROUP BY name, rarity",
+        (target_id,),
+    )
+    caught_map: dict[tuple[str, str], dict] = {}
+    for r in caught_rows:
+        caught_map[(str(r["name"]), str(r["rarity"]))] = {
+            "total": int(r["total"]),
+            "total_levels": int(r["total_levels"] or 0),
+            "total_value": int(r["total_value"] or 0),
+        }
+
+    by_rarity: dict[str, list[tuple[str, int]]] = {r: [] for r in RARITY_ORDER}
+    total_points = 0
+    total_creatures = 0
+    species_caught = 0
+    species_total = 0
+
+    for ct in CREATURES:
+        species_total += 1
+        key = (ct.name, ct.rarity)
+        info = caught_map.get(key)
+        if info:
+            species_caught += 1
+            count = info["total"]
+            total_points += info["total_value"]
+            total_creatures += count
+            by_rarity[ct.rarity].append((ct.name, count))
+
+    for rarity in by_rarity:
+        by_rarity[rarity].sort(key=lambda x: (-x[1], x[0]))
+
+    lines: list[str] = []
+    lines.append(f"**{target_name}'s Abyssia Zoo**")
+    lines.append(f"{species_caught}/{species_total} species • {total_creatures:,} creatures • Zoo Points: {total_points:,}")
+    lines.append("")
+
+    # Rarity short codes for footer
+    rarity_short = {"Common": "C", "Uncommon": "U", "Rare": "R", "Epic": "E", "Legendary": "L", "Mythic": "M", "Ancient": "A", "Patreon": "P", "Divine": "D", "Eldritch": "El", "Abyssal": "Ab", "Prismatic": "Pr", "Ethereal": "Et", "Void Lord": "VL", "Hidden": "H"}
+    missing_counts: list[str] = []
+    
+    for rarity in RARITY_ORDER:
+        creatures = by_rarity.get(rarity, [])
+        if not creatures:
+            continue
+            
+        total_in_rarity = sum(c[1] for c in creatures)
+        species_in_rarity = len(creatures)
+        total_species_in_rarity = sum(1 for ct in CREATURES if ct.rarity == rarity)
+        missing_in_rarity = total_species_in_rarity - species_in_rarity
+        
+        if missing_in_rarity > 0:
+            short = rarity_short.get(rarity, rarity[:1])
+            missing_counts.append(f"{short}-{missing_in_rarity}")
+            
+        rmob = rarity_emoji(rarity)
+        header = f"{rmob} **{rarity}** ({_superscript(total_in_rarity)})" if rmob else f"**{rarity}** ({_superscript(total_in_rarity)})"
+        lines.append(header)
+
+        # Build creature entries with emojis and counts
+        parts: list[str] = []
+        for name, count in creatures:
+            emoji = creature_emoji(name)
+            if emoji:
+                parts.append(f"{emoji}{_superscript(count)}")
+            else:
+                parts.append(f"`{name[:12]}`{_superscript(count)}")
+
+        # Wrap rows at ~500 chars for clean display
+        rows: list[str] = []
+        current_row = ""
+        for p in parts:
+            if not current_row:
+                current_row = p
+            elif len(current_row) + 1 + len(p) > 500:
+                rows.append(current_row)
+                current_row = p
+            else:
+                current_row += " " + p
+        if current_row:
+            rows.append(current_row)
+        
+        lines.extend(rows)
+        lines.append("")
+
+    if species_caught == 0:
+        lines.append("*No creatures caught yet.*")
+    elif missing_counts:
+        lines.append(f"Missing: {', '.join(missing_counts)}")
+
+    return "\n".join(lines)
 
 
 SPECIES_PER_PAGE = 21
@@ -52,39 +161,90 @@ RARITY_OPTIONS = [
     ("Legendary", "Legendary"),
     ("Mythic", "Mythic"),
     ("Ancient", "Ancient"),
+    ("Patreon", "Patreon"),
     ("Divine", "Divine"),
     ("Eldritch", "Eldritch"),
     ("Abyssal", "Abyssal"),
+    ("Prismatic", "Prismatic"),
+    ("Ethereal", "Ethereal"),
+    ("Void Lord", "Void Lord"),
+    ("Hidden", "Hidden"),
 ]
+
+PROFILE_ACCENT_PRESETS = {
+    "purple": "#AA5FF5",
+    "gold": "#EBC350",
+    "cyan": "#37E1D2",
+    "green": "#50D278",
+    "red": "#DC3C4B",
+    "orange": "#F5912D",
+    "blue": "#46A0EB",
+    "pink": "#FB7185",
+}
+
+
+def _available_profile_backgrounds() -> str:
+    return ", ".join(zone.name for zone in ZONES.values())
+
+
+def _normalize_profile_color(value: str) -> str:
+    raw = value.strip()
+    lowered = raw.lower()
+    if lowered in {"default", "reset", "none", "zone"}:
+        return ""
+    if lowered in PROFILE_ACCENT_PRESETS:
+        return PROFILE_ACCENT_PRESETS[lowered]
+    if lowered.startswith("0x"):
+        raw = raw[2:]
+    raw = raw.lstrip("#")
+    if len(raw) != 6 or any(ch not in "0123456789abcdefABCDEF" for ch in raw):
+        presets = ", ".join(PROFILE_ACCENT_PRESETS)
+        raise commands.BadArgument(f"Use a hex color like `#22d3ee`, `default`, or one of: {presets}.")
+    return f"#{raw.upper()}"
+
+
+def _profile_embed_color(value: str | None, fallback: discord.Color = discord.Color.dark_purple()) -> discord.Color:
+    if not value:
+        return fallback
+    raw = value.strip().lstrip("#")
+    if len(raw) != 6:
+        return fallback
+    try:
+        return discord.Color(int(raw, 16))
+    except ValueError:
+        return fallback
 
 
 class InventoryView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, has_crates: bool = False, has_swords: bool = False) -> None:
+    def __init__(
+        self,
+        ctx: commands.Context,
+        has_crates: bool = False,
+        has_swords: bool = False,
+        has_lootboxes: bool = False,
+    ) -> None:
         super().__init__(timeout=60)
         self.ctx = ctx
         self.has_crates = has_crates
         self.has_swords = has_swords
-        self.open_crate.disabled = not has_crates
+        self.has_lootboxes = has_lootboxes
+        self.open_crate.disabled = not (has_crates or has_lootboxes)
         self.use_sword.disabled = not has_swords
 
     @discord.ui.button(label="Open Crate", style=discord.ButtonStyle.secondary, emoji="📦", row=0)
     async def open_crate(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await interaction.response.defer()
         from cogs.rpg_shop import CrateOpenView
-        from core.rpg import ensure_player, get_quantity
-        from core.rpg_data import CRATE_TYPES
+        from core.rpg import ensure_player
         db = self.ctx.bot.db
-        player = await ensure_player(db, self.ctx.author.id, self.ctx.author.display_name)
-        # Find owned crates
-        owned = []
-        for ck in CRATE_TYPES:
-            qty = await get_quantity(db, self.ctx.author.id, "crate", ck)
-            if qty > 0:
-                owned.append((ck, CRATE_TYPES[ck]["name"], qty))
-        if not owned:
-            await interaction.followup.send("No crates found. Hunt for crates or buy one with `b shardcrate cache`.", ephemeral=True)
+        await ensure_player(db, self.ctx.author.id, self.ctx.author.display_name)
+        view = CrateOpenView(self.ctx)
+        if not await view.load_owned_options():
+            await interaction.followup.send("No lootboxes or crates found. Hunt for lootboxes or buy one with `b shardcrate cache`.", ephemeral=True)
             return
-        # Build dropdown with only owned crates
+        embed = discord.Embed(title="Open Box", description="Choose a lootbox or weapon crate to open.", color=discord.Color.orange())
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+        return
         options = [
             discord.SelectOption(
                 label=name,
@@ -115,14 +275,14 @@ class InventoryView(discord.ui.View):
         if active:
             remaining = SWORD_DURATION - (now_ts() - await _get_sword_activated_at(db, self.ctx.author.id))
             mins = max(0, remaining // 60)
-            await interaction.followup.send(f"Hunt Sword already active! **{mins}** min remaining. Use `b hunt` for +1 roll.", ephemeral=True)
+            await interaction.followup.send(f"Hunt Sword already active! **{mins}** min remaining. Use `b hunt` for 1.3x catch rate.", ephemeral=True)
             return
         # Activate
         await add_item(db, self.ctx.author.id, "consumable", HUNT_SWORD_KEY, -1)
         await activate_buff(db, self.ctx.author.id, SWORD_BUFF_KEY, "consumable", 1)
         embed = discord.Embed(
             title=f"{consumable_label(HUNT_SWORD_KEY, HUNT_SWORD_NAME)} Activated",
-            description=f"+1 extra hunt roll for **20 minutes**\n{qty - 1} sword(s) remaining\n\nUse `b hunt` now!",
+            description=f"1.3x catch rate for **20 minutes**\n{qty - 1} sword(s) remaining\n\nUse `b hunt` now!",
             color=discord.Color.dark_green(),
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
@@ -231,6 +391,42 @@ class RPGProfile(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
+    async def _get_profile_cosmetics(self, user_id: int) -> dict[str, str]:
+        row = await self.bot.db.fetchone(
+            "SELECT background_key, accent_color, about FROM rpg_profile_cosmetics WHERE user_id = ?",
+            (user_id,),
+        )
+        if row is None:
+            return {"background_key": "", "accent_color": "", "about": ""}
+        return {
+            "background_key": str(row["background_key"] or ""),
+            "accent_color": str(row["accent_color"] or ""),
+            "about": str(row["about"] or ""),
+        }
+
+    async def _set_profile_cosmetics(self, user_id: int, **changes: str) -> dict[str, str]:
+        current = await self._get_profile_cosmetics(user_id)
+        current.update({key: value for key, value in changes.items() if key in current})
+        await self.bot.db.execute(
+            """
+            INSERT INTO rpg_profile_cosmetics (user_id, background_key, accent_color, about, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(user_id) DO UPDATE SET
+                background_key = excluded.background_key,
+                accent_color = excluded.accent_color,
+                about = excluded.about,
+                updated_at = excluded.updated_at
+            """,
+            (
+                user_id,
+                current["background_key"],
+                current["accent_color"],
+                current["about"],
+                now_ts(),
+            ),
+        )
+        return current
+
     @commands.hybrid_command(name="start")
     async def start(self, ctx: commands.Context, *, hunter_name: str | None = None) -> None:
         """Create your hunter profile."""
@@ -261,12 +457,9 @@ class RPGProfile(commands.Cog):
             "SELECT COUNT(*) AS total FROM rpg_creatures WHERE user_id = ?",
             (target.id,),
         )
-        embed = dark_embed(f"{player['hunter_name']} - {player['title']}", color=discord.Color.dark_purple())
+        cosmetics = await self._get_profile_cosmetics(target.id)
+        embed = dark_embed(f"{player['hunter_name']} - {player['title']}", color=_profile_embed_color(cosmetics.get("accent_color")))
         embed.set_author(name=str(target), icon_url=target.display_avatar.url)
-        embed.add_field(name="Level", value=f"**{player['level']}**\n{progress_bar(int(player['xp']), xp_for_level(int(player['level'])))}\n`{player['xp']}/{xp_for_level(player['level'])} XP`", inline=True)
-        embed.add_field(name="Wallet", value=f"{currency_label('gold')} **{player['gold']}**\n{currency_label('gems')} **{player['gems']}**", inline=True)
-        embed.add_field(name="Arena", value=f"**{player['arena_rating']}** rating", inline=True)
-        embed.add_field(name="Collection", value=f"**{creature_count['total']}** monsters bound\n**{player['hunts_done']}** hunts survived\n**{player['prestige']}** prestige", inline=True)
         weapon_row = await self.bot.db.fetchone("SELECT name, quality, weapon_type FROM weapons WHERE user_id = ? AND equipped_creature_id IS NOT NULL LIMIT 1", (target.id,))
         if weapon_row:
             wq = str(weapon_row["quality"]) if weapon_row["quality"] else "Normal"
@@ -275,6 +468,17 @@ class RPGProfile(commands.Cog):
         else:
             weapon_name = "None"
         active_buffs = await get_active_buffs(self.bot.db, target.id)
+        arena = await ensure_arena_stats(self.bot.db, target.id, ctx.guild.id)
+        win_streak = int(arena["win_streak"])
+        best_streak = int(arena["highest_win_streak"])
+        avatar_bytes: bytes | None = None
+        try:
+            avatar_asset = target.display_avatar.with_size(256)
+            if hasattr(avatar_asset, "with_static_format"):
+                avatar_asset = avatar_asset.with_static_format("png")
+            avatar_bytes = await avatar_asset.read()
+        except Exception:
+            avatar_bytes = None
         image = render_profile_card(
             target.display_name,
             player,
@@ -282,18 +486,150 @@ class RPGProfile(commands.Cog):
             weapon_name=weapon_name,
             xp_needed=xp_for_level(int(player["level"])),
             active_buffs=active_buffs if active_buffs else None,
+            profile_cosmetics=cosmetics,
+            avatar_bytes=avatar_bytes,
+            win_streak=win_streak,
+            best_streak=best_streak,
         )
         file = discord.File(image, filename="abyssia_profile.png")
         embed.set_image(url="attachment://abyssia_profile.png")
         await ctx.reply(embed=embed, file=file, mention_author=False)
 
-    @commands.hybrid_command(name="bestiary", aliases=["zoo", "den", "pets", "collection", "vault"])
-    async def bestiary(self, ctx: commands.Context, member: discord.Member | None = None, page: int = 1) -> None:
-        """Show your Abyssian monster index. Sorted by rarity, shows caught and uncaught."""
+    @commands.hybrid_group(name="profilecustomize", aliases=["profilecard", "pcard", "pc"], invoke_without_command=True)
+    async def profilecustomize(self, ctx: commands.Context) -> None:
+        """Customize your hunter profile card."""
         assert ctx.guild is not None
-        target = member or ctx.author
-        await ensure_player(self.bot.db, target.id, target.display_name)
+        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        cosmetics = await self._get_profile_cosmetics(ctx.author.id)
+        background_key = cosmetics["background_key"] or str(player["current_zone"])
+        zone = ZONES.get(background_key) or ZONES.get("void_realm")
+        accent = cosmetics["accent_color"] or "zone default"
+        about = cosmetics["about"] or "zone flavor"
+        embed = dark_embed(
+            "Profile Customization",
+            (
+                f"Background: **{zone.name if zone else background_key}**\n"
+                f"Accent: `{accent}`\n"
+                f"About: {about}\n\n"
+                "`b profilecustomize background <zone>`\n"
+                "`b profilecustomize accent <hex|preset|default>`\n"
+                "`b profilecustomize about <text|clear>`\n"
+                "`b profilecustomize reset`"
+            ),
+            color=_profile_embed_color(cosmetics.get("accent_color")),
+        )
+        embed.add_field(name="Backgrounds", value=_available_profile_backgrounds()[:1024], inline=False)
+        embed.add_field(name="Accent Presets", value=", ".join(PROFILE_ACCENT_PRESETS), inline=False)
+        await ctx.reply(embed=embed, mention_author=False)
 
+    @profilecustomize.command(name="background", aliases=["bg"])
+    async def profile_background(self, ctx: commands.Context, *, zone: str) -> None:
+        """Set your profile card background."""
+        assert ctx.guild is not None
+        await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        try:
+            selected = get_zone(zone)
+        except ValueError as exc:
+            raise commands.BadArgument(f"{exc}\nAvailable backgrounds: {_available_profile_backgrounds()}") from exc
+        cosmetics = await self._set_profile_cosmetics(ctx.author.id, background_key=selected.key)
+        await ctx.reply(
+            embed=status_embed(
+                "Profile Background Updated",
+                f"Your profile background is now **{selected.name}**.",
+                color=_profile_embed_color(cosmetics.get("accent_color")),
+            ),
+            mention_author=False,
+        )
+
+    @profilecustomize.command(name="accent")
+    async def profile_accent(self, ctx: commands.Context, *, color: str) -> None:
+        """Set your profile card accent color."""
+        assert ctx.guild is not None
+        await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        normalized = _normalize_profile_color(color)
+        cosmetics = await self._set_profile_cosmetics(ctx.author.id, accent_color=normalized)
+        label = "the background default" if not normalized else f"`{normalized}`"
+        await ctx.reply(
+            embed=status_embed(
+                "Profile Accent Updated",
+                f"Your profile accent now uses {label}.",
+                color=_profile_embed_color(cosmetics.get("accent_color")),
+            ),
+            mention_author=False,
+        )
+
+    @profilecustomize.command(name="about", aliases=["bio"])
+    async def profile_about(self, ctx: commands.Context, *, text: str) -> None:
+        """Set your profile card about text."""
+        assert ctx.guild is not None
+        await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        cleaned = " ".join(text.strip().split())
+        if cleaned.lower() in {"clear", "reset", "none", "default"}:
+            cleaned = ""
+        if len(cleaned) > 140:
+            raise commands.BadArgument("About text must be 140 characters or fewer.")
+        cosmetics = await self._set_profile_cosmetics(ctx.author.id, about=cleaned)
+        description = "Your about text now uses the selected background's flavor." if not cleaned else cleaned
+        await ctx.reply(
+            embed=status_embed(
+                "Profile About Updated",
+                description,
+                color=_profile_embed_color(cosmetics.get("accent_color")),
+            ),
+            mention_author=False,
+        )
+
+    @profilecustomize.command(name="reset")
+    async def profile_reset(self, ctx: commands.Context) -> None:
+        """Reset your profile card cosmetics."""
+        assert ctx.guild is not None
+        await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        await self.bot.db.execute("DELETE FROM rpg_profile_cosmetics WHERE user_id = ?", (ctx.author.id,))
+        await ctx.reply(
+            embed=status_embed("Profile Customization Reset", "Your profile card is back to its zone defaults."),
+            mention_author=False,
+        )
+
+    @commands.hybrid_command(name="bestiary", aliases=["zoo", "den", "pets", "collection", "vault"])
+    async def bestiary(self, ctx: commands.Context, *, content: str = "") -> None:
+        """View your monster collection. Pass 'd' for dense view."""
+        assert ctx.guild is not None
+        content = content.strip()
+
+        if content.lower() in ("d", "dense"):
+            target = ctx.author
+            await ensure_player(self.bot.db, target.id, target.display_name)
+            text = await _build_dense_zoo(self.bot.db, target.id, target.display_name, str(target.display_avatar.url))
+            chunks: list[str] = []
+            while text:
+                if len(text) <= 1900:
+                    chunks.append(text)
+                    break
+                split_at = text.rfind("\n", 0, 1900)
+                if split_at == -1:
+                    split_at = 1900
+                chunks.append(text[:split_at])
+                text = text[split_at:].lstrip("\n")
+            for idx, chunk in enumerate(chunks):
+                if idx == 0:
+                    await ctx.reply(chunk, mention_author=False)
+                else:
+                    await ctx.send(chunk)
+            return
+
+        target = ctx.author
+        page = 1
+        if content:
+            try:
+                page = max(1, int(content))
+            except ValueError:
+                try:
+                    converter = commands.MemberConverter()
+                    target = await converter.convert(ctx, content)
+                except commands.MemberNotFound:
+                    pass
+
+        await ensure_player(self.bot.db, target.id, target.display_name)
         view = BestiaryView(self.bot, target.id, target.display_name, str(target.display_avatar.url), page)
         embed, files = await view._build_page()
 
@@ -303,6 +639,31 @@ class RPGProfile(commands.Cog):
             return
 
         await ctx.reply(embed=embed, files=files, view=view, mention_author=False)
+
+    @commands.hybrid_command(name="zoodense", aliases=["zood", "zoode", "bestiaryd", "bd"])
+    async def bestiary_dense(self, ctx: commands.Context, member: discord.Member | None = None) -> None:
+        """Show your Abyssian monster collection in dense OwO-style format."""
+        assert ctx.guild is not None
+        target = member or ctx.author
+        await ensure_player(self.bot.db, target.id, target.display_name)
+
+        text = await _build_dense_zoo(self.bot.db, target.id, target.display_name, str(target.display_avatar.url))
+        chunks: list[str] = []
+        remaining = text
+        while remaining:
+            if len(remaining) <= 1900:
+                chunks.append(remaining)
+                break
+            split_at = remaining.rfind("\n", 0, 1900)
+            if split_at == -1:
+                split_at = 1900
+            chunks.append(remaining[:split_at])
+            remaining = remaining[split_at:].lstrip("\n")
+        for idx, chunk in enumerate(chunks):
+            if idx == 0:
+                await ctx.reply(chunk, mention_author=False)
+            else:
+                await ctx.send(chunk)
 
     @commands.hybrid_command(name="monsters")
     async def monsters(self, ctx: commands.Context, member: discord.Member | None = None) -> None:
@@ -321,6 +682,7 @@ class RPGProfile(commands.Cog):
         sections: dict[str, list[tuple[str, int]]] = {}
         has_crates = False
         has_swords = False
+        has_lootboxes = False
         for row in rows:
             item_type = str(row["item_type"])
             key = str(row["item_key"])
@@ -345,6 +707,7 @@ class RPGProfile(commands.Cog):
                 has_crates = True
             elif item_type == "lootbox":
                 name = crate_label("cache", "Lootbox")
+                has_lootboxes = True
             elif item_type == "equipment":
                 name = equipment_label(key, key.replace("_", " ").title())
             else:
@@ -380,7 +743,7 @@ class RPGProfile(commands.Cog):
             embed.add_field(name=label_map.get(section, section.title()), value=value, inline=True)
         embed.set_footer(text="Use the buttons below for quick item actions.")
         
-        view = InventoryView(ctx, has_crates=has_crates, has_swords=has_swords)
+        view = InventoryView(ctx, has_crates=has_crates, has_swords=has_swords, has_lootboxes=has_lootboxes)
         await ctx.reply(embed=embed, view=view, mention_author=False)
 
     # ── Daily ──────────────────────────────────────────────────────
@@ -392,7 +755,8 @@ class RPGProfile(commands.Cog):
         player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         today_start = utc_day_start()
         if int(player["last_daily_at"]) >= today_start:
-            raise commands.BadArgument("You already claimed today's daily reward.")
+            await ctx.reply(embed=status_embed("Daily", "You already claimed today's daily reward."), mention_author=False)
+            return
         gold = 500 + int(player["level"]) * 35
         gems = 15 + int(player["wisdom"]) // 3
         swords = 4 + min(8, int(player["level"]) // 4) + max(0, int(player["luck"]) // 8)

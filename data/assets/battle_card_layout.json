@@ -1,9 +1,9 @@
 {
   "card": { "width": 1920, "height": 1080 },
   "background": {
-    "darken_factor": 0.55,
-    "blur_radius": 10,
-    "vignette_strength": 0.85,
+    "darken_factor": 0.42,
+    "blur_radius": 4,
+    "vignette_strength": 0.62,
     "vignette_radius": 1.3
   },
   "result_banner": {

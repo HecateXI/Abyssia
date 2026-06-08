@@ -22,7 +22,6 @@ from core.rpg import (
     HUNT_MAX_CRATE_CHANCE,
     HUNT_MIN_COOLDOWN_SECONDS,
     HUNT_SWORD_DURATION_SECONDS,
-    HUNT_SWORD_EXTRA_ROLLS,
     HUNT_ZONE_LEVEL_CRATE_BONUS,
     activate_buff,
     add_item,
@@ -55,6 +54,7 @@ from core.theme import (
     asset_emoji,
     consumable_label,
     crate_label,
+    currency_emoji,
     currency_label,
     creature_emoji,
     creature_line,
@@ -110,20 +110,20 @@ SWORD_DURATION = HUNT_SWORD_DURATION_SECONDS
 
 
 async def _check_sword_active(db, user_id: int) -> bool:
-    """Check if Hunt Sword buff is active (within 20 min window)."""
+    """Check if Hunt Sword buff is active (within 20 min window, regardless of charges)."""
     rows = await db.fetchall(
-        "SELECT activated_at FROM rpg_active_buffs WHERE user_id = ? AND buff_key = ? AND charges_remaining > 0",
+        "SELECT activated_at FROM rpg_active_buffs WHERE user_id = ? AND buff_key = ?",
         (user_id, SWORD_BUFF_KEY),
     )
     if not rows:
         return False
-    return True
+    return (now_ts() - int(rows[0]["activated_at"])) < SWORD_DURATION
 
 
 async def _get_sword_activated_at(db, user_id: int) -> int:
     """Get the activation timestamp of the Hunt Sword buff."""
     rows = await db.fetchall(
-        "SELECT activated_at FROM rpg_active_buffs WHERE user_id = ? AND buff_key = ? AND charges_remaining > 0",
+        "SELECT activated_at FROM rpg_active_buffs WHERE user_id = ? AND buff_key = ?",
         (user_id, SWORD_BUFF_KEY),
     )
     if not rows:
@@ -170,6 +170,52 @@ class ExploreZoneView(discord.ui.View):
         return interaction.user.id == self.ctx.author.id
 
 
+class HuntSwordView(discord.ui.View):
+    def __init__(self, db, user_id: int) -> None:
+        super().__init__(timeout=120)
+        self.db = db
+        self.user_id = user_id
+        self._used = False
+
+    @discord.ui.button(label="Use Hunt Sword", style=discord.ButtonStyle.green, row=1)
+    async def use_sword(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("Not your hunt.", ephemeral=True)
+            return
+        if self._used:
+            await interaction.response.send_message("Already used.", ephemeral=True)
+            return
+        await interaction.response.defer()
+        sword_qty = await get_quantity(self.db, self.user_id, "consumable", HUNT_SWORD_KEY)
+        if sword_qty <= 0:
+            self._disable_all()
+            await interaction.edit_original_response(view=self)
+            await interaction.followup.send("No Hunt Swords in inventory.", ephemeral=True)
+            return
+        sword_active = await _check_sword_active(self.db, self.user_id)
+        if sword_active:
+            remaining = SWORD_DURATION - (now_ts() - await _get_sword_activated_at(self.db, self.user_id))
+            mins = max(0, remaining // 60)
+            self._disable_all()
+            await interaction.edit_original_response(view=self)
+            await interaction.followup.send(f"Hunt Sword already active! **{mins}** min remaining.", ephemeral=True)
+            return
+        await add_item(self.db, self.user_id, "consumable", HUNT_SWORD_KEY, -1)
+        await activate_buff(self.db, self.user_id, SWORD_BUFF_KEY, "consumable", 1)
+        self._used = True
+        self._disable_all()
+        button.label = "Hunt Sword Active (20 min)"
+        button.style = discord.ButtonStyle.grey
+        await interaction.edit_original_response(view=self)
+
+    def _disable_all(self) -> None:
+        for child in self.children:
+            child.disabled = True
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.user_id
+
+
 class RPGHunting(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
@@ -179,9 +225,14 @@ class RPGHunting(commands.Cog):
         levelups: dict[int, int] = {}
         if not team or xp <= 0:
             return team, levelups
+        avg_level = sum(int(c["level"]) for c in team) / len(team) if team else 1
         for creature in team:
             level = int(creature["level"])
-            stored_xp = int(creature["xp"]) + xp
+            creature_level = max(1, level)
+            ratio = avg_level / creature_level
+            xp_boost = max(1.0, ratio ** 0.28)
+            boosted_xp = max(1, round(xp * xp_boost))
+            stored_xp = int(creature["xp"]) + boosted_xp
             gained = 0
             while stored_xp >= creature_xp_for_level(level):
                 stored_xp -= creature_xp_for_level(level)
@@ -195,17 +246,17 @@ class RPGHunting(commands.Cog):
                 levelups[int(creature["id"])] = gained
         return await team_creatures(self.bot.db, user_id), levelups
 
-    async def _hunt_roll(self, user_id: int, player, zone, *, roll_index: int = 0, rarity_bonus: float = 0.0, allow_creature: bool = True) -> dict[str, object]:
+    async def _hunt_roll(self, user_id: int, player, zone, *, roll_index: int = 0, rarity_bonus: float = 0.0, allow_creature: bool = True, creature_mult: float = 1.0) -> dict[str, object]:
         luck = int(player["luck"])
         level = int(player["level"])
-        gold = random.randint(*zone.gold) + level * 5 + roll_index * 6
+        gold = (random.randint(*zone.gold) + level * 5 + roll_index * 6) // 3
         gems = 0
 
         creature_id = None
         creature_stats = None
         if allow_creature:
             catch_rate = HUNT_BASE_CATCH_RATE + luck * HUNT_LUCK_CATCH_BONUS
-            if random.random() < min(HUNT_MAX_CATCH_RATE, catch_rate):
+            if random.random() < min(HUNT_MAX_CATCH_RATE, catch_rate * creature_mult):
                 rarity = choose_rarity(zone, luck, rarity_bonus)
                 template = choose_creature_template(rarity)
                 creature_stats = roll_creature_stats(template, level)
@@ -230,7 +281,7 @@ class RPGHunting(commands.Cog):
 
     @commands.hybrid_command(name="hunt", aliases=["h"])
     async def hunt(self, ctx: commands.Context, *, zone: str | None = None) -> None:
-        """Hunt for creatures. Active Hunt Sword grants +1 roll for 20 min."""
+        """Hunt for creatures. Active Hunt Sword grants 1.3x catch rate for 20 min."""
         assert ctx.guild is not None
         await ensure_application_emojis(self.bot, max_age=60.0)
         player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
@@ -244,10 +295,20 @@ class RPGHunting(commands.Cog):
         if elapsed < cooldown:
             raise commands.BadArgument(f"You are recovering from the hunt. Try again in {readable_seconds(cooldown - elapsed)}.")
 
-        # Check if Hunt Sword buff is active (time-based, 20 min)
+        # Check if Hunt Sword buff is active (time-based, 20 min) — gives 1.3x catch rate
         sword_active = await _check_sword_active(self.bot.db, ctx.author.id)
-        sword_count = HUNT_SWORD_EXTRA_ROLLS if sword_active else 0
-        hunts_amount = 1 + sword_count
+        sword_creature_mult = 1.3 if sword_active else 1.0
+        hunts_amount = 1
+
+        # Get arena streak for hunt bonuses
+        from core.rpg import ensure_arena_stats
+        from core.rpg_data import get_streak_tier
+        arena = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
+        streak = int(arena["win_streak"])
+        streak_tier = get_streak_tier(streak)
+        catch_boost = 1.0 + streak_tier.catch_boost
+        xp_boost = 1.0 + streak_tier.xp_boost
+        gold_boost = 1.0 + streak_tier.gold_boost
 
         total_gold = 0
         total_xp = 0
@@ -263,9 +324,9 @@ class RPGHunting(commands.Cog):
             # Sigil: roll extra monsters per hunt
             monster_rolls = 1 + sigil_extra
             for mi in range(monster_rolls):
-                result = await self._hunt_roll(ctx.author.id, player, target_zone, roll_index=i, rarity_bonus=rarity_bonus)
-                total_gold += int(result["gold"])
-                total_xp += int(result["xp"])
+                result = await self._hunt_roll(ctx.author.id, player, target_zone, roll_index=i, rarity_bonus=rarity_bonus, creature_mult=sword_creature_mult * catch_boost)
+                total_gold += int(result["gold"] * gold_boost)
+                total_xp += int(result["xp"] * xp_boost)
                 if result.get("material_key") and int(result.get("material_amount", 0)):
                     materials[str(result["material_key"])] = materials.get(str(result["material_key"]), 0) + int(result["material_amount"])
                 if result["creature"]:
@@ -304,8 +365,8 @@ class RPGHunting(commands.Cog):
             {"label": "Souls", "amount": total_gold, "icon_key": "souls", "kind": "currency", "color": (235, 195, 80)},
             {"label": "XP", "amount": total_xp, "icon_key": "profile", "kind": "ui", "color": (250, 204, 21)},
         ]
-        if sword_count:
-            rewards_list.append({"label": f"{sword_count} Hunt Swords Used", "amount": 0, "icon_key": HUNT_SWORD_KEY, "kind": "consumable", "color": (90, 225, 130)})
+        if sword_active:
+            rewards_list.append({"label": "Hunt Sword Active", "amount": 0, "icon_key": HUNT_SWORD_KEY, "kind": "consumable", "color": (90, 225, 130)})
         if levels:
             rewards_list.append({"label": "Levels", "amount": levels, "icon_key": "profile", "kind": "ui", "color": (250, 204, 21)})
         if checklist_lootboxes:
@@ -333,6 +394,8 @@ class RPGHunting(commands.Cog):
             counter = f"`[{remaining}/{max_charges}]`"
             active_buff_lines.append(f"{icon} {counter}" if icon else counter)
             rewards_list.append({"label": f"[{remaining}/{max_charges}]", "amount": 0, "icon_key": buff_key, "kind": "buffs", "color": color})
+        if sword_active:
+            active_buff_lines.append(_hunt_sword_label())
         for mk, mv in materials.items():
             display_name = str(mk).replace("_", " ").title()
             rewards_list.append({"label": display_name, "amount": mv, "icon_key": mk, "kind": "materials", "color": (80, 210, 120)})
@@ -421,38 +484,54 @@ class RPGHunting(commands.Cog):
 
         card_file = discord.File(hunt_card_buf, filename="abyssia_hunt.png")
 
-        header_icon = asset_emoji("ui", "hunt") or "Hunt"
-        if active_buff_lines:
-            header_text = f"{header_icon} | **{ctx.author.display_name}**, active buffs {' '.join(active_buff_lines[:6])} !"
-        else:
-            header_text = f"{header_icon} | **{ctx.author.display_name}**, hunt !"
+        header_icon = asset_emoji("ui", "hunt") or "H"
+        buff_icons = " ".join(active_buff_lines[:6])
+        header_text = " ".join(part for part in (header_icon, buff_icons) if part)
         embed_lines = [
             header_text,
         ]
+        xp_icon = asset_emoji("ui", "profile") or "XP"
+        souls_icon = currency_emoji("gold") or "S"
+        reward_parts = []
         if xp_team:
             team_icons = []
             for cr in xp_team[:3]:
                 icon = creature_emoji(str(cr["name"]), str(cr["rarity"])) or rarity_emoji(str(cr["rarity"]))
                 if icon:
                     team_icons.append(icon)
-            icon_prefix = f"{' '.join(team_icons)} " if team_icons else ""
-            embed_lines.append(f"| {icon_prefix}gained **{total_xp:,}xp**!")
+            icon_prefix = " ".join(team_icons)
+            reward_parts.append(f"{icon_prefix} {xp_icon} **{total_xp:,}** XP".strip())
         else:
-            embed_lines.append(f"| gained **{total_xp:,}xp**!")
-        embed_lines.append(f"| {currency_label('gold')} **{total_gold:,}**")
+            reward_parts.append(f"{xp_icon} **{total_xp:,}** XP")
+        reward_parts.append(f"{souls_icon} **{total_gold:,}** Souls")
         if checklist_lootboxes:
-            embed_lines.append(f"| {crate_label('cache', 'Lootbox')} `[{checklist_lootbox_count}/3]` **RESETS IN:** `{_daily_reset_timer()}`")
+            loot_icon = asset_emoji("crate", "cache") or crate_label("cache", "Lootbox")
+            reward_parts.append(f"{loot_icon} Lootbox `[{checklist_lootbox_count}/3]`")
         if found_crate:
             crate_name = str(CRATE_TYPES[found_crate].get("name", "Weapon Crate"))
-            embed_lines.append(f"| {crate_label(found_crate, crate_name)}")
+            reward_parts.append(f"{asset_emoji('crate', found_crate) or crate_label(found_crate, crate_name)} {crate_name}")
+        embed_lines.append(" | ".join(reward_parts))
 
         embed = discord.Embed(description="\n".join(embed_lines), color=discord.Color.dark_green())
         embed.set_image(url="attachment://abyssia_hunt.png")
-        await ctx.reply(embed=embed, file=card_file, mention_author=False)
+        sword_qty = await get_quantity(self.bot.db, ctx.author.id, "consumable", HUNT_SWORD_KEY)
+        sword_active = await _check_sword_active(self.bot.db, ctx.author.id)
+        view = None
+        if sword_qty > 0 or sword_active:
+            view = HuntSwordView(self.bot.db, ctx.author.id)
+            if sword_active:
+                view._disable_all()
+                for child in view.children:
+                    if isinstance(child, discord.ui.Button):
+                        child.label = "Hunt Sword Active (20 min)"
+                        child.style = discord.ButtonStyle.grey
+            elif sword_qty <= 0:
+                view._disable_all()
+        await ctx.reply(embed=embed, file=card_file, mention_author=False, view=view)
 
     @commands.hybrid_command(name="use", aliases=["activate"])
     async def use_item(self, ctx: commands.Context, *, item_name: str | None = None) -> None:
-        """Use a consumable item. Currently: Hunt Sword (+1 roll for 20 min)."""
+        """Use a consumable item. Currently: Hunt Sword (1.3x catch rate for 20 min)."""
         assert ctx.guild is not None
         await ensure_application_emojis(self.bot, max_age=60.0)
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
@@ -463,7 +542,7 @@ class RPGHunting(commands.Cog):
             embed = dark_embed("Use Item", color=discord.Color.dark_green())
             if sword_qty > 0:
                 status = "ACTIVE" if sword_active else "Ready"
-                embed.add_field(name=_hunt_sword_label(), value=f"Quantity: **{sword_qty}**\nStatus: **{status}**\nEffect: +1 extra hunt roll for 20 minutes\n\n`b use sword` to activate", inline=False)
+                embed.add_field(name=_hunt_sword_label(), value=f"Quantity: **{sword_qty}**\nStatus: **{status}**\nEffect: 1.3x catch rate for 20 minutes\n\n`b use sword` to activate", inline=False)
             else:
                 embed.add_field(name=_hunt_sword_label(), value="None owned\nGet them from daily rewards, crates, or the shop.", inline=False)
             if sword_active:
@@ -489,7 +568,7 @@ class RPGHunting(commands.Cog):
             await add_item(self.bot.db, ctx.author.id, "consumable", HUNT_SWORD_KEY, -1)
             await activate_buff(self.bot.db, ctx.author.id, SWORD_BUFF_KEY, "consumable", 1)
             embed = dark_embed(f"{_hunt_sword_label()} Activated", color=discord.Color.dark_green())
-            embed.add_field(name="Effect", value="+1 extra hunt roll for **20 minutes**", inline=False)
+            embed.add_field(name="Effect", value="1.3x catch rate for **20 minutes**", inline=False)
             embed.add_field(name="Remaining", value=f"{sword_qty - 1} sword(s) left in inventory", inline=False)
             embed.set_footer(text="Hunt now for bonus rolls!")
             await ctx.reply(embed=embed, mention_author=False)

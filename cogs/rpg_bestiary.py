@@ -6,7 +6,7 @@ from typing import Optional
 
 from core.cards import render_creature_card
 from core.rpg import ensure_player
-from core.rpg_data import CREATURES, catch_rate_for_rarity
+from core.rpg_data import CREATURES, RARITY_BY_NAME, catch_rate_for_rarity, derive_7stats, determine_role, dex_mana_for_rarity
 
 
 class Bestiary(commands.Cog):
@@ -24,11 +24,13 @@ class Bestiary(commands.Cog):
         if not creature_name.strip():
             raise commands.BadArgument("Usage: `b dex [creature_name]` — e.g., `b dex Bloodmoon Drake`")
 
+        # Normalize search: lowercase, replace underscores and hyphens with spaces
         search_lower = creature_name.lower().replace("_", " ").replace("-", " ")
         creature = None
         for ct in CREATURES:
-            nm = ct.name.lower()
-            if nm == search_lower or search_lower in nm:
+            # Normalize creature name for comparison
+            nm = ct.name.lower().replace("_", " ").replace("-", " ")
+            if nm == search_lower or search_lower in nm or nm in search_lower:
                 creature = ct
                 break
 
@@ -36,6 +38,11 @@ class Bestiary(commands.Cog):
             raise commands.BadArgument(f"Creature not found: {creature_name}")
 
         catch_rate = catch_rate_for_rarity(creature.rarity)
+        rarity_data = RARITY_BY_NAME.get(creature.rarity)
+        mana = dex_mana_for_rarity(creature.rarity)
+
+        s7 = derive_7stats(creature)
+        role = determine_role(creature)
 
         caught_row = await self.bot.db.fetchone(
             "SELECT id, level, xp FROM rpg_creatures WHERE user_id = ? AND name = ? LIMIT 1",
@@ -45,16 +52,18 @@ class Bestiary(commands.Cog):
         file = render_creature_card(
             creature_name=creature.name,
             rarity=creature.rarity,
-            attack=creature.attack,
-            defense=creature.defense,
-            hp=creature.hp,
-            speed=creature.speed,
+            hp=s7["hp"], str_stat=s7["str"], pr_stat=s7["pr"],
+            wp_stat=s7["wp"], mag_stat=s7["mag"], mr_stat=s7["mr"],
+            speed=s7["spd"],
+            role=role,
             ability=creature.ability,
             level=int(caught_row["level"]) if caught_row else 1,
             xp=int(caught_row["xp"]) if caught_row else 0,
             caught=caught_row is not None,
             player_name=ctx.author.display_name,
             catch_rate=catch_rate,
+            mana=mana,
+            weight=rarity_data.weight if rarity_data else None,
         )
 
         await ctx.reply(file=discord.File(file, "creature.png"), mention_author=False)

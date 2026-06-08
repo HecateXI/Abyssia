@@ -3,12 +3,18 @@ from __future__ import annotations
 import asyncio
 import base64
 import time
+from io import BytesIO
+from pathlib import Path
 
 import discord
 from discord.http import Route
+from PIL import Image
 
 from core.content_config import ASSET_DIR, get_asset_file_path, get_public_asset_url, safe_key
 
+
+EMOJI_IMAGE_SIZE = 128
+MAX_EMOJI_IMAGE_BYTES = 256 * 1024
 
 CURRENCY_KEYS = ("gold", "gems", "souls", "corrupted_essence", "void_crystals")
 UI_KEYS = (
@@ -42,6 +48,7 @@ def emoji_asset_name(kind: str, key: str) -> str:
         "weapons": "weapon",
         "passives": "passive",
         "status": "status",
+        "stats": "stat",
         "crate": "crate",
         "zones": "zone",
         "bosses": "boss",
@@ -49,6 +56,38 @@ def emoji_asset_name(kind: str, key: str) -> str:
     safe = safe_key(key).lower()
     max_key_length = 32 - len(prefix) - 1
     return f"{prefix}_{safe[:max_key_length]}"
+
+
+def prepared_emoji_png(path: str | Path) -> bytes:
+    with Image.open(path) as source:
+        image = source.convert("RGBA")
+    bbox = image.getbbox()
+    if bbox:
+        image = image.crop(bbox)
+    image.thumbnail((EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGBA", (EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), (0, 0, 0, 0))
+    x = (EMOJI_IMAGE_SIZE - image.width) // 2
+    y = (EMOJI_IMAGE_SIZE - image.height) // 2
+    canvas.alpha_composite(image, (x, y))
+
+    output = BytesIO()
+    canvas.save(output, format="PNG", optimize=True)
+    raw = output.getvalue()
+    if len(raw) <= MAX_EMOJI_IMAGE_BYTES:
+        return raw
+
+    compact = canvas.quantize(colors=256, method=Image.Quantize.FASTOCTREE).convert("RGBA")
+    output = BytesIO()
+    compact.save(output, format="PNG", optimize=True)
+    raw = output.getvalue()
+    if len(raw) > MAX_EMOJI_IMAGE_BYTES:
+        raise ValueError(f"Prepared emoji PNG is too large ({len(raw)} bytes).")
+    return raw
+
+
+def emoji_image_data_url(path: str | Path) -> str:
+    encoded = base64.b64encode(prepared_emoji_png(path)).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
 
 async def application_id_for(bot: discord.Client) -> int:
@@ -133,10 +172,9 @@ async def upload_application_asset_emojis(bot: discord.Client, *, replace_existi
                         Route("DELETE", "/applications/{application_id}/emojis/{emoji_id}", application_id=app_id, emoji_id=emoji_id)
                     )
                     replaced += 1
-                encoded = base64.b64encode(path.read_bytes()).decode("ascii")
                 await bot.http.request(
                     Route("POST", "/applications/{application_id}/emojis", application_id=app_id),
-                    json={"name": emoji_name, "image": f"data:image/png;base64,{encoded}"},
+                    json={"name": emoji_name, "image": emoji_image_data_url(path)},
                 )
                 uploaded += 1
             except Exception as exc:
@@ -214,12 +252,13 @@ def asset_emoji_targets() -> list[tuple[str, list[str]]]:
         ("weapons", list(WEAPON_TYPES.keys())),
         ("passives", list(WEAPON_PASSIVES.keys())),
         ("status", [effect.key for effect in STATUS_EFFECTS]),
+        ("stats", ["hp", "str", "def", "mana", "mag", "res", "spd"]),
         ("creatures", [creature.name for creature in CREATURES]),
         ("crate", list(CRATE_TYPES.keys())),
         ("consumable", ["hunt_sword"]),
         ("currency", list(CURRENCY_KEYS)),
         ("materials", list(MATERIALS.keys())),
-        ("rarity", [rarity.name.lower() for rarity in RARITIES]),
+        ("rarity", [safe_key(rarity.name) for rarity in RARITIES]),
         ("ui", list(UI_KEYS)),
         ("equipment", list(EQUIPMENT.keys())),
         ("buffs", [sigil.key for sigil in SIGILS] + [charm.key for charm in CHARMS]),

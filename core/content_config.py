@@ -15,9 +15,10 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT_DIR / os.getenv("BOT_CONTENT_CONFIG_PATH", "data/content_config.json")
 ASSET_DIR = ROOT_DIR / os.getenv("BOT_ASSET_DIR", "data/assets")
-VALID_KINDS = {"creatures", "equipment", "materials", "zones", "bosses", "rarity", "currency", "crate", "ui", "buffs", "weapons", "passives", "status", "consumable"}
+VALID_KINDS = {"creatures", "equipment", "materials", "zones", "bosses", "rarity", "currency", "crate", "ui", "buffs", "weapons", "passives", "status", "consumable", "stats"}
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
-MAX_PNG_BYTES = 8 * 1024 * 1024
+JPEG_SIGNATURE = b"\xff\xd8\xff"
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 DEFAULT_PATREON_TIERS: list[dict[str, Any]] = [
     {"tier": 1, "name": "Patron I", "description": "Entry supporter tier."},
@@ -56,6 +57,7 @@ DEFAULT_BALANCING: dict[str, Any] = {
             "Legendary": 0.02,
             "Mythic": 0.01,
             "Ancient": 0.005,
+            "Patreon": 0.005,
             "Divine": 0.002,
             "Eldritch": 0.001,
             "Abyssal": 0.0005,
@@ -212,8 +214,11 @@ def balancing_value(path: str, fallback: Any) -> Any:
     return current
 
 
-def _asset_file(kind: str, key: str) -> Path:
-    return ASSET_DIR / validate_kind(kind) / f"{safe_key(key)}.png"
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+
+
+def _asset_file(kind: str, key: str, ext: str = ".png") -> Path:
+    return ASSET_DIR / validate_kind(kind) / f"{safe_key(key)}{ext}"
 
 
 def set_asset_from_data_url(kind: str, key: str, data_url: str) -> dict[str, Any]:
@@ -227,13 +232,17 @@ def set_asset_from_data_url(kind: str, key: str, data_url: str) -> dict[str, Any
     try:
         raw = base64.b64decode(encoded, validate=True)
     except (binascii.Error, ValueError) as exc:
-        raise ValueError("Invalid PNG upload data.") from exc
-    if len(raw) > MAX_PNG_BYTES:
-        raise ValueError("PNG must be 8 MB or smaller.")
-    if not raw.startswith(PNG_SIGNATURE):
-        raise ValueError("Uploaded file is not a valid PNG.")
+        raise ValueError("Invalid image upload data.") from exc
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise ValueError("Image must be 8 MB or smaller.")
+    if raw.startswith(PNG_SIGNATURE):
+        ext = ".png"
+    elif raw[:3] == JPEG_SIGNATURE:
+        ext = ".jpg"
+    else:
+        raise ValueError("Uploaded file is not a valid PNG or JPEG.")
 
-    path = _asset_file(kind, key)
+    path = _asset_file(kind, key, ext)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(raw)
 
@@ -286,9 +295,10 @@ def get_asset_file_path(kind: str, key: str) -> Path | None:
         path = (ASSET_DIR / str(record["file"])).resolve()
         if path.exists() and path.is_file() and ASSET_DIR.resolve() in path.parents:
             return path
-    direct = (ASSET_DIR / kind / f"{safe}.png").resolve()
-    if direct.exists() and direct.is_file() and ASSET_DIR.resolve() in direct.parents:
-        return direct
+    for ext in (".png", ".jpg", ".jpeg"):
+        direct = (ASSET_DIR / kind / f"{safe}{ext}").resolve()
+        if direct.exists() and direct.is_file() and ASSET_DIR.resolve() in direct.parents:
+            return direct
     return None
 
 
@@ -310,8 +320,11 @@ def get_creature_asset_path(key: str) -> Path | None:
             if base_file.exists():
                 return base_file
             break
-    direct = ASSET_DIR / "creatures" / f"{key}.png"
-    return direct if direct.exists() else None
+    for ext in (".png", ".jpg", ".jpeg"):
+        direct = ASSET_DIR / "creatures" / f"{key}{ext}"
+        if direct.exists():
+            return direct
+    return None
 
 
 def get_public_asset_url(kind: str, key: str) -> str | None:
@@ -333,12 +346,18 @@ def get_public_asset_url(kind: str, key: str) -> str | None:
 
 def asset_preview_url(kind: str, key: str) -> str | None:
     record = get_asset_record(kind, key)
-    if not record:
-        return None
-    if record.get("url"):
+    if record and record.get("url"):
         return str(record["url"])
-    if record.get("file"):
+    if record and record.get("file"):
         updated_at = record.get("updated_at")
         url = f"/assets/{record['file']}"
         return f"{url}?v={updated_at}" if updated_at else url
+    path = get_asset_file_path(kind, key)
+    if path:
+        try:
+            relative = path.resolve().relative_to(ASSET_DIR.resolve()).as_posix()
+        except ValueError:
+            return None
+        updated_at = int(path.stat().st_mtime)
+        return f"/assets/{relative}?v={updated_at}"
     return None

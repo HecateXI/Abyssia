@@ -7,6 +7,7 @@ import random
 import discord
 from discord.ext import commands
 
+from core.battle_engine import BattleEngine
 from core.battle_card_renderer import BattleCardRenderer
 from core.cards import render_arena_card, render_team_card
 from core.discord_assets import embed_asset, ensure_application_emojis
@@ -16,6 +17,7 @@ from core.rpg import (
     award_player_xp,
     calculate_battle_rewards,
     creature_weapons,
+    creature_xp_for_level,
     elo_rating_change,
     ensure_arena_stats,
     ensure_player,
@@ -40,8 +42,6 @@ from core.rpg import (
     top_creatures,
     unlock_achievement,
     update_arena_after_battle,
-    weapon_display_name,
-    weapon_stats,
 )
 from core.rpg_data import (
     BOSSES,
@@ -58,6 +58,7 @@ from core.theme import (
     GOLD_COLOR,
     asset_emoji,
     boss_label,
+    creature_emoji,
     creature_label,
     creature_line,
     currency_label,
@@ -65,12 +66,14 @@ from core.theme import (
     dark_embed,
     rarity_emoji,
     rarity_label,
+    stat_emoji,
     status_effect_emoji,
     status_effect_label,
     status_embed,
     ui_label,
     weapon_emoji,
     weapon_label,
+    passive_emoji,
 )
 
 
@@ -81,26 +84,6 @@ def creature_power(creature) -> int:
     return team_power([creature])
 
 
-def _row_value(creature, key: str, fallback: int | str = 0):
-    try:
-        return creature[key]
-    except (KeyError, IndexError, TypeError):
-        return fallback
-
-
-def _get_weapon_affixes(creature: dict) -> dict[str, int]:
-    """Extract weapon affixes from creature dict (they're prefixed with _)."""
-    affixes = {}
-    for key, value in creature.items():
-        if key.startswith("_"):
-            affix_name = key[1:]
-            try:
-                affixes[affix_name] = int(value)
-            except (TypeError, ValueError):
-                pass
-    return affixes
-
-
 def _emoji_prefix(emoji: str) -> str:
     return f"{emoji} " if emoji else ""
 
@@ -108,45 +91,68 @@ def _emoji_prefix(emoji: str) -> str:
 def _weapon_status(creature: dict) -> str:
     weapon = creature.get("_weapon") if isinstance(creature.get("_weapon"), dict) else None
     if not weapon:
-        return "*no weapon*"
-    weapon_name = str(weapon.get("name", "Weapon") or "Weapon")
+        return ""
+    rarity = str(weapon.get("rarity", "Common") or "Common")
     weapon_type = str(weapon.get("weapon_type", "sword") or "sword")
-    return f"**{weapon_label(weapon_type, weapon_name)}**"
+    wep = weapon_emoji(weapon_type) or weapon_type[:1].upper()
+    passive_raw = weapon.get("passive")
+    passive = ""
+    if passive_raw:
+        try:
+            import json as _json
+            pdata = _json.loads(str(passive_raw)) if isinstance(passive_raw, str) else passive_raw
+            if isinstance(pdata, dict) and pdata.get("key"):
+                passive = f" {passive_emoji(str(pdata['key']))}" if passive_emoji(str(pdata["key"])) else ""
+        except Exception:
+            pass
+    return f"{rarity_emoji(rarity) or rarity[0].upper()}{wep}{passive}"
 
 
 def _battle_team_line(creature: dict) -> str:
     level = int(creature.get("level", 1) or 1)
     name = str(creature.get("name", "?") or "?")
     rarity = str(creature.get("rarity", "Common") or "Common")
-    rarity_badge = rarity_emoji(rarity) or rarity
-    return f"L.`{level}` {_emoji_prefix(rarity_badge)}**{creature_label(name, rarity)}** - {_weapon_status(creature)}"
+    creature_badge = creature_emoji(name, rarity) or rarity[:1].upper()
+    weapon = _weapon_status(creature)
+    if weapon:
+        return f"L.`{level}` {creature_badge} - {weapon}"
+    return f"L.`{level}` {creature_badge} - no weapons"
 
 
 def _team_slot_value(slot: int, creature, weapon) -> tuple[str, str]:
+    from core.battle_engine import compute_display_stats
     name = str(row_get(creature, "name", "?") or "?")
     rarity = str(row_get(creature, "rarity", "Common") or "Common")
     level = int(row_get(creature, "level", 1) or 1)
-    hp = int(row_get(creature, "hp", 0) or 0)
-    atk = int(row_get(creature, "attack", 0) or 0)
-    defense = int(row_get(creature, "defense", 0) or 0)
-    speed = int(row_get(creature, "speed", 0) or 0)
-    crit = int(row_get(creature, "crit", 0) or 0)
-    mana = int(row_get(creature, "mana", 0) or 0)
+    xp = int(row_get(creature, "xp", 0) or 0)
+    xp_needed = creature_xp_for_level(level)
+    stats = compute_display_stats(creature)
     header = f"[{slot}] {rarity_emoji(rarity) or ''} **{creature_label(name, rarity)}**".strip()
+    
+    # Compact stat display like OwO
+    hp = stats['HP']
+    str_val = stats['STR']
+    def_pct = stats['DEF']
+    mana = stats['MANA']
+    mag = stats['MAG']
+    res_pct = stats['RES']
+    spd = stats['SPD']
+    crit = stats['Crit']
+    
     lines = [
-        f"Lvl **{level}**",
-        f"`HP {hp:,}`",
-        f"`ATK {atk:,}`  `DEF {defense:,}`",
-        f"`SPD {speed:,}`  `Crit {crit}%`",
-        f"`Mana {mana}`",
+        f"Lvl **{level}** XP `{xp}/{xp_needed}`",
+        f"{stat_emoji('hp')} `{hp:,}`  {stat_emoji('mana')} `{mana:,}`",
+        f"{stat_emoji('str')} `{str_val:,}`  {stat_emoji('mag')} `{mag:,}`",
+        f"{stat_emoji('def')} `{def_pct}%`  {stat_emoji('res')} `{res_pct}%`",
+        f"{stat_emoji('spd')} `{spd}`  Crit `{crit}%`",
     ]
     if weapon:
         wtype = str(row_get(weapon, "weapon_type", "sword") or "sword")
         quality_pct = int(row_get(weapon, "quality_pct", 50) or 50)
-        ws = weapon_stats(weapon)
-        lines.append(f"`{int(row_get(weapon, 'id', 0)):05d}` {weapon_label(wtype, weapon_display_name(weapon))} `{quality_pct}%`")
-        if ws:
-            lines.append(f"`W ATK +{ws.get('attack', 0)}`  `W DEF +{ws.get('defense', 0)}`")
+        from core.rpg import weapon_quality_rarity
+        wr = weapon_quality_rarity(quality_pct)
+        wid = f"{int(row_get(weapon, 'id', 0)):05d}"
+        lines.append(f"`{wid}` {rarity_emoji(wr) or ''} {weapon_emoji(wtype) or ''} `{quality_pct}%`")
     else:
         lines.append("*no weapon*")
     return header, "\n".join(lines)
@@ -161,6 +167,7 @@ def _battle_overview_embed(
     color: discord.Color,
     image_filename: str,
     footer: str | None = None,
+    log_lines: list[str] | None = None,
 ) -> discord.Embed:
     embed = dark_embed(f"{author.display_name} goes into battle!", color=color)
     embed.set_author(name=f"{author.display_name} goes into battle!", icon_url=author.display_avatar.url)
@@ -168,6 +175,9 @@ def _battle_overview_embed(
     enemy_lines = [_battle_team_line(cr) for cr in right_team]
     embed.add_field(name=f"{author.display_name}'s Team", value="\n".join(team_lines) if team_lines else "None", inline=True)
     embed.add_field(name="Enemy Team", value="\n".join(enemy_lines) if enemy_lines else "None", inline=True)
+    if log_lines:
+        log_text = "\n".join(log_lines[-12:])
+        embed.add_field(name="Turn Log", value=f"```{log_text}```", inline=False)
     if footer:
         embed.set_footer(text=footer)
     embed.set_image(url=f"attachment://{image_filename}")
@@ -195,7 +205,7 @@ def _daily_reset_timer() -> str:
     return f"{hours}H {minutes}M {sec}S"
 
 
-def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30) -> list[dict[str, object]]:
+def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30, log_enabled: bool = False) -> list[dict[str, object]]:
     """
     Simulate a battle between two teams with support for status effects and weapon affixes.
     
@@ -205,251 +215,9 @@ def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30) -> l
     - curse, fear: damage reduction
     - stun: skip next turn
     
-    Status effects tracked per creature with duration.
     """
-    left_hp = [int(c["hp"]) for c in left_team]
-    right_hp = [int(c["hp"]) for c in right_team]
-    left_mana = [int(_row_value(c, "mana", 50)) for c in left_team]
-    right_mana = [int(_row_value(c, "mana", 50)) for c in right_team]
-    
-    # Extract weapon affixes for each creature
-    left_affixes = [_get_weapon_affixes(c) for c in left_team]
-    right_affixes = [_get_weapon_affixes(c) for c in right_team]
-    
-    # Status effect tracking: list of dicts with {"effect": str, "stacks": int, "duration": int}
-    left_statuses: list[dict[str, dict]] = [{} for _ in left_team]
-    right_statuses: list[dict[str, dict]] = [{} for _ in right_team]
-    
-    stunned_left: set[int] = set()
-    stunned_right: set[int] = set()
-    log: list[str] = []
-    frames: list[dict[str, object]] = []
+    return BattleEngine(left_team, right_team, max_turns=max_turns, log_enabled=log_enabled).run()
 
-    for turn in range(1, max_turns + 1):
-        living_left = [index for index, hp in enumerate(left_hp) if hp > 0]
-        living_right = [index for index, hp in enumerate(right_hp) if hp > 0]
-        if not living_left or not living_right:
-            break
-        turn_log: list[str] = []
-        
-        # ── Apply status effects at turn start ──
-        for index in living_left:
-            if "bleed" in left_statuses[index]:
-                damage = max(1, int(left_team[index]["hp"] * 0.05))
-                left_hp[index] -= damage
-                turn_log.append(f"T{turn}: {left_team[index]['name']} bled for {damage}.")
-            if "burn" in left_statuses[index]:
-                damage = max(1, int(left_team[index]["hp"] * 0.08))
-                left_hp[index] -= damage
-                turn_log.append(f"T{turn}: {left_team[index]['name']} took burn damage {damage}.")
-            if "poison" in left_statuses[index]:
-                damage = max(1, int(left_team[index]["hp"] * 0.06))
-                left_hp[index] -= damage
-                turn_log.append(f"T{turn}: {left_team[index]['name']} took poison damage {damage}.")
-            if "heal" in left_statuses[index]:
-                heal = max(3, int(left_team[index]["hp"] * 0.10))
-                left_hp[index] = min(int(left_team[index]["hp"]), left_hp[index] + heal)
-                turn_log.append(f"T{turn}: {left_team[index]['name']} recovered {heal} HP.")
-        
-        for index in living_right:
-            if "bleed" in right_statuses[index]:
-                damage = max(1, int(right_team[index]["hp"] * 0.05))
-                right_hp[index] -= damage
-                turn_log.append(f"T{turn}: {right_team[index]['name']} bled for {damage}.")
-            if "burn" in right_statuses[index]:
-                damage = max(1, int(right_team[index]["hp"] * 0.08))
-                right_hp[index] -= damage
-                turn_log.append(f"T{turn}: {right_team[index]['name']} took burn damage {damage}.")
-            if "poison" in right_statuses[index]:
-                damage = max(1, int(right_team[index]["hp"] * 0.06))
-                right_hp[index] -= damage
-                turn_log.append(f"T{turn}: {right_team[index]['name']} took poison damage {damage}.")
-            if "heal" in right_statuses[index]:
-                heal = max(3, int(right_team[index]["hp"] * 0.10))
-                right_hp[index] = min(int(right_team[index]["hp"]), right_hp[index] + heal)
-                turn_log.append(f"T{turn}: {right_team[index]['name']} recovered {heal} HP.")
-        
-        # Re-check living after status effects
-        living_left = [index for index, hp in enumerate(left_hp) if hp > 0]
-        living_right = [index for index, hp in enumerate(right_hp) if hp > 0]
-        if not living_left or not living_right:
-            break
-        
-        # ── Turn order by speed ──
-        actors = [("left", index) for index in living_left] + [("right", index) for index in living_right]
-        actors.sort(key=lambda item: (left_team if item[0] == "left" else right_team)[item[1]]["speed"], reverse=True)
-        
-        for side, index in actors:
-            living_left = [idx for idx, hp in enumerate(left_hp) if hp > 0]
-            living_right = [idx for idx, hp in enumerate(right_hp) if hp > 0]
-            if not living_left or not living_right:
-                break
-            
-            attacker = left_team[index] if side == "left" else right_team[index]
-            attacker_hp = left_hp if side == "left" else right_hp
-            attacker_mana = left_mana if side == "left" else right_mana
-            defender_hp = right_hp if side == "left" else left_hp
-            attacker_statuses = left_statuses if side == "left" else right_statuses
-            attacker_affixes = left_affixes if side == "left" else right_affixes
-            defender_statuses = right_statuses if side == "left" else left_statuses
-            defender_affixes = right_affixes if side == "left" else left_affixes
-            stunned_attackers = stunned_left if side == "left" else stunned_right
-            stunned_defenders = stunned_right if side == "left" else stunned_left
-            defender_team = right_team if side == "left" else left_team
-
-            # ── Check stun ──
-            if index in stunned_attackers:
-                stunned_attackers.remove(index)
-                turn_log.append(f"T{turn}: {attacker['name']} was stunned.")
-                continue
-
-            # ── Shadow Cloak dodge ──
-            target_index = random.choice(living_right if side == "left" else living_left)
-            defender = defender_team[target_index]
-            if defender["ability"] == "Shadow Cloak" and random.random() < 0.08:
-                attacker_mana[index] = min(int(_row_value(attacker, "mana", 50)), attacker_mana[index] + 10)
-                turn_log.append(f"T{turn}: {defender['name']} dodged with Shadow Cloak.")
-                continue
-
-            # ── Action selection ──
-            action = "Attack"
-            multiplier = 1.0
-            if attacker_mana[index] >= 80:
-                action = "Ultimate"
-                multiplier = 1.85
-                attacker_mana[index] -= 80
-            elif attacker_mana[index] >= 35 and random.random() < 0.42:
-                action = "Skill"
-                multiplier = 1.30
-                attacker_mana[index] -= 35
-            else:
-                attacker_mana[index] = min(int(_row_value(attacker, "mana", 50)), attacker_mana[index] + 14)
-
-            # ── Damage calculation ──
-            base_damage = attacker["attack"] * multiplier * random.uniform(0.86, 1.16)
-            defense_reduction = defender["defense"] * 0.42
-            
-            # Fear reduces damage
-            if "fear" in attacker_statuses[index]:
-                base_damage *= 0.75
-            
-            # Curse reduces damage
-            if "curse" in attacker_statuses[index]:
-                base_damage *= 0.80
-            
-            damage = max(3, int(base_damage - defense_reduction))
-            
-            # Ability bonuses
-            if attacker["ability"] == "Infernal Rage":
-                damage = round(damage * 1.15)
-            elif attacker["ability"] == "Void Corruption":
-                damage = round(damage * 1.12)
-            elif defender["ability"] == "Blood Pact":
-                damage = round(damage * 0.88)
-
-            # Shield reduces damage
-            if "shield" in defender_statuses[target_index]:
-                damage = round(damage * 0.70)
-
-            # Critical hit
-            critical = random.random() < min(0.45, int(_row_value(attacker, "crit", 5)) / 100)
-            if critical:
-                damage = round(damage * 1.55)
-                
-                # Weapon crit bonus
-                if attacker_affixes[index].get("crit", 0) > 0:
-                    damage = round(damage * 1.1)
-            
-            defender_hp[target_index] -= damage
-
-            # ── Apply status effects from weapon affixes ──
-            weapon_affixes = attacker_affixes[index]
-            
-            # Bleed chance from weapon
-            if weapon_affixes.get("bleed", 0) > 0:
-                if random.random() < min(0.50, weapon_affixes["bleed"] / 100):
-                    if "bleed" not in defender_statuses[target_index]:
-                        defender_statuses[target_index]["bleed"] = {"stacks": 1, "duration": 3}
-                    else:
-                        defender_statuses[target_index]["bleed"]["stacks"] += 1
-                        defender_statuses[target_index]["bleed"]["duration"] = max(3, defender_statuses[target_index]["bleed"]["duration"])
-            
-            # Burn chance from weapon
-            if weapon_affixes.get("burn", 0) > 0:
-                if random.random() < min(0.50, weapon_affixes["burn"] / 100):
-                    if "burn" not in defender_statuses[target_index]:
-                        defender_statuses[target_index]["burn"] = {"stacks": 1, "duration": 3}
-                    else:
-                        defender_statuses[target_index]["burn"]["stacks"] += 1
-                        defender_statuses[target_index]["burn"]["duration"] = max(3, defender_statuses[target_index]["burn"]["duration"])
-            
-            # Poison chance from weapon
-            if weapon_affixes.get("poison", 0) > 0:
-                if random.random() < min(0.50, weapon_affixes["poison"] / 100):
-                    if "poison" not in defender_statuses[target_index]:
-                        defender_statuses[target_index]["poison"] = {"stacks": 1, "duration": 3}
-                    else:
-                        defender_statuses[target_index]["poison"]["stacks"] += 1
-                        defender_statuses[target_index]["poison"]["duration"] = max(3, defender_statuses[target_index]["poison"]["duration"])
-            
-            # Stun chance from weapon
-            if weapon_affixes.get("stun", 0) > 0:
-                if random.random() < min(0.40, weapon_affixes["stun"] / 100):
-                    stunned_defenders.add(target_index)
-            
-            # Shield buff
-            if weapon_affixes.get("shield", 0) > 0:
-                if random.random() < min(0.40, weapon_affixes["shield"] / 100):
-                    if "shield" not in defender_statuses[target_index]:
-                        defender_statuses[target_index]["shield"] = {"stacks": 1, "duration": 2}
-                    else:
-                        defender_statuses[target_index]["shield"]["stacks"] += 1
-            
-            # Life steal
-            if weapon_affixes.get("life_steal", 0) > 0:
-                heal_amount = int(damage * weapon_affixes["life_steal"] / 100)
-                attacker_hp[index] = min(int(attacker["hp"]), attacker_hp[index] + heal_amount)
-            
-            # Creature abilities
-            if attacker["ability"] == "Soul Drain":
-                attacker_hp[index] = min(int(attacker["hp"]), attacker_hp[index] + max(1, damage // 5))
-            elif attacker["ability"] == "Abyssal Howl" and action != "Attack" and random.random() < 0.18:
-                stunned_defenders.add(target_index)
-
-            turn_log.append(f"T{turn}: {attacker['name']} used {action}{' CRIT' if critical else ''} on {defender['name']} for {damage}.")
-
-        # ── Decay status effect durations ──
-        for index in living_left:
-            for status in list(left_statuses[index].keys()):
-                left_statuses[index][status]["duration"] -= 1
-                if left_statuses[index][status]["duration"] <= 0:
-                    del left_statuses[index][status]
-        
-        for index in living_right:
-            for status in list(right_statuses[index].keys()):
-                right_statuses[index][status]["duration"] -= 1
-                if right_statuses[index][status]["duration"] <= 0:
-                    del right_statuses[index][status]
-
-        log.extend(turn_log)
-        left_alive = sum(max(0, hp) for hp in left_hp)
-        right_alive = sum(max(0, hp) for hp in right_hp)
-        frames.append({
-            "turn": turn,
-            "left_won": left_alive >= right_alive,
-            "log": log[-5:],
-            "turn_log": list(turn_log),
-            "full_log": list(log),
-            "left_hp": [max(0, hp) for hp in left_hp],
-            "right_hp": [max(0, hp) for hp in right_hp],
-            "finished": not left_alive or not right_alive,
-        })
-        if not left_alive or not right_alive:
-            break
-
-    if not frames:
-        frames.append({"turn": 0, "left_won": True, "log": ["Battle ended before either team moved."], "full_log": [], "left_hp": left_hp, "right_hp": right_hp, "finished": True})
-    return frames
 
 
 def select_battle_preview_frames(frames: list[dict[str, object]], *, max_frames: int = 5) -> list[dict[str, object]]:
@@ -545,7 +313,10 @@ class RPGBattle(commands.Cog):
         opponent_name: str, opponent_id: int, right_team: list,
         is_npc: bool = False,
     ) -> None:
-        frames = simulate_battle_timeline(left_team, right_team)
+        # Check user's battle log preference
+        pref = await self.bot.db.fetchone("SELECT battle_log FROM rpg_user_prefs WHERE user_id = ?", (ctx.author.id,))
+        log_enabled = bool(int(pref["battle_log"])) if pref else False
+        frames = simulate_battle_timeline(left_team, right_team, log_enabled=log_enabled)
         preview_frames = select_battle_preview_frames(frames, max_frames=5)
         battle_message = None
         battle_renderer = BattleCardRenderer()
@@ -558,8 +329,12 @@ class RPGBattle(commands.Cog):
                 "enemy_team": right_team,
                 "player_hp": list(frame["left_hp"]),
                 "enemy_hp": list(frame["right_hp"]),
-            "zone_key": str(attacker["current_zone"]) if "current_zone" in attacker.keys() else "bloodmoon_forest",
-                "log": [],
+                "player_wp": list(frame.get("left_wp", [])),
+                "enemy_wp": list(frame.get("right_wp", [])),
+                "zone_key": str(attacker["current_zone"]) if "current_zone" in attacker.keys() else "bloodmoon_forest",
+                "log": list(frame.get("turn_log", [])),
+                "log_enabled": log_enabled,
+                "won": None,
             }
             image = battle_renderer.render_battle_frame(frame_data)
             filename = f"abyssia_battle_turn_{frame_index}.png"
@@ -572,6 +347,7 @@ class RPGBattle(commands.Cog):
                 color=discord.Color.dark_gray(),
                 image_filename=filename,
                 footer=f"Battle animation {frame_index}/{len(preview_frames)}",
+                log_lines=frame.get("turn_log") if log_enabled else None,
             )
             if battle_message is None:
                 battle_message = await ctx.send(embed=embed, file=file)
@@ -580,19 +356,24 @@ class RPGBattle(commands.Cog):
             await asyncio.sleep(1)
 
         result = frames[-1]
-        won = bool(result["left_won"])
+        tied = result.get("tied", False)
+        won = bool(result["left_won"]) if not tied else False
 
         arena = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
+        previous_streak = int(arena["win_streak"])
         opp_arena = await ensure_arena_stats(self.bot.db, opponent_id, ctx.guild.id) if not is_npc else None
         opp_rating = int(opp_arena["rating"]) if opp_arena else int(arena["rating"])
-        winner_change, loser_change = elo_rating_change(int(arena["rating"]), opp_rating)
-        rating_change = winner_change if won else loser_change
 
-        await update_arena_after_battle(self.bot.db, ctx.author.id, ctx.guild.id, won, rating_change)
-        if not is_npc and opp_arena:
-            await update_arena_after_battle(self.bot.db, opponent_id, ctx.guild.id, not won, loser_change if won else winner_change)
+        if not tied:
+            winner_change, loser_change = elo_rating_change(int(arena["rating"]), opp_rating)
+            rating_change = winner_change if won else loser_change
+            await update_arena_after_battle(self.bot.db, ctx.author.id, ctx.guild.id, won, rating_change)
+            if not is_npc and opp_arena:
+                await update_arena_after_battle(self.bot.db, opponent_id, ctx.guild.id, not won, loser_change if won else winner_change)
+        else:
+            rating_change = 0
 
-        streak = int(arena["win_streak"]) + 1 if won else 0
+        streak = previous_streak + 1 if won else 0
         streak_bonus_str = ""
         if won and streak >= 3:
             mult = streak_multiplier(streak)
@@ -615,7 +396,7 @@ class RPGBattle(commands.Cog):
                     streak_bonus_str += f"\nMilestone: **{mname}** awarded!"
                 elif rtype == "title":
                     streak_bonus_str += f"\nMilestone: **{mname}** - `Void Champion` title unlocked!"
-        else:
+        elif not tied:
             await award_currency(self.bot.db, ctx.author.id, gold=rewards["gold"])
 
         checklist_crates, checklist_crate_count = await roll_checklist_battle_crates(self.bot.db, ctx.author.id, 1)
@@ -643,33 +424,41 @@ class RPGBattle(commands.Cog):
         status_applied = 0
         creature_damage: dict[str, int] = {}
         creature_kills: dict[str, int] = {}
+        current_actor: str | None = None
+        left_names = {str(c["name"]) for c in left_team}
         for line in (log or []):
             for cr in left_team + right_team:
                 cn = str(cr.get("name", ""))
                 if cn and cn in line:
                     creature_damage.setdefault(cn, 0)
                     creature_kills.setdefault(cn, 0)
-            if "CRIT" in line:
+            # Track current actor from action lines
+            if " uses " in line and ". SPD" not in line and " vs " not in line:
+                current_actor = line.split(" uses ")[0].strip()
+            # Clear actor when creature cannot act (skip)
+            if " cannot act" in line:
+                current_actor = None
+            if "Critical hit" in line:
                 crits += 1
-            if "for " in line and "damage" in line:
+            if " takes " in line and " damage" in line:
                 try:
-                    parts = line.split("for ")
+                    parts = line.split(" takes ")
                     val = int(parts[-1].split()[0].replace(",", ""))
-                    if ctx.author.display_name in line or any(cn in line for cn in [c["name"] for c in left_team]):
-                        damage_dealt += val
-                        for cr in left_team:
-                            if cr["name"] in line:
-                                creature_damage[str(cr["name"])] = creature_damage.get(str(cr["name"]), 0) + val
+                    target_name = parts[0].strip()
+                    if target_name in left_names:
+                        damage_taken += val  # player's creature was hit
                     else:
-                        damage_taken += val
+                        damage_dealt += val  # enemy was hit by player
+                    # Attribute damage to the current actor if on left team
+                    if current_actor and current_actor in left_names:
+                        creature_damage[current_actor] = creature_damage.get(current_actor, 0) + val
                 except (ValueError, IndexError):
                     pass
-            if any(e in line for e in ["Bleed", "Burn", "Poison", "Stun", "Shield"]):
+            if any(e in line for e in ["bleeding", "burned", "poisoned", "stunned", "shielded"]):
                 status_applied += 1
-            if "defeated" in line.lower() or "DEFEATED" in line:
-                for cr in left_team:
-                    if str(cr.get("name", "")) in line:
-                        creature_kills[str(cr.get("name", ""))] = creature_kills.get(str(cr.get("name", "")), 0) + 1
+            if "defeated" in line.lower():
+                if current_actor and current_actor in left_names:
+                    creature_kills[current_actor] = creature_kills.get(current_actor, 0) + 1
 
         mvp_creature = None
         if creature_damage:
@@ -686,8 +475,10 @@ class RPGBattle(commands.Cog):
         enemy_rating = opp_rating if not is_npc else int(arena["rating"])
         enemy_rank_label = arena_rank(enemy_rating)
 
+        tied = result.get("tied", False)
         battle_result_data = {
-            "won": won,
+            "won": won if not tied else None,
+            "tied": tied,
             "winner_name": ctx.author.display_name if won else opponent_name,
             "loser_name": opponent_name if won else ctx.author.display_name,
             "player_name": ctx.author.display_name,
@@ -696,6 +487,8 @@ class RPGBattle(commands.Cog):
             "enemy_team": right_team,
             "player_hp": list(result["left_hp"]),
             "enemy_hp": list(result["right_hp"]),
+            "player_wp": list(result["left_wp"]),
+            "enemy_wp": list(result["right_wp"]),
             "player_rating": int(attacker["arena_rating"]),
             "enemy_rating": enemy_rating,
             "player_rank": f"{player_rank_label} Hunter",
@@ -713,6 +506,8 @@ class RPGBattle(commands.Cog):
             "mvp": mvp_creature,
             "player_weapons": player_weapons,
             "log": log,
+            "log_enabled": log_enabled,
+            "full_log": list(result.get("full_log", log)),
             "xp_reward": rewards.get("xp", 0),
             "gold_reward": rewards.get("gold", 0),
             "turns": int(result.get("turn", len(frames))),
@@ -721,15 +516,34 @@ class RPGBattle(commands.Cog):
         image = battle_renderer.render_battle_result(battle_result_data)
         file = discord.File(image, filename="abyssia_battle.png")
         turns_total = int(result.get("turn", len(frames)))
-        result_word = "won" if won else "lost"
+        if tied:
+            result_word = "tied"
+        else:
+            result_word = "won" if won else "lost"
+        footer_bits = [
+            f"You {result_word} in {turns_total} turns!",
+            f"+{int(rewards.get('xp', 0))} xp",
+            f"Rating {new_rating} ({rating_change:+d})",
+        ]
+        if won:
+            streak_text = f"Streak: {streak}"
+            if streak >= 3:
+                from core.rpg_data import get_streak_tier
+                tier = get_streak_tier(streak)
+                if tier.label:
+                    streak_text = f"{tier.emoji} {streak}x Streak ({tier.label})"
+            footer_bits.append(streak_text)
+        elif previous_streak > 0 and not tied:
+            footer_bits.append(f"Streak broken: {previous_streak}")
         embed = _battle_overview_embed(
             ctx.author,
             opponent_name,
             left_team,
             right_team,
-            color=discord.Color.green() if won else discord.Color.dark_red(),
+            color=discord.Color.dark_gray() if tied else (discord.Color.green() if won else discord.Color.dark_red()),
             image_filename="abyssia_battle.png",
-            footer=f"You {result_word} in {turns_total} turns! | +{int(rewards.get('xp', 0))} xp | Rating {new_rating} ({rating_change:+d})",
+            footer=" | ".join(footer_bits),
+            log_lines=log if log_enabled else None,
         )
         message_content = None
         if checklist_crates:
@@ -787,8 +601,8 @@ class RPGBattle(commands.Cog):
         npc_power = team_power(npc_team)
         scale = max(0.7, min(1.3, player_power / max(1, npc_power)))
         for c in npc_team:
-            c["attack"] = round(int(c["attack"]) * scale)
-            c["defense"] = round(int(c["defense"]) * scale)
+            c["str_stat"] = round(int(c.get("str_stat", c.get("attack", 0))) * scale)
+            c["pr_stat"] = round(int(c.get("pr_stat", c.get("defense", 0))) * scale)
             c["hp"] = round(int(c["hp"]) * scale)
             c["speed"] = round(max(1, int(c["speed"]) * scale))
             c["level"] = max(1, round(int(c["level"]) * scale))
@@ -800,7 +614,7 @@ class RPGBattle(commands.Cog):
 
     @commands.hybrid_group(name="team", invoke_without_command=True)
     async def team(self, ctx: commands.Context, member: discord.Member | None = None) -> None:
-        """Show a hunter's battle team with a team card."""
+        """Show a hunter's battle team."""
         assert ctx.guild is not None
         await ensure_application_emojis(self.bot, max_age=60.0)
         target = member or ctx.author
@@ -828,16 +642,18 @@ class RPGBattle(commands.Cog):
                 "You haven't set a team yet. Pick up to **3 monsters** to fight for you.\n\n"
                 "**Your strongest monsters:**\n" + "\n".join(lines) + "\n\n"
                 f"Use `{prefix}team set 1 <name>` to assign a monster to slot 1.\n"
-                f"Then `{prefix}team set 2 <name>` and `{prefix}team set 3 <name>` for slots 2 and 3.\n"
+                f"Then `{prefix}team set 2 <name>` and `{prefix}team set 2 <name>` for slots 2 and 3.\n"
                 f"Example: `{prefix}team set 1 {your_creatures[0]['name']}`",
                 color=GOLD_COLOR,
             )
             await ctx.reply(embed=embed, mention_author=False)
             return
+
         power = team_power(creatures)
         cids = [int(c["id"]) for c in creatures]
         weapons = await creature_weapons(self.bot.db, cids)
         arena = await ensure_arena_stats(self.bot.db, target.id, ctx.guild.id)
+        streak = int(arena['win_streak'])
         title = ui_label("team", f"{target.display_name}'s Team")
         description = (
             "`b team set <slot> <name>` set a team slot\n"
@@ -848,10 +664,16 @@ class RPGBattle(commands.Cog):
         for index, creature in enumerate(creatures[:3], start=1):
             field_name, field_value = _team_slot_value(index, creature, weapons.get(int(creature["id"])))
             embed.add_field(name=field_name, value=field_value, inline=True)
+        streak_text = f"Current Streak: {streak}"
+        if streak >= 3:
+            from core.rpg_data import get_streak_tier, streak_bonus_text
+            tier = get_streak_tier(streak)
+            if tier.label:
+                streak_text = f"{tier.emoji} Streak: {streak} ({tier.label})"
         embed.set_footer(
             text=(
-                f"Team Power: {power:,} | Current Streak: {int(arena['win_streak'])} | "
-                f"Highest Streak: {int(arena['highest_win_streak'])}"
+                f"Team Power: {power:,} | {streak_text} | "
+                f"Best: {int(arena['highest_win_streak'])}"
             )
         )
         await ctx.reply(embed=embed, mention_author=False)
@@ -870,9 +692,12 @@ class RPGBattle(commands.Cog):
         if slot not in {1, 2, 3}:
             raise commands.BadArgument("Slot must be 1, 2, or 3.")
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        
+        # Normalize search: replace hyphens and underscores with spaces for better matching
+        search_name = creature_name.lower().replace("-", " ").replace("_", " ")
         creatures = await self.bot.db.fetchall(
-            "SELECT id, name FROM rpg_creatures WHERE user_id = ? AND LOWER(name) LIKE ? ORDER BY level DESC, attack + defense + hp + speed DESC LIMIT 1",
-            (ctx.author.id, f"%{creature_name.lower()}%"),
+            "SELECT id, name FROM rpg_creatures WHERE user_id = ? AND LOWER(REPLACE(REPLACE(name, '-', ' '), '_', ' ')) LIKE ? ORDER BY level DESC, str_stat + pr_stat + hp + spd DESC LIMIT 1",
+            (ctx.author.id, f"%{search_name}%"),
         )
         if not creatures:
             raise commands.BadArgument(f"No creature found matching `{creature_name}`.")
@@ -904,15 +729,20 @@ class RPGBattle(commands.Cog):
         await self.bot.db.execute("DELETE FROM rpg_teams WHERE user_id = ?", (ctx.author.id,))
         await ctx.reply(embed=status_embed("Team Cleared", "Your team has been cleared. Use `b team` to set a new one."), mention_author=False)
 
-    # ── Battle Command ──────────────────────────────────────────────
-
-    @commands.hybrid_command(name="battle", aliases=["duel"])
+    @commands.hybrid_command(name="battle", aliases=["duel", "bbattle"])
     @commands.cooldown(1, 10, commands.BucketType.user)
-    async def battle(self, ctx: commands.Context, opponent: discord.Member | None = None) -> None:
-        """Battle another hunter or enter global matchmaking."""
+    async def battle(self, ctx: commands.Context, opponent: discord.Member | None = None, *, level: str | None = None) -> None:
+        """Battle another hunter or enter global matchmaking. Usage: bbattle @user lvl 10"""
         assert ctx.guild is not None
         await ensure_application_emojis(self.bot, max_age=60.0)
         player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+
+        override_level = None
+        if level:
+            import re
+            m = re.search(r'(?:lvl|level)\s*(\d+)', level.lower())
+            if m:
+                override_level = max(1, min(100, int(m.group(1))))
 
         if opponent:
             if opponent.bot:
@@ -924,11 +754,17 @@ class RPGBattle(commands.Cog):
             right_team = await prepare_battle(self.bot.db, opponent.id)
             if not left_team or not right_team:
                 raise commands.BadArgument("Both players need at least one creature.")
+            if override_level:
+                for c in left_team:
+                    c["level"] = override_level
+                for c in right_team:
+                    c["level"] = override_level
             challenge = dark_embed(
                 ui_label("battle", "Duel Challenge"),
                 f"{ctx.author.mention} challenges {opponent.mention} to a duel.\n\n"
                 f"Team Power: **{team_power(left_team):,}** vs **{team_power(right_team):,}**\n"
-                "Expires in **60s**.",
+                + (f"All creatures set to **Level {override_level}**.\n" if override_level else "")
+                + "Expires in **60s**.",
                 color=BLOOD_COLOR,
             )
             view = BattleChallengeView(ctx.author.id, opponent.id)
@@ -942,6 +778,11 @@ class RPGBattle(commands.Cog):
                 return
             left_team = await prepare_battle(self.bot.db, ctx.author.id)
             right_team = await prepare_battle(self.bot.db, opponent.id)
+            if override_level:
+                for c in left_team:
+                    c["level"] = override_level
+                for c in right_team:
+                    c["level"] = override_level
             opp_name = opponent.display_name
             opp_id = opponent.id
         else:
@@ -950,15 +791,27 @@ class RPGBattle(commands.Cog):
             left_team = await prepare_battle(self.bot.db, ctx.author.id)
             if not left_team:
                 raise commands.BadArgument("You need at least one creature in your team to battle. Use `b team set`.")
+            if override_level:
+                for c in left_team:
+                    c["level"] = override_level
             await join_battle_queue(self.bot.db, ctx.author.id, ctx.guild.id)
             status_msg = await ctx.reply(embed=dark_embed(ui_label("battle", "Matchmaking"), "Searching for an opponent...", color=discord.Color.dark_gray()), mention_author=False)
             await asyncio.sleep(1)
             opp_name, opp_id, right_team = await self._get_or_make_opponent(ctx, left_team)
+            if override_level:
+                for c in right_team:
+                    c["level"] = override_level
             await status_msg.delete()
             if opp_id == ctx.author.id:
                 raise commands.BadArgument("No opponents found. Try again later.")
 
         await self._run_battle_and_reward(ctx, player, left_team, opp_name, opp_id, right_team, is_npc=(opp_id == 0))
+
+    @commands.hybrid_command(name="b", aliases=[])
+    @commands.cooldown(1, 10, commands.BucketType.user)
+    async def b_shortcut(self, ctx: commands.Context, opponent: discord.Member | None = None, *, level: str | None = None) -> None:
+        """Shortcut: 'bb' = b + b -> battle. Usage: bb @user"""
+        await self.battle(ctx, opponent, level=level)
 
     # ── Revenge ──────────────────────────────────────────────────────
 
@@ -997,6 +850,7 @@ class RPGBattle(commands.Cog):
                 snap = await load_team_snapshot(self.bot.db, opp_id)
                 if not snap:
                     raise commands.BadArgument("Opponent no longer has a team available.")
+                right_team = snap
 
         await self._run_battle_and_reward(ctx, player, left_team, opp_name, opp_id, right_team, is_npc=is_npc)
 
@@ -1032,6 +886,22 @@ class RPGBattle(commands.Cog):
         )
         await ctx.reply(embed=embed, mention_author=False)
 
+    # ── Battle Log Toggle ──────────────────────────────────────────
+
+    @commands.hybrid_command(name="battlelog", aliases=["blog"])
+    async def battlelog(self, ctx: commands.Context) -> None:
+        """Toggle detailed turn-by-turn battle logs on the battle card."""
+        assert ctx.guild is not None
+        pref = await self.bot.db.fetchone("SELECT battle_log FROM rpg_user_prefs WHERE user_id = ?", (ctx.author.id,))
+        current = bool(int(pref["battle_log"])) if pref else False
+        new_val = 0 if current else 1
+        await self.bot.db.execute(
+            "INSERT INTO rpg_user_prefs (user_id, battle_log) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET battle_log = excluded.battle_log",
+            (ctx.author.id, new_val),
+        )
+        state = "enabled" if new_val else "disabled"
+        await ctx.reply(embed=status_embed("Battle Logs", f"Turn-by-turn battle logs {state}."), mention_author=False)
+
     # ── Arena Stats ──────────────────────────────────────────────────
 
     @commands.hybrid_command(name="arena")
@@ -1049,10 +919,18 @@ class RPGBattle(commands.Cog):
         losses = int(arena["losses"])
         winrate = f"{round(wins / max(1, total) * 100)}%" if total > 0 else "N/A"
 
+        streak_line = f"{status_effect_label('burn', 'Current streak')}: **{streak}** | Best: **{best}**"
+        if streak >= 3:
+            from core.rpg_data import get_streak_tier, streak_bonus_text
+            tier = get_streak_tier(streak)
+            if tier.label:
+                bonus_text = streak_bonus_text(streak)
+                streak_line = f"{status_effect_label('burn', f'{tier.emoji} Streak: {streak}')}: **{tier.label}** | Best: **{best}**\n{bonus_text}"
+
         message = (
             f"{ui_label('leaderboard', 'Rating')}: **{arena['rating']}** | Rank: **{rank}**\n"
             f"{ui_label('battle', 'Record')}: **{wins}W** / **{losses}L** ({winrate})\n"
-            f"{status_effect_label('burn', 'Current streak')}: **{streak}** | Best: **{best}**\n"
+            f"{streak_line}\n"
             f"Total battles: **{total}**"
         )
         if streak >= BOUNTY_STREAK:
