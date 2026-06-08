@@ -1,35 +1,6 @@
-# Python
+.env
+.venv/
 __pycache__/
 *.py[cod]
-*.egg-info/
-dist/
-build/
-
-# Virtual environment
-.venv/
-venv/
-env/
-
-# Environment
-.env
-
-# Database
 data/*.sqlite3
 data/*.sqlite3-*
-
-# Temp / generated / debug files
-tmp/
-*.png
-*.jpg
-*.jpeg
-emoji_results.txt
-
-# OS
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo

@@ -1443,14 +1443,9 @@ async def leave_battle_queue(db: BotDatabase, user_id: int) -> None:
 
 
 async def find_match(db: BotDatabase, user_id: int) -> sqlite3.Row | None:
-    # Get the current user's queue entry to find their guild
-    my_entry = await db.fetchone("SELECT guild_id FROM rpg_battle_queue WHERE user_id = ?", (user_id,))
-    if not my_entry:
-        return None
-    guild_id = int(my_entry["guild_id"])
     rows = await db.fetchall(
-        "SELECT * FROM rpg_battle_queue WHERE user_id != ? AND guild_id = ? ORDER BY joined_at ASC LIMIT 1",
-        (user_id, guild_id),
+        "SELECT * FROM rpg_battle_queue WHERE user_id != ? ORDER BY joined_at ASC LIMIT 1",
+        (user_id,),
     )
     if rows:
         await db.execute("DELETE FROM rpg_battle_queue WHERE user_id IN (?, ?)", (user_id, rows[0]["user_id"]))
@@ -1740,3 +1735,69 @@ async def get_or_create_daily_deals(db: BotDatabase, user_id: int) -> list[dict[
 
 async def purchase_shop_deal(db: BotDatabase, user_id: int, slot: int, currency: str) -> dict[str, object]:
     raise ValueError("Weapon crate purchases now use Weapon Shards. Use `b shardcrate <cache|relic|treasure>`.")
+
+    today = _today_str()
+    row = await db.fetchone(
+        "SELECT * FROM rpg_crate_shop WHERE user_id = ? AND date = ? AND slot = ?",
+        (user_id, today, slot),
+    )
+    if not row:
+        raise ValueError("Deal not found or expired.")
+    if row["purchased"]:
+        raise ValueError("Already purchased this deal today.")
+
+    player = await ensure_player(db, user_id, "")
+    souls = int(player["gold"])
+    gems = int(player["gems"])
+
+    if currency == "souls":
+        cost = int(row["discounted_souls"])
+        if cost > 0 and souls < cost:
+            raise ValueError(f"Need **{cost:,}** Souls, you have **{souls:,}**.")
+    elif currency == "gems":
+        cost = int(row["discounted_gems"])
+        if cost <= 0:
+            raise ValueError("This deal cannot be bought with Gems.")
+        if gems < cost:
+            raise ValueError(f"Need **{cost}** Gems, you have **{gems}**.")
+    else:
+        raise ValueError("Currency must be `souls` or `gems`.")
+
+    if currency == "souls":
+        await award_currency(db, user_id, gold=-cost)
+    else:
+        await award_currency(db, user_id, gems=-cost)
+
+    await db.execute(
+        "UPDATE rpg_crate_shop SET purchased = 1 WHERE user_id = ? AND date = ? AND slot = ?",
+        (user_id, today, slot),
+    )
+
+    item_key = str(row["item_key"])
+    bundle_size = int(row["bundle_size"])
+    results: list[dict[str, object]] = []
+
+    if item_key in ("mixed_cache", "mixed_relic"):
+        if item_key == "mixed_cache":
+            opens = [("cache", 1), ("relic", 1)]
+        else:
+            opens = [("relic", 1), ("treasure", 1)]
+        for ck, cnt in opens:
+            for _ in range(cnt):
+                r = await open_crate(db, user_id, ck)
+                results.append(r)
+    else:
+        for _ in range(bundle_size):
+            r = await open_crate(db, user_id, item_key)
+            results.append(r)
+
+    merged: dict[str, object] = {"gold": 0, "gems": 0, "materials": {}, "swords": 0, "weapons": []}
+    for r in results:
+        merged["gold"] = int(merged["gold"]) + int(r.get("gold", 0))
+        merged["gems"] = int(merged["gems"]) + int(r.get("gems", 0))
+        merged["swords"] = int(merged["swords"]) + int(r.get("swords", 0))
+        for mk, mv in r.get("materials", {}).items():
+            merged["materials"][mk] = merged["materials"].get(mk, 0) + mv
+        merged["weapons"].extend(r.get("weapons", []))
+
+    return merged

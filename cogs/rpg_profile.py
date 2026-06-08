@@ -244,6 +244,21 @@ class InventoryView(discord.ui.View):
             return
         embed = discord.Embed(title="Open Box", description="Choose a lootbox or weapon crate to open.", color=discord.Color.orange())
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+        return
+        options = [
+            discord.SelectOption(
+                label=name,
+                value=ck,
+                description=f"Owned: {qty}",
+                emoji=discord.PartialEmoji.from_str(crate_emoji(ck)) if crate_emoji(ck) else "📦",
+            )
+            for ck, name, qty in owned
+        ]
+        view = CrateOpenView(self.ctx)
+        view.crate_select.options = options
+        view.crate_select.placeholder = f"You own {sum(q for _, _, q in owned)} crate(s)..."
+        embed = discord.Embed(title=crate_label(owned[0][0], "Open Crate"), description="Choose a crate to open from your inventory.", color=discord.Color.orange())
+        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(label="Use Hunt Sword", style=discord.ButtonStyle.primary, emoji="⚔️", row=0)
     async def use_sword(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:

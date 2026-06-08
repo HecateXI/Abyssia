@@ -82,11 +82,8 @@ class AbyssiaBot(commands.Bot):
         for cog in COGS:
             await self.load_extension(cog)
         self.before_invoke(self._claim_command_invocation)
-        if os.getenv("SYNC_SLASH_COMMANDS", "1") not in ("0", "false", "False"):
-            synced = await self.tree.sync()
-            logging.info("Synced %d app commands", len(synced))
-        else:
-            logging.info("Slash command sync disabled via SYNC_SLASH_COMMANDS=0")
+        synced = await self.tree.sync()
+        logging.info("Synced %d app commands", len(synced))
 
     async def _claim_command_invocation(self, ctx: commands.Context) -> None:
         if ctx.guild is not None:

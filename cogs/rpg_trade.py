@@ -212,7 +212,25 @@ class TradeView(discord.ui.View):
         if offer.confirmed:
             await interaction.response.send_message("You already confirmed. Unconfirm to change your offer.", ephemeral=True)
             return
-        await interaction.response.send_message("Crafting materials are no longer tradable. Use weapons, creatures, Souls, or Gems.", ephemeral=True)
+        await interaction.response.send_message("Crafting materials were removed. Trade weapons, creatures, Souls, or Gems.", ephemeral=True)
+        return
+        db = interaction.client.db
+        inv = await inventory_rows(db, interaction.user.id)
+        mats = [r for r in inv if r["item_type"] == "material" and r["quantity"] > 0]
+        if not mats:
+            await interaction.response.send_message("No materials to trade.", ephemeral=True)
+            return
+        options = []
+        for m in mats[:25]:
+            name = MATERIALS.get(m["item_key"], m["item_key"].replace("_", " ").title())
+            options.append(discord.SelectOption(
+                label=name[:100],
+                value=m["item_key"],
+                description=f"Qty: {m['quantity']}",
+                emoji="📦",
+            ))
+        view = MaterialSelectView(self.session, interaction.user.id, mats)
+        await interaction.response.send_message("Select a material to add:", view=view, ephemeral=True)
 
     @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, row=2)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
