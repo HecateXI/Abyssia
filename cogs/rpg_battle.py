@@ -53,6 +53,7 @@ from core.rpg_data import (
     normalize_key,
     streak_multiplier,
 )
+from .rpg_battle_views import BattleChallengeView
 from core.theme import (
     BLOOD_COLOR,
     GOLD_COLOR,
@@ -234,72 +235,6 @@ def streak_milestone_reward(streak: int) -> str | None:
         if streak == need:
             return need, name, rtype
     return None
-
-
-class BattleChallengeView(discord.ui.View):
-    def __init__(self, challenger_id: int, opponent_id: int) -> None:
-        super().__init__(timeout=60)
-        self.challenger_id = challenger_id
-        self.opponent_id = opponent_id
-        self.accepted = False
-        self.declined = False
-
-    async def _check_user(self, interaction: discord.Interaction) -> bool:
-        if interaction.user.id != self.opponent_id:
-            await interaction.response.send_message("Only the challenged hunter can answer this duel.", ephemeral=True)
-            return False
-        return True
-
-    def _disable(self) -> None:
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.danger)
-    async def accept(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        if not await self._check_user(interaction):
-            return
-        self.accepted = True
-        self._disable()
-        await interaction.response.edit_message(content="Duel accepted. Simulating the battle...", view=self)
-        self.stop()
-
-    @discord.ui.button(label="Decline", style=discord.ButtonStyle.secondary)
-    async def decline(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        if not await self._check_user(interaction):
-            return
-        self.declined = True
-        self._disable()
-        await interaction.response.edit_message(content="Duel declined.", view=self)
-        self.stop()
-
-
-class RevengeView(discord.ui.View):
-    def __init__(self, target_id: int) -> None:
-        super().__init__(timeout=30)
-        self.target_id = target_id
-        self.wants_revenge = False
-
-    @discord.ui.button(label="Take Revenge!", style=discord.ButtonStyle.danger)
-    async def revenge_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        if interaction.user.id != self.target_id:
-            await interaction.response.send_message("Not your prompt.", ephemeral=True)
-            return
-        self.wants_revenge = True
-        for child in self.children:
-            child.disabled = True
-        await interaction.response.edit_message(content="Hunting for a rematch...", view=self)
-        self.stop()
-
-    @discord.ui.button(label="Forget it", style=discord.ButtonStyle.secondary)
-    async def forget_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        if interaction.user.id != self.target_id:
-            await interaction.response.send_message("Not your prompt.", ephemeral=True)
-            return
-        for child in self.children:
-            child.disabled = True
-        await interaction.response.edit_message(view=self)
-        self.stop()
 
 
 class RPGBattle(commands.Cog):
@@ -642,7 +577,7 @@ class RPGBattle(commands.Cog):
                 "You haven't set a team yet. Pick up to **3 monsters** to fight for you.\n\n"
                 "**Your strongest monsters:**\n" + "\n".join(lines) + "\n\n"
                 f"Use `{prefix}team set 1 <name>` to assign a monster to slot 1.\n"
-                f"Then `{prefix}team set 2 <name>` and `{prefix}team set 2 <name>` for slots 2 and 3.\n"
+                f"Then `{prefix}team set 2 <name>` and `{prefix}team set 3 <name>` for slots 2 and 3.\n"
                 f"Example: `{prefix}team set 1 {your_creatures[0]['name']}`",
                 color=GOLD_COLOR,
             )
@@ -677,13 +612,6 @@ class RPGBattle(commands.Cog):
             )
         )
         await ctx.reply(embed=embed, mention_author=False)
-        return
-        image = render_team_card(target.display_name, creatures, team_power=power, weapons=weapons)
-        file = discord.File(image, filename="abyssia_team.png")
-        embed = discord.Embed(color=GOLD_COLOR)
-        embed.set_author(name=str(target), icon_url=target.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_team.png")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
 
     @team.command(name="set")
     async def team_set(self, ctx: commands.Context, slot: int, *, creature_name: str) -> None:
@@ -807,7 +735,7 @@ class RPGBattle(commands.Cog):
 
         await self._run_battle_and_reward(ctx, player, left_team, opp_name, opp_id, right_team, is_npc=(opp_id == 0))
 
-    @commands.hybrid_command(name="b", aliases=[])
+    @commands.hybrid_command(name="bb", aliases=["b"])
     @commands.cooldown(1, 10, commands.BucketType.user)
     async def b_shortcut(self, ctx: commands.Context, opponent: discord.Member | None = None, *, level: str | None = None) -> None:
         """Shortcut: 'bb' = b + b -> battle. Usage: bb @user"""
