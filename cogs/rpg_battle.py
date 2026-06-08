@@ -10,6 +10,8 @@ from discord.ext import commands
 from core.battle_engine import BattleEngine
 from core.battle_card_renderer import BattleCardRenderer
 from core.cards import render_arena_card, render_team_card
+from core.team_display import team_slot_value
+from core.battle_rewards import creature_power, daily_reset_timer, streak_milestone_reward
 from core.discord_assets import embed_asset, ensure_application_emojis
 from core.rpg import (
     add_item,
@@ -17,7 +19,6 @@ from core.rpg import (
     award_player_xp,
     calculate_battle_rewards,
     creature_weapons,
-    creature_xp_for_level,
     elo_rating_change,
     ensure_arena_stats,
     ensure_player,
@@ -34,9 +35,7 @@ from core.rpg import (
     readable_seconds,
     record_battle_history,
     roll_checklist_battle_crates,
-    row_get,
     save_team_snapshot,
-    seconds_until_daily_reset,
     team_creatures,
     team_power,
     top_creatures,
@@ -46,7 +45,6 @@ from core.rpg import (
 from core.rpg_data import (
     BOSSES,
     BOUNTY_STREAK,
-    STREAK_MILESTONES,
     WEAPON_SHARD_KEY,
     arena_rank,
     get_npc_pool,
@@ -66,7 +64,6 @@ from core.theme import (
     dark_embed,
     rarity_emoji,
     rarity_label,
-    stat_emoji,
     status_effect_emoji,
     status_effect_label,
     status_embed,
@@ -78,10 +75,6 @@ from core.theme import (
 
 
 REVENGE_COOLDOWN = 10
-
-
-def creature_power(creature) -> int:
-    return team_power([creature])
 
 
 def _emoji_prefix(emoji: str) -> str:
@@ -119,43 +112,7 @@ def _battle_team_line(creature: dict) -> str:
     return f"L.`{level}` {creature_badge} - no weapons"
 
 
-def _team_slot_value(slot: int, creature, weapon) -> tuple[str, str]:
-    from core.battle_engine import compute_display_stats
-    name = str(row_get(creature, "name", "?") or "?")
-    rarity = str(row_get(creature, "rarity", "Common") or "Common")
-    level = int(row_get(creature, "level", 1) or 1)
-    xp = int(row_get(creature, "xp", 0) or 0)
-    xp_needed = creature_xp_for_level(level)
-    stats = compute_display_stats(creature)
-    header = f"[{slot}] {rarity_emoji(rarity) or ''} **{creature_label(name, rarity)}**".strip()
-    
-    # Compact stat display like OwO
-    hp = stats['HP']
-    str_val = stats['STR']
-    def_pct = stats['DEF']
-    mana = stats['MANA']
-    mag = stats['MAG']
-    res_pct = stats['RES']
-    spd = stats['SPD']
-    crit = stats['Crit']
-    
-    lines = [
-        f"Lvl **{level}** XP `{xp}/{xp_needed}`",
-        f"{stat_emoji('hp')} `{hp:,}`  {stat_emoji('mana')} `{mana:,}`",
-        f"{stat_emoji('str')} `{str_val:,}`  {stat_emoji('mag')} `{mag:,}`",
-        f"{stat_emoji('def')} `{def_pct}%`  {stat_emoji('res')} `{res_pct}%`",
-        f"{stat_emoji('spd')} `{spd}`  Crit `{crit}%`",
-    ]
-    if weapon:
-        wtype = str(row_get(weapon, "weapon_type", "sword") or "sword")
-        quality_pct = int(row_get(weapon, "quality_pct", 50) or 50)
-        from core.rpg import weapon_quality_rarity
-        wr = weapon_quality_rarity(quality_pct)
-        wid = f"{int(row_get(weapon, 'id', 0)):05d}"
-        lines.append(f"`{wid}` {rarity_emoji(wr) or ''} {weapon_emoji(wtype) or ''} `{quality_pct}%`")
-    else:
-        lines.append("*no weapon*")
-    return header, "\n".join(lines)
+
 
 
 def _battle_overview_embed(
@@ -198,13 +155,6 @@ def _outcome_badge(won: bool) -> str:
     return rarity_emoji("Legendary") if won else status_effect_emoji("bleed")
 
 
-def _daily_reset_timer() -> str:
-    seconds = max(0, seconds_until_daily_reset())
-    hours, rem = divmod(seconds, 3600)
-    minutes, sec = divmod(rem, 60)
-    return f"{hours}H {minutes}M {sec}S"
-
-
 def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30, log_enabled: bool = False) -> list[dict[str, object]]:
     """
     Simulate a battle between two teams with support for status effects and weapon affixes.
@@ -227,13 +177,6 @@ def select_battle_preview_frames(frames: list[dict[str, object]], *, max_frames:
     last = len(frames) - 1
     indexes = {round(i * last / (max_frames - 1)) for i in range(max_frames)}
     return [frames[i] for i in sorted(indexes)]
-
-
-def streak_milestone_reward(streak: int) -> str | None:
-    for need, (name, rtype) in sorted(STREAK_MILESTONES.items(), reverse=True):
-        if streak == need:
-            return need, name, rtype
-    return None
 
 
 class BattleChallengeView(discord.ui.View):
@@ -550,7 +493,7 @@ class RPGBattle(commands.Cog):
             message_content = (
                 f"{crate_label('cache', 'Weapon Crate')} | **{ctx.author.display_name}**, "
                 f"You found a **weapon crate!** `[{checklist_crate_count}/3]` "
-                f"**RESETS IN:** `{_daily_reset_timer()}`"
+                f"**RESETS IN:** `{daily_reset_timer()}`"
             )
         if battle_message is not None:
             await battle_message.edit(content=message_content, embed=embed, attachments=[file])
@@ -662,7 +605,7 @@ class RPGBattle(commands.Cog):
         embed = discord.Embed(title=title, description=description, color=GOLD_COLOR)
         embed.set_author(name=str(target), icon_url=target.display_avatar.url)
         for index, creature in enumerate(creatures[:3], start=1):
-            field_name, field_value = _team_slot_value(index, creature, weapons.get(int(creature["id"])))
+            field_name, field_value = team_slot_value(index, creature, weapons.get(int(creature["id"])))
             embed.add_field(name=field_name, value=field_value, inline=True)
         streak_text = f"Current Streak: {streak}"
         if streak >= 3:
