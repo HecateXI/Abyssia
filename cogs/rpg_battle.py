@@ -12,6 +12,7 @@ from core.battle_card_renderer import BattleCardRenderer
 from core.cards import render_arena_card, render_team_card
 from core.team_display import team_slot_value
 from core.battle_rewards import creature_power, daily_reset_timer, streak_milestone_reward
+from core.battle_matchmaking import get_or_make_opponent
 from core.discord_assets import embed_asset, ensure_application_emojis
 from core.rpg import (
     add_item,
@@ -22,7 +23,6 @@ from core.rpg import (
     elo_rating_change,
     ensure_arena_stats,
     ensure_player,
-    find_match,
     generate_npc_team,
     get_bounty_targets,
     get_quantity,
@@ -511,48 +511,6 @@ class RPGBattle(commands.Cog):
             )
             await ctx.send(embed=bounty_embed)
 
-    async def _get_or_make_opponent(self, ctx: commands.Context, player_team: list) -> tuple[str, int, list]:
-        match = await find_match(self.bot.db, ctx.author.id)
-        if match:
-            opp_id = int(match["user_id"])
-            opp_guild = int(match["guild_id"])
-            opp_player = await ensure_player(self.bot.db, opp_id, "Opponent")
-            opp_name = str(opp_player["hunter_name"])
-            opp_team = await prepare_battle(self.bot.db, opp_id)
-            if opp_team:
-                return opp_name, opp_id, opp_team
-
-        # Try offline player snapshot
-        offline = await self.bot.db.fetchall(
-            "SELECT DISTINCT user_id FROM rpg_team_snapshots WHERE user_id != ? ORDER BY RANDOM() LIMIT 5",
-            (ctx.author.id,),
-        )
-        for row in offline:
-            snap = await load_team_snapshot(self.bot.db, int(row["user_id"]))
-            if snap:
-                opp_row = await self.bot.db.fetchone("SELECT hunter_name FROM rpg_players WHERE user_id = ?", (int(row["user_id"]),))
-                opp_name = str(opp_row["hunter_name"]) if opp_row else "Wandering Hunter"
-                return opp_name, int(row["user_id"]), snap
-
-        # NPC fallback
-        arena = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
-        rating = int(arena["rating"])
-        pool = get_npc_pool(rating)
-        npc = random.choice(pool)
-        npc_team = generate_npc_team(npc)
-        player_power = team_power(player_team)
-        npc_power = team_power(npc_team)
-        scale = max(0.7, min(1.3, player_power / max(1, npc_power)))
-        for c in npc_team:
-            c["str_stat"] = round(int(c.get("str_stat", c.get("attack", 0))) * scale)
-            c["pr_stat"] = round(int(c.get("pr_stat", c.get("defense", 0))) * scale)
-            c["hp"] = round(int(c["hp"]) * scale)
-            c["speed"] = round(max(1, int(c["speed"]) * scale))
-            c["level"] = max(1, round(int(c["level"]) * scale))
-        rank_label = arena_rank(rating)
-        npc_name = f"{npc.title} {npc.name}"
-        return npc_name, 0, npc_team
-
     # ── Team Commands ────────────────────────────────────────────────
 
     @commands.hybrid_group(name="team", invoke_without_command=True)
@@ -740,7 +698,7 @@ class RPGBattle(commands.Cog):
             await join_battle_queue(self.bot.db, ctx.author.id, ctx.guild.id)
             status_msg = await ctx.reply(embed=dark_embed(ui_label("battle", "Matchmaking"), "Searching for an opponent...", color=discord.Color.dark_gray()), mention_author=False)
             await asyncio.sleep(1)
-            opp_name, opp_id, right_team = await self._get_or_make_opponent(ctx, left_team)
+            opp_name, opp_id, right_team = await get_or_make_opponent(self.bot.db, ctx.author.id, ctx.guild.id, left_team)
             if override_level:
                 for c in right_team:
                     c["level"] = override_level
