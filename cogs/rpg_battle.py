@@ -7,12 +7,12 @@ import random
 import discord
 from discord.ext import commands
 
-from core.battle_engine import BattleEngine
 from core.battle_card_renderer import BattleCardRenderer
 from core.cards import render_arena_card, render_team_card
 from core.team_display import team_slot_value
 from core.battle_rewards import creature_power, daily_reset_timer, streak_milestone_reward
 from core.battle_matchmaking import get_or_make_opponent
+from core.battle_images import select_battle_preview_frames, simulate_battle_timeline
 from core.battle_display import (
     battle_log_line,
     battle_overview_embed,
@@ -92,30 +92,6 @@ REVENGE_COOLDOWN = 10
 
 
 
-
-
-def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30, log_enabled: bool = False) -> list[dict[str, object]]:
-    """
-    Simulate a battle between two teams with support for status effects and weapon affixes.
-    
-    Each creature can have weapon affixes that trigger status effects on hit:
-    - bleed, burn, poison: DoT effects
-    - shield: reduce damage taken
-    - curse, fear: damage reduction
-    - stun: skip next turn
-    
-    """
-    return BattleEngine(left_team, right_team, max_turns=max_turns, log_enabled=log_enabled).run()
-
-
-
-def select_battle_preview_frames(frames: list[dict[str, object]], *, max_frames: int = 5) -> list[dict[str, object]]:
-    """Pick a short, evenly spaced preview while preserving the final battle state."""
-    if len(frames) <= max_frames:
-        return frames
-    last = len(frames) - 1
-    indexes = {round(i * last / (max_frames - 1)) for i in range(max_frames)}
-    return [frames[i] for i in sorted(indexes)]
 
 
 class BattleChallengeView(discord.ui.View):
