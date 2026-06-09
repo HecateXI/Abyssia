@@ -701,25 +701,25 @@ class BattleEngine:
                 continue
 
             if ev.status_damage > 0:
-                lines.append(f"{ev.actor} takes {ev.status_damage} {_STATUS_LABELS.get(ev.action, ev.action)} damage.")
+                lines.append(f"  {ev.actor} takes `{ev.status_damage}` {_STATUS_LABELS.get(ev.action, ev.action)} damage.")
                 if ev.defeated:
-                    lines.append(f"{ev.defeated} was defeated.")
+                    lines.append(f"  **{ev.defeated} was defeated!**")
                 continue
 
             if ev.action_type == "status" and ev.status_applied:
-                lines.append(f"{ev.target} is now {_STATUS_LABELS.get(ev.status_applied, ev.status_applied)}.")
+                lines.append(f"  {ev.target} is now {_STATUS_LABELS.get(ev.status_applied, ev.status_applied)}.")
                 continue
 
             if ev.action_type == "skip" and ev.skipped_reason == "stunned":
-                lines.append(f"{ev.actor} is stunned!")
+                lines.append(f"  **{ev.actor}** is stunned!")
                 continue
 
             if ev.action_type == "defeat" and ev.defeated:
-                lines.append(f"{ev.defeated} was defeated.")
+                lines.append(f"  **{ev.defeated} was defeated!**")
                 continue
 
             if ev.action_type == "lifesteal" and ev.heal_from_lifesteal > 0:
-                lines.append(f"{ev.actor} steals {ev.heal_from_lifesteal} HP.")
+                lines.append(f"  {ev.actor} steals `{ev.heal_from_lifesteal}` HP.")
                 continue
 
             if ev.action == "":
@@ -731,14 +731,14 @@ class BattleEngine:
             tgt_mx = mx.get(tgt, 0)
 
             if ev.damage > 0:
-                crit = " CRIT!" if ev.is_crit else ""
-                lines.append(f"{ev.actor} → {tgt}: {action_name}{crit}")
-                lines.append(f"  {ev.damage} dmg. {tgt} HP: {tgt_hp}/{tgt_mx}")
+                crit = " **CRIT!**" if ev.is_crit else ""
+                lines.append(f"**{ev.actor}** → {tgt}: `{action_name}`{crit}")
+                lines.append(f"  `{ev.damage}` dmg. {tgt} HP: `{tgt_hp}/{tgt_mx}`")
             else:
-                lines.append(f"{ev.actor} → {tgt}: {action_name}")
+                lines.append(f"**{ev.actor}** → {tgt}: `{action_name}`")
 
             if ev.defeated:
-                lines.append(f"{ev.defeated} was defeated.")
+                lines.append(f"  **{ev.defeated} was defeated!**")
 
         if not lines:
             return lines
@@ -749,10 +749,10 @@ class BattleEngine:
             lines.append("Battle ends in a tie.")
         elif left_alive and not right_alive:
             lines.append("")
-            lines.append("🏆 Victory!")
+            lines.append("🏆 **Victory!**")
         elif right_alive and not left_alive:
             lines.append("")
-            lines.append("💀 Defeat!")
+            lines.append("💀 **Defeat!**")
         return lines
         lines.append("")
         left_alive = any(c.current_hp > 0 for c in self.left)
