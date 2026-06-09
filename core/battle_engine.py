@@ -507,21 +507,28 @@ class BattleEngine:
                 frames.append(self._frame(turn))
                 self._render_frame_logs(frames[-1], turn)
                 break
-            actors = [creature for creature in self.left + self.right if creature.alive]
-            actors.sort(key=lambda c: (c.speed, c.current_wp, c.level), reverse=True)
-            for idx, actor in enumerate(actors):
-                if not actor.alive:
-                    self.events.append(BattleEvent(
-                        round_no=turn, actor=actor.name, actor_side=actor.side,
-                        action="", action_type="skip", skipped_reason="dead",
-                        is_first=(idx == 0), target=actor.name, defeated=actor.name,
-                    ))
-                    continue
-                enemies = self._living(self.right if actor.side == "left" else self.left)
-                allies = self._living(self.left if actor.side == "left" else self.right)
-                if not enemies or not allies:
+            # Side-alternating turn order: left[0], right[0], left[1], right[1], ...
+            left_actors = sorted(self._living(self.left), key=lambda c: (c.speed, c.current_wp, c.level), reverse=True)
+            right_actors = sorted(self._living(self.right), key=lambda c: (c.speed, c.current_wp, c.level), reverse=True)
+            max_len = max(len(left_actors), len(right_actors))
+            seq_idx = 0
+            all_done = False
+            for i in range(max_len):
+                if all_done:
                     break
-                self._act(turn, actor, allies, enemies, is_first=(idx == 0))
+                for team in (left_actors, right_actors):
+                    if i >= len(team):
+                        continue
+                    actor = team[i]
+                    if not actor.alive:
+                        continue
+                    enemies = self._living(self.right if actor.side == "left" else self.left)
+                    allies = self._living(self.left if actor.side == "left" else self.right)
+                    if not enemies or not allies:
+                        all_done = True
+                        break
+                    self._act(turn, actor, allies, enemies, is_first=(seq_idx == 0))
+                    seq_idx += 1
             self._turn_end()
             frame = self._frame(turn)
             self._render_frame_logs(frame, turn)
