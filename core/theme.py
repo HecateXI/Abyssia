@@ -149,11 +149,11 @@ def passive_emoji(key: str) -> str:
     return asset_emoji("passives", key.lower())
 
 
-def passive_label(key: str, fallback: str | None = None, chance: int | None = None) -> str:
+def passive_label(key: str, fallback: str | None = None, chance: int | None = None, show_rarity: bool = True) -> str:
     data = WEAPON_PASSIVES.get(key.lower())
     name = fallback or (str(data.get("name")) if data else key.replace("_", " ").title())
     rarity = _roll_rarity(chance) if chance is not None else (data.get("rarity") if data else None)
-    rarity_str = f"{rarity_emoji(rarity)} " if rarity else ""
+    rarity_str = f"{rarity_emoji(rarity)} " if rarity and show_rarity else ""
     label = _label_with_emoji("passives", key.lower(), name)
     chance_str = f" `{chance}%`" if chance is not None else ""
     return f"{rarity_str}{label}{chance_str}"

@@ -1181,7 +1181,7 @@ class RPGEquipment(commands.Cog):
             title = f"Weapon Dex - {weapon_label(matched_key, str(data.get('name', matched_key.title())))}"
             embed = _embed(title, "\n".join(_weapon_type_lines(matched_key)), discord.Color.dark_gray())
             embed.add_field(name="Passive Pool", value="\n".join(
-                f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']))} `{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` — {format_passive_description(key, 0, index_mode=True)}"
+                f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']), show_rarity=False)} `{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` — {format_passive_description(key, 0, index_mode=True)}"
                 for key in data.get("passive_pool", [])
             ) or "None", inline=False)
             _, asset_file = embed_asset("weapons", matched_key)
@@ -1381,7 +1381,7 @@ class RPGEquipment(commands.Cog):
         title = f"Weapon Info - {weapon_label(matched_key, str(data.get('name', matched_key.title())))}"
         embed = _embed(title, "\n".join(_weapon_type_lines(matched_key)), discord.Color.dark_gray())
         embed.add_field(name="Passive Pool", value="\n".join(
-            f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']))} `{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` — {format_passive_description(key, 0, index_mode=True)}"
+            f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']), show_rarity=False)} `{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` — {format_passive_description(key, 0, index_mode=True)}"
             for key in data.get("passive_pool", [])
         ) or "None", inline=False)
         _, asset_file = embed_asset("weapons", matched_key)
