@@ -102,7 +102,10 @@ def format_battle_log(log_lines: list[str], *, max_lines: int = 20, max_chars: i
         text = "\n".join(display)
         if len(display) < len(log_lines):
             omitted = len(log_lines) - len(display)
-            text += f"\n... *{omitted} more events*"
+            total = len(log_lines)
+            text += f"\n… and {omitted} more lines (full log attached)"
     elif truncated_by_lines:
-        text += f"\n... *{len(log_lines) - max_lines} more events*"
+        omitted = len(log_lines) - max_lines
+        total = len(log_lines)
+        text += f"\n… and {omitted} more lines (full log attached)"
     return text[:1024]

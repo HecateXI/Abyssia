@@ -98,6 +98,7 @@ class BattleEvent:
     skipped_reason: str | None = None
     heal_from_lifesteal: int = 0
     heal_from_regen: int = 0
+    aoe_group: int = 0
 
 
 # -- Ability --
@@ -489,6 +490,7 @@ class BattleEngine:
         self.debug = log_enabled
         self.tied = False
         self._status_order = 0
+        self._aoe_counter = 0
         self.events: list[BattleEvent] = []
         for creature in self.left + self.right:
             creature.export()
@@ -680,8 +682,6 @@ class BattleEngine:
         for c in self.left + self.right:
             mx[c.name] = c.max_hp
             hp[c.name] = c.max_hp
-        lines: list[str] = []
-        current_turn = 0
         for ev in up_to_events:
             if ev.damage > 0 and ev.target:
                 hp[ev.target] = max(0, hp[ev.target] - ev.damage)
@@ -694,6 +694,12 @@ class BattleEngine:
             if ev.heal_from_regen > 0:
                 hp[ev.actor] = min(mx.get(ev.actor, hp.get(ev.actor, 0)), hp.get(ev.actor, 0) + ev.heal_from_regen)
 
+        lines: list[str] = []
+        current_turn = 0
+        i = 0
+        while i < len(up_to_events):
+            ev = up_to_events[i]
+
             if ev.round_no != current_turn:
                 current_turn = ev.round_no
                 if lines:
@@ -701,35 +707,83 @@ class BattleEngine:
                 lines.append(f"⚔️ **Turn {current_turn}**")
 
             if ev.action_type in ("regen", "energize", "passive_trigger", "charge"):
+                i += 1
                 continue
             if ev.action_type == "skip" and ev.skipped_reason == "dead":
+                i += 1
                 continue
             if ev.action != "" and "debug" in ev.action_type:
+                i += 1
+                continue
+
+            # AoE group: collect all events sharing the same aoe_group > 0
+            if ev.aoe_group > 0:
+                group = [ev]
+                j = i + 1
+                while j < len(up_to_events) and up_to_events[j].aoe_group == ev.aoe_group:
+                    group.append(up_to_events[j])
+                    j += 1
+                # Also absorb trailing defeat events for targets in this group
+                aoe_targets = {e.target for e in group if e.target}
+                while j < len(up_to_events):
+                    next_ev = up_to_events[j]
+                    if next_ev.action_type == "defeat" and next_ev.defeated in aoe_targets:
+                        group.append(next_ev)
+                        j += 1
+                    else:
+                        break
+                # Render AoE block
+                actor_name = group[0].actor
+                action_name = group[0].action.replace("Basic Attack", "attacks")
+                dmg_events = [e for e in group if e.damage > 0]
+                targets_str = ", ".join(e.target for e in dmg_events)
+                has_crit = any(e.is_crit for e in dmg_events)
+                crit_str = " **CRIT!**" if has_crit else ""
+                lines.append(f"**{actor_name}** → {targets_str}: `{action_name}`{crit_str}")
+                for ge in group:
+                    if ge.damage > 0:
+                        tgt_hp = hp.get(ge.target, 0)
+                        tgt_mx = mx.get(ge.target, 0)
+                        lines.append(f"  `{ge.damage}` dmg. {ge.target} HP: `{tgt_hp}/{tgt_mx}`")
+                    elif ge.action_type == "status" and ge.status_applied:
+                        label = _STATUS_LABELS.get(ge.status_applied, ge.status_applied)
+                        lines.append(f"  {ge.target} is now {label}.")
+                    elif ge.action_type == "defeat" and ge.defeated:
+                        lines.append(f"  **{ge.defeated} was defeated!**")
+                    elif ge.action_type == "lifesteal" and ge.heal_from_lifesteal > 0:
+                        lines.append(f"  {ge.actor} steals `{ge.heal_from_lifesteal}` HP.")
+                i = j
                 continue
 
             if ev.status_damage > 0:
                 lines.append(f"  {ev.actor} takes `{ev.status_damage}` {_STATUS_LABELS.get(ev.action, ev.action)} damage.")
                 if ev.defeated:
                     lines.append(f"  **{ev.defeated} was defeated!**")
+                i += 1
                 continue
 
             if ev.action_type == "status" and ev.status_applied:
                 lines.append(f"  {ev.target} is now {_STATUS_LABELS.get(ev.status_applied, ev.status_applied)}.")
+                i += 1
                 continue
 
             if ev.action_type == "skip" and ev.skipped_reason == "stunned":
                 lines.append(f"  **{ev.actor}** is stunned!")
+                i += 1
                 continue
 
             if ev.action_type == "defeat" and ev.defeated:
                 lines.append(f"  **{ev.defeated} was defeated!**")
+                i += 1
                 continue
 
             if ev.action_type == "lifesteal" and ev.heal_from_lifesteal > 0:
                 lines.append(f"  {ev.actor} steals `{ev.heal_from_lifesteal}` HP.")
+                i += 1
                 continue
 
             if ev.action == "":
+                i += 1
                 continue
 
             action_name = ev.action.replace("Basic Attack", "attacks")
@@ -746,6 +800,7 @@ class BattleEngine:
 
             if ev.defeated:
                 lines.append(f"  **{ev.defeated} was defeated!**")
+            i += 1
 
         if not lines:
             return lines
@@ -759,16 +814,6 @@ class BattleEngine:
             lines.append("🏆 **Victory!**")
         elif right_alive and not left_alive:
             lines.append("")
-            lines.append("💀 **Defeat!**")
-        return lines
-        lines.append("")
-        left_alive = any(c.current_hp > 0 for c in self.left)
-        right_alive = any(c.current_hp > 0 for c in self.right)
-        if self.tied:
-            lines.append("⚖️ **The battle ended in a tie!**")
-        elif left_alive and not right_alive:
-            lines.append("🏆 **Victory!**")
-        elif right_alive and not left_alive:
             lines.append("💀 **Defeat!**")
         return lines
 
@@ -909,21 +954,24 @@ class BattleEngine:
             for key, status in list(creature.statuses.items()):
                 stacks = max(1, int(status.get("stacks", 1)))
                 if key == "bleed":
-                    damage = max(1, round(creature.max_hp * 0.025 * stacks))
+                    power = int(status.get("power", 1))
+                    damage = max(1, round((power * 0.12 + creature.max_hp * 0.02) * stacks))
                     creature.current_hp -= damage
                     self.events.append(BattleEvent(
                         round_no=turn, actor=creature.name, actor_side=creature.side,
                         action="bleed", action_type="status_damage", status_damage=damage,
                     ))
                 elif key == "burn":
-                    damage = max(1, round(creature.max_hp * 0.030 * stacks))
+                    power = int(status.get("power", 1))
+                    damage = max(1, round((power * 0.12 + creature.max_hp * 0.02) * stacks))
                     creature.current_hp -= damage
                     self.events.append(BattleEvent(
                         round_no=turn, actor=creature.name, actor_side=creature.side,
                         action="burn", action_type="status_damage", status_damage=damage,
                     ))
                 elif key == "poison":
-                    damage = max(1, round(creature.max_hp * 0.022 * stacks))
+                    power = int(status.get("power", 1))
+                    damage = max(1, round((power * 0.08 + creature.max_hp * 0.015) * stacks))
                     creature.current_hp -= damage
                     self.events.append(BattleEvent(
                         round_no=turn, actor=creature.name, actor_side=creature.side,
@@ -1108,6 +1156,7 @@ class BattleEngine:
 
         if ability.mode == "cleave":
             raw_stat = actor.strength
+            aoe_group = self._next_aoe_group()
             for enemy in list(enemies):
                 if not enemy.alive:
                     continue
@@ -1124,9 +1173,9 @@ class BattleEngine:
                     defense_used="DEF", defense_value=round(enemy.pr * 100),
                     damage=damage, is_crit=is_crit,
                     mana_before=old_wp, mana_after=actor.current_wp,
-                    is_first=is_first,
+                    is_first=is_first, aoe_group=aoe_group,
                 ))
-                self._after_hit(actor, enemy, damage, turn)
+                self._after_hit(actor, enemy, damage, turn, aoe_group=aoe_group)
             return
 
         if ability.mode == "bleed_apply":
@@ -1150,7 +1199,7 @@ class BattleEngine:
                     action="", target=target.name,
                     action_type="status_damage", status_damage=bleed_dmg,
                 ))
-            target.add_status("bleed", duration=3, order=self._next_status_order())
+            target.add_status("bleed", duration=3, power=actor.strength, order=self._next_status_order())
             self.events.append(BattleEvent(
                 round_no=turn, actor=actor.name, actor_side=actor.side,
                 action="", target=target.name,
@@ -1213,7 +1262,7 @@ class BattleEngine:
                     damage=detonate_dmg, is_crit=det_crit,
                     is_first=is_first,
                 ))
-            target.add_status("burn", duration=3, order=self._next_status_order())
+            target.add_status("burn", duration=3, power=actor.magic, order=self._next_status_order())
             self.events.append(BattleEvent(
                 round_no=turn, actor=actor.name, actor_side=actor.side,
                 action="", target=target.name,
@@ -1335,7 +1384,6 @@ class BattleEngine:
             target = self._pick_target(enemies)
             raw_stat = actor.magic
             damage, is_crit = self._deal_damage(actor, target, raw_stat, ability.damage_type, multiplier=mult)
-            target.add_status("poison", duration=3, order=self._next_status_order())
             self.events.append(BattleEvent(
                 round_no=turn, actor=actor.name, actor_side=actor.side,
                 action=ability.name, target=target.name,
@@ -1345,6 +1393,16 @@ class BattleEngine:
                 mana_before=old_wp, mana_after=actor.current_wp,
                 is_first=is_first,
             ))
+            if "poison" in target.statuses:
+                burst_pct = 0.08 + q * 0.12
+                burst = max(1, round(target.max_hp * burst_pct))
+                target.current_hp = max(0, target.current_hp - burst)
+                self.events.append(BattleEvent(
+                    round_no=turn, actor=actor.name, actor_side=actor.side,
+                    action="", target=target.name,
+                    action_type="status_damage", status_damage=burst,
+                ))
+            target.add_status("poison", duration=3, power=actor.magic, order=self._next_status_order())
             self.events.append(BattleEvent(
                 round_no=turn, actor=actor.name, actor_side=actor.side,
                 action="", target=target.name,
@@ -1576,13 +1634,15 @@ class BattleEngine:
 
     def _physical_damage(self, attacker: Creature, defender: Creature, multiplier: float = 1.0, weapon_bonus: int = 0) -> int:
         atk = attacker.strength + weapon_bonus
-        defense = round(defender.pr * 100)
-        return max(1, int((atk * 1.25 - defense * 0.45) * multiplier))
+        base = max(1, int((atk * 1.25) * multiplier))
+        reduction = min(defender.pr, 0.8)
+        return max(1, int(base * (1.0 - reduction)))
 
     def _magical_damage(self, attacker: Creature, defender: Creature, multiplier: float = 1.0, weapon_bonus: int = 0) -> int:
         atk = attacker.magic + weapon_bonus
-        res = round(defender.mr * 100)
-        return max(1, int((atk * 1.25 - res * 0.45) * multiplier))
+        base = max(1, int((atk * 1.25) * multiplier))
+        reduction = min(defender.mr, 0.8)
+        return max(1, int(base * (1.0 - reduction)))
 
     def _deal_damage(self, attacker: Creature, target: Creature, stat_value: int, damage_type: str, *, multiplier: float = 1.0, weapon_bonus: int = 0) -> tuple[int, bool]:
         if damage_type == "physical":
@@ -1594,6 +1654,8 @@ class BattleEngine:
         if "fear" in attacker.statuses:
             damage = max(1, int(damage * 0.75))
         if "curse" in attacker.statuses:
+            damage = max(1, int(damage * 0.80))
+        if "stagger" in attacker.statuses:
             damage = max(1, int(damage * 0.80))
         if "black_sun_march" in attacker.statuses:
             march_power = int(attacker.statuses["black_sun_march"].get("power", 15))
@@ -1617,17 +1679,19 @@ class BattleEngine:
         target.current_hp = max(0, target.current_hp - damage)
         return damage, is_crit
 
-    def _after_hit(self, attacker: Creature, target: Creature, damage: int, turn: int) -> None:
+    def _after_hit(self, attacker: Creature, target: Creature, damage: int, turn: int, aoe_group: int = 0) -> None:
         if not attacker.weapon:
             return
         for passive in attacker.weapon.passives:
             chance = passive.value / 100.0
             if passive.key in {"bleed", "burn", "poison", "stun"} and random.random() < chance:
-                target.add_status(passive.key, duration=2 if passive.key == "stun" else 3, order=self._next_status_order())
+                pwr = attacker.strength if passive.key == "bleed" else (attacker.magic if passive.key in ("burn", "poison") else 1)
+                target.add_status(passive.key, duration=2 if passive.key == "stun" else 3, power=pwr, order=self._next_status_order())
                 self.events.append(BattleEvent(
                     round_no=turn, actor=attacker.name, actor_side=attacker.side,
                     action="", target=target.name,
                     action_type="status", status_applied=passive.key,
+                    aoe_group=aoe_group,
                 ))
             elif passive.key == "shield" and random.random() < chance:
                 attacker.add_status("shield", duration=2, order=self._next_status_order())
@@ -1635,6 +1699,7 @@ class BattleEngine:
                     round_no=turn, actor=attacker.name, actor_side=attacker.side,
                     action="", target=attacker.name,
                     action_type="status", status_applied="shield",
+                    aoe_group=aoe_group,
                 ))
             elif passive.key in {"heal", "life_steal"} and damage > 0:
                 heal = max(1, round(damage * min(0.35, passive.value / 100.0)))
@@ -1643,6 +1708,7 @@ class BattleEngine:
                     round_no=turn, actor=attacker.name, actor_side=attacker.side,
                     action="", target=attacker.name,
                     action_type="lifesteal", heal_from_lifesteal=heal,
+                    aoe_group=aoe_group,
                 ))
             elif passive.key == "mana_tap" and damage > 0:
                 mana_restore = max(1, round(damage * passive.value / 100.0))
@@ -1653,11 +1719,16 @@ class BattleEngine:
                     round_no=turn, actor=attacker.name, actor_side=attacker.side,
                     action="", target=target.name,
                     action_type="status", status_applied="fear",
+                    aoe_group=aoe_group,
                 ))
 
     def _next_status_order(self) -> int:
         self._status_order += 1
         return self._status_order
+
+    def _next_aoe_group(self) -> int:
+        self._aoe_counter += 1
+        return self._aoe_counter
 
     def _phase_remove_dead(self, turn: int) -> None:
         for creature in self.left + self.right:
@@ -1775,8 +1846,8 @@ def compute_display_stats(row: Any) -> dict[str, int]:
         "STR": strength,
         "MAG": magic,
         "MANA": max_wp,
-        "DEF": round(pr * 100),
-        "RES": round(mr * 100),
+        "DEF": round(pr * 100, 1),
+        "RES": round(mr * 100, 1),
         "SPD": max(1, speed),
         "Crit": _int(_row_get(row, "crit", 5), 5),
     }

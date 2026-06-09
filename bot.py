@@ -91,6 +91,33 @@ class AbyssiaBot(commands.Bot):
                 await ensure_application_emojis(self, max_age=60.0)
             except discord.HTTPException:
                 logging.exception("Could not refresh application emoji cache before command")
+        if ctx.command and ctx.command.qualified_name not in ("start", "help", "commands"):
+            agreed = await self.db.fetchone(
+                "SELECT 1 FROM rpg_user_agreements WHERE user_id = ?", (ctx.author.id,)
+            )
+            if not agreed:
+                embed = discord.Embed(
+                    title="Welcome to Abyssia!",
+                    description=(
+                        "Before you begin, please read the following:\n\n"
+                        "• This is a dark fantasy monster-collecting RPG.\n"
+                        "• Your profile, creatures, and items are stored locally.\n"
+                        "• You must follow Discord's Terms of Service.\n\n"
+                        "**To get started, use `b start` to create your hunter profile.**\n"
+                        "Use `b help` to see all available commands.\n\n"
+                        "**Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)"
+                    ),
+                    color=0x1a1a2e,
+                )
+                embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
+                try:
+                    if ctx.interaction:
+                        await ctx.reply(embed=embed, ephemeral=True)
+                    else:
+                        await ctx.reply(embed=embed, mention_author=False)
+                except discord.HTTPException:
+                    pass
+                raise commands.CheckFailure("needs-agreement")
         command_name = ctx.command.qualified_name if ctx.command else "unknown"
         if ctx.interaction is not None:
             dedupe_key = f"interaction:{ctx.interaction.id}"
@@ -115,6 +142,35 @@ class AbyssiaBot(commands.Bot):
                 logging.exception("Could not refresh application emoji cache before command")
         await super().process_commands(message)
 
+    async def on_guild_join(self, guild: discord.Guild) -> None:
+        channel = guild.system_channel
+        if channel is None:
+            for c in guild.text_channels:
+                if c.permissions_for(guild.me).send_messages:
+                    channel = c
+                    break
+        if channel is None:
+            return
+        embed = discord.Embed(
+            title="Welcome to Abyssia!",
+            description=(
+                "A dark fantasy monster-collecting RPG where you hunt, battle, and trade creatures.\n\n"
+                "**Getting Started:**\n"
+                "• `b start` — Create your hunter profile\n"
+                "• `b hunt` — Capture your first monster\n"
+                "• `b team` — Build your battle team\n"
+                "• `b battle` — Fight other hunters\n"
+                "• `b help` — View all commands\n\n"
+                "**Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)"
+            ),
+            color=0x1a1a2e,
+        )
+        embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
+        try:
+            await channel.send(embed=embed)
+        except discord.HTTPException:
+            pass
+
     async def close(self) -> None:
         await self._post_status("Offline", discord.Color.dark_red())
         self._offline_notice_sent = True
@@ -130,7 +186,7 @@ class AbyssiaBot(commands.Bot):
             await refresh_application_emojis(self)
         except discord.HTTPException:
             logging.exception("Could not refresh application emoji cache")
-        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.playing, name="Abyssia hunts"))
+        await self.change_presence(activity=discord.Activity(type=discord.ActivityType.streaming, name="Abyssia (b)", url="https://twitch.tv/abyssia"))
         if not self._ready_notice_sent:
             self._ready_notice_sent = True
             await self._post_status("Online", discord.Color.green())

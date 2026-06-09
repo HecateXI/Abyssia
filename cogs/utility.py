@@ -34,7 +34,7 @@ class Utility(commands.Cog):
             message = str(error)
         elif isinstance(error, commands.MissingRequiredArgument):
             message = f"Missing required argument: `{error.param.name}`"
-        elif isinstance(error, commands.CheckFailure) and str(error) == "duplicate-invocation":
+        elif isinstance(error, commands.CheckFailure) and str(error) in ("duplicate-invocation", "needs-agreement"):
             return
         elif isinstance(error, commands.CheckFailure):
             message = "You cannot use that command here."

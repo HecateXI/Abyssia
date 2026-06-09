@@ -688,6 +688,12 @@ class BotDatabase:
                     battle_log INTEGER NOT NULL DEFAULT 0
                 )
             """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS rpg_user_agreements (
+                    user_id INTEGER NOT NULL PRIMARY KEY,
+                    agreed_at INTEGER NOT NULL
+                )
+            """)
             await self._migrate_to_global()
             self.conn.commit()
 

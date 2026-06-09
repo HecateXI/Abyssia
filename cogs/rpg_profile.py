@@ -432,6 +432,10 @@ class RPGProfile(commands.Cog):
         """Create your hunter profile."""
         assert ctx.guild is not None
         player = await ensure_player(self.bot.db, ctx.author.id, hunter_name or ctx.author.display_name)
+        await self.bot.db.execute(
+            "INSERT OR IGNORE INTO rpg_user_agreements (user_id, agreed_at) VALUES (?, ?)",
+            (ctx.author.id, now_ts()),
+        )
         if hunter_name:
             hunter_name = hunter_name[:32]
             await self.bot.db.execute(

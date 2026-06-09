@@ -357,7 +357,8 @@ class DynamicHelpView(discord.ui.View):
             f"{_category_emoji('Economy & Market')} **Spend wisely:** `{self.prefix}souls`  •  `{self.prefix}shop`  •  `{self.prefix}market`\n\n"
             f"Showing **{total}** loaded command entries. Pick a category, then pick a command for full details.\n"
             f"Text commands work as `{self.prefix}command`"
-            + (" or attached to the prefix, like `bhunt`." if self.prefix == "b " else "."),
+            + (" or attached to the prefix, like `bhunt`." if self.prefix == "b " else "."
+              ) + "\n\n📬 **Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)",
             color=GOLD_COLOR,
         )
         embed.set_author(name=self.ctx.author.display_name, icon_url=self.ctx.author.display_avatar.url)

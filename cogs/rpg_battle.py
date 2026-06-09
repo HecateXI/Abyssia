@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import io
 import random
 
 import discord
@@ -400,9 +401,13 @@ class RPGBattle(commands.Cog):
             footer=" | ".join(footer_bits),
         )
         compact_log = result.get("compact_log", [])
+        log_file = None
         if compact_log:
             log_text = format_battle_log(compact_log, max_lines=18)
             embed.add_field(name="⚔️ Battle Log", value=f"{log_text}", inline=False)
+            if len(compact_log) > 18:
+                log_bytes = io.BytesIO("\n".join(compact_log).encode("utf-8"))
+                log_file = discord.File(log_bytes, filename="battle_log.txt")
         message_content = None
         if checklist_crates:
             message_content = (
@@ -411,9 +416,11 @@ class RPGBattle(commands.Cog):
                 f"**RESETS IN:** `{daily_reset_timer()}`"
             )
         if battle_message is not None:
-            await battle_message.edit(content=message_content, embed=embed, attachments=[file])
+            attachments = [file] + ([log_file] if log_file else [])
+            await battle_message.edit(content=message_content, embed=embed, attachments=attachments)
         else:
-            await ctx.reply(content=message_content, embed=embed, file=file, mention_author=False)
+            send_files = [file] + ([log_file] if log_file else [])
+            await ctx.reply(content=message_content, embed=embed, files=send_files, mention_author=False)
 
         # Bounty announcement
         if won and streak >= BOUNTY_STREAK:
