@@ -534,48 +534,5 @@ class HelpGuide(commands.Cog):
             await ctx.reply(embed=embed, mention_author=False) if index == 0 else await ctx.send(embed=embed)
 
 
-    @commands.hybrid_command(name="welcome", aliases=["guide"])
-    async def welcome(self, ctx: commands.Context) -> None:
-        """Show the server welcome guide and getting started info."""
-        embed = discord.Embed(
-            title="🌑 Welcome to Abyssia",
-            description=(
-                "*The mist parts. You stand at the threshold of a dying world.*\n\n"
-                "Abyssia is a dark fantasy monster-collecting RPG. "
-                "Hunt creatures, forge weapons, climb the arena. "
-                "Every shadow hides either a prize or your end."
-            ),
-            color=GOLD_COLOR,
-        )
-        embed.add_field(
-            name="⚔️ Rise, Hunter",
-            value=(
-                "`b start` — Sign the contract and begin\n"
-                "`b hunt` — Bind your first monster\n"
-                "`b team` — Build your battle line\n"
-                "`b battle` — Challenge the arena\n"
-                "`b help` — All commands at a glance"
-            ),
-            inline=False,
-        )
-        embed.add_field(
-            name="📜 The Hunter's Creed",
-            value=(
-                "• Your profile and progress are stored locally.\n"
-                "• Treat fellow hunters with respect.\n"
-                "• Abyssia does not forgive the unprepared.\n\n"
-                "By using `b start`, you agree to the terms above and Discord's ToS."
-            ),
-            inline=False,
-        )
-        embed.add_field(
-            name="🌐 Join the Hunt",
-            value="[Abyssia Support Discord](https://discord.gg/CwRRA98Kx5) — bug reports, suggestions, theorycrafting, and community events.",
-            inline=False,
-        )
-        embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
-        await ctx.reply(embed=embed, mention_author=False)
-
-
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(HelpGuide(bot))
