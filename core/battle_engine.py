@@ -1526,15 +1526,19 @@ class BattleEngine:
             return
 
         if ability.mode == "heal":
-            damaged = [ally for ally in allies if ally.current_hp < ally.max_hp]
+            damaged = [ally for ally in allies if ally.current_hp < ally.max_hp * 1.5]
             if damaged:
                 target = min(damaged, key=lambda ally: ally.current_hp / max(1, ally.max_hp))
-                heal = max(1, round(actor.stat_value(ability.scale_stat) * mult))
-                target.current_hp = min(target.max_hp, target.current_hp + heal)
+                heal_raw = max(1, round(actor.stat_value(ability.scale_stat) * mult)) + random.randint(-50, 50)
+                heal = max(1, heal_raw)
+                over_heal_max = int(target.max_hp * 1.5)
+                old_hp = target.current_hp
+                target.current_hp = min(over_heal_max, target.current_hp + heal)
+                actual = target.current_hp - old_hp
                 self.events.append(BattleEvent(
                     round_no=turn, actor=actor.name, actor_side=actor.side,
                     action=ability.name, target=target.name,
-                    action_type="heal", healing=heal,
+                    action_type="heal", healing=actual,
                     mana_before=old_wp, mana_after=actor.current_wp,
                     is_first=is_first,
                 ))
@@ -1554,7 +1558,7 @@ class BattleEngine:
             self._after_hit(actor, target, damage, turn)
             return
 
-        if ability.mode == "purity":
+        if ability.mode == "cleanse_ward":
             enemy_target = next((enemy for enemy in enemies if enemy.remove_oldest_buff()), None)
             ally_target = next((ally for ally in allies if ally.remove_oldest_debuff()), None)
             if enemy_target:
@@ -1569,8 +1573,8 @@ class BattleEngine:
                     is_first=is_first,
                 ))
             if ally_target:
-                heal_multiplier = 0.50 + (1.00 - 0.50) * q
-                heal = max(1, round(actor.strength * heal_multiplier))
+                heal_raw = max(1, round(actor.strength * mult)) + random.randint(-50, 50)
+                heal = max(1, heal_raw)
                 ally_target.current_hp = min(ally_target.max_hp, ally_target.current_hp + heal)
                 self.events.append(BattleEvent(
                     round_no=turn, actor=actor.name, actor_side=actor.side,
