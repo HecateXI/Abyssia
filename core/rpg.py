@@ -126,11 +126,11 @@ def _tier_value(values: list[int] | tuple[int, ...], defaults: list[int], rarity
 
 
 def xp_for_level(level: int) -> int:
-    return 100 + (level - 1) * 55 + level * level * 18
+    return level ** 4 + 1000
 
 
 def creature_xp_for_level(level: int) -> int:
-    return 60 + level * level * 24
+    return level ** 4 + 1000
 
 
 def readable_seconds(seconds: int) -> str:
@@ -1579,20 +1579,39 @@ async def record_battle_history(
     )
 
 
+def _streak_xp_bonus(streak: int) -> int:
+    if streak <= 0:
+        return 0
+    sqrt_part = int((streak / 100) ** 0.5 * 100 + 500)
+    if streak % 1000 == 0:
+        bonus = 25 * sqrt_part
+    elif streak % 500 == 0:
+        bonus = 10 * sqrt_part
+    elif streak % 100 == 0:
+        bonus = 5 * sqrt_part
+    elif streak % 50 == 0:
+        bonus = 3 * sqrt_part
+    elif streak % 10 == 0:
+        bonus = sqrt_part
+    else:
+        bonus = 0
+    return min(bonus, 100000)
+
+
 def calculate_battle_rewards(won: bool, player_level: int, streak: int, rating: int) -> dict[str, object]:
     from core.rpg_data import streak_multiplier, get_streak_tier
     base_mult = 1.0 + streak_multiplier(streak)
     tier = get_streak_tier(streak)
-    xp_mult = base_mult * (1.0 + tier.xp_boost)
     gold_mult = base_mult * (1.0 + tier.gold_boost)
     if won:
+        xp = 200 + _streak_xp_bonus(streak)
         gold = round((160 + player_level * 12) * gold_mult)
         gems = max(1, round(3 * base_mult))
-        xp = round(75 * xp_mult)
         return {"gold": gold, "gems": gems, "xp": xp}
     else:
+        xp = 50
         gold = round((40 + player_level * 4) * gold_mult)
-        return {"gold": gold, "gems": 0, "xp": 0}
+        return {"gold": gold, "gems": 0, "xp": xp}
 
 
 async def get_bounty_targets(db: BotDatabase, min_streak: int = 20) -> list[sqlite3.Row]:

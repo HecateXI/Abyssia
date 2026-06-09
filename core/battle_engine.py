@@ -502,36 +502,36 @@ class BattleEngine:
             right_living = self._living(self.right)
             if not left_living or not right_living:
                 break
-            self._turn_start(turn)
+            self._pre_turn(turn)
             left_living = self._living(self.left)
             right_living = self._living(self.right)
             if not left_living or not right_living:
                 frames.append(self._frame(turn))
                 self._render_frame_logs(frames[-1], turn)
                 break
-            # Side-alternating turn order: left[0], right[0], left[1], right[1], ...
-            left_actors = sorted(self._living(self.left), key=lambda c: (c.speed, c.current_wp, c.level), reverse=True)
-            right_actors = sorted(self._living(self.right), key=lambda c: (c.speed, c.current_wp, c.level), reverse=True)
+            # Position-interleaved turn order (A1, B1, A2, B2, A3, B3)
+            left_actors = self._living(self.left)
+            right_actors = self._living(self.right)
             max_len = max(len(left_actors), len(right_actors))
             seq_idx = 0
-            all_done = False
             for i in range(max_len):
-                if all_done:
-                    break
-                for team in (left_actors, right_actors):
-                    if i >= len(team):
-                        continue
-                    actor = team[i]
-                    if not actor.alive:
-                        continue
-                    enemies = self._living(self.right if actor.side == "left" else self.left)
-                    allies = self._living(self.left if actor.side == "left" else self.right)
-                    if not enemies or not allies:
-                        all_done = True
-                        break
-                    self._act(turn, actor, allies, enemies, is_first=(seq_idx == 0))
-                    seq_idx += 1
-            self._turn_end()
+                if i < len(left_actors):
+                    actor = left_actors[i]
+                    if actor.alive:
+                        enemies = self._living(self.right)
+                        allies = self._living(self.left)
+                        if enemies and allies:
+                            self._act(turn, actor, allies, enemies, is_first=(seq_idx == 0))
+                            seq_idx += 1
+                if i < len(right_actors):
+                    actor = right_actors[i]
+                    if actor.alive:
+                        enemies = self._living(self.left)
+                        allies = self._living(self.right)
+                        if enemies and allies:
+                            self._act(turn, actor, allies, enemies, is_first=(seq_idx == 0))
+                            seq_idx += 1
+            self._post_turn()
             frame = self._frame(turn)
             self._render_frame_logs(frame, turn)
             frames.append(frame)
@@ -926,7 +926,7 @@ class BattleEngine:
     def _living(self, team: list[Creature]) -> list[Creature]:
         return [c for c in team if c.alive]
 
-    def _turn_start(self, turn: int) -> None:
+    def _pre_turn(self, turn: int) -> None:
         for creature in self.left + self.right:
             if not creature.alive:
                 continue
@@ -991,7 +991,7 @@ class BattleEngine:
             if creature.current_hp <= 0:
                 self._handle_death(creature, self.left if creature.side == "left" else self.right)
 
-    def _turn_end(self) -> None:
+    def _post_turn(self) -> None:
         for creature in self.left + self.right:
             creature.taunting = False
             for key in list(creature.statuses.keys()):
@@ -1036,12 +1036,9 @@ class BattleEngine:
 
         actor.current_wp = min(actor.max_wp, actor.current_wp + max(10, round(actor.max_wp * 0.04)))
         target = self._pick_target(enemies)
-        weapon_bonus = 0
-        if actor.weapon and isinstance(actor.weapon.statRolls, dict):
-            weapon_bonus = int(actor.weapon.statRolls.get("base_str", 0))
         if actor.weapon and actor.weapon.activeAbility.mode == "rune_empowerment":
             hybrid_stat = round(actor.strength * 0.6 + actor.magic * 0.6)
-            damage, is_crit = self._deal_damage(actor, target, hybrid_stat, "true", weapon_bonus=weapon_bonus)
+            damage, is_crit = self._deal_damage(actor, target, hybrid_stat, "true")
             self.events.append(BattleEvent(
                 round_no=turn, actor=actor.name, actor_side=actor.side,
                 action="Basic Attack (Rune)", target=target.name,
@@ -1050,7 +1047,7 @@ class BattleEngine:
                 damage=damage, is_crit=is_crit, is_first=is_first,
             ))
         else:
-            damage, is_crit = self._deal_damage(actor, target, actor.strength, "physical", weapon_bonus=weapon_bonus)
+            damage, is_crit = self._deal_damage(actor, target, actor.strength, "physical")
             self.events.append(BattleEvent(
                 round_no=turn, actor=actor.name, actor_side=actor.side,
                 action="Basic Attack", target=target.name,
@@ -1632,52 +1629,57 @@ class BattleEngine:
         taunts = [e for e in enemies if e.taunting]
         return random.choice(taunts or enemies)
 
-    def _physical_damage(self, attacker: Creature, defender: Creature, multiplier: float = 1.0, weapon_bonus: int = 0) -> int:
-        atk = attacker.strength + weapon_bonus
-        base = max(1, int((atk * 1.25) * multiplier))
-        reduction = min(defender.pr, 0.8)
-        return max(1, int(base * (1.0 - reduction)))
-
-    def _magical_damage(self, attacker: Creature, defender: Creature, multiplier: float = 1.0, weapon_bonus: int = 0) -> int:
-        atk = attacker.magic + weapon_bonus
-        base = max(1, int((atk * 1.25) * multiplier))
-        reduction = min(defender.mr, 0.8)
-        return max(1, int(base * (1.0 - reduction)))
-
-    def _deal_damage(self, attacker: Creature, target: Creature, stat_value: int, damage_type: str, *, multiplier: float = 1.0, weapon_bonus: int = 0) -> tuple[int, bool]:
+    def _deal_damage(self, attacker: Creature, target: Creature, stat_value: int, damage_type: str, *, multiplier: float = 1.0) -> tuple[int, bool]:
+        raw = stat_value * multiplier
+        jitter = random.randint(-50, 50)
+        damage_before_res = max(1, round(raw)) + jitter
         if damage_type == "physical":
-            damage = self._physical_damage(attacker, target, multiplier, weapon_bonus)
+            reduction = target.pr
         elif damage_type == "magical":
-            damage = self._magical_damage(attacker, target, multiplier, weapon_bonus)
+            reduction = target.mr
         else:
-            damage = max(1, int((stat_value + weapon_bonus) * multiplier))
+            reduction = 0.0
+        reduction = min(reduction, 0.8)
+        base_damage = max(1, int(damage_before_res * (1.0 - reduction)))
+
+        total = [base_damage, 0]
+
         if "fear" in attacker.statuses:
-            damage = max(1, int(damage * 0.75))
+            total[0] = max(1, int(total[0] * 0.75))
         if "curse" in attacker.statuses:
-            damage = max(1, int(damage * 0.80))
+            total[0] = max(1, int(total[0] * 0.80))
         if "stagger" in attacker.statuses:
-            damage = max(1, int(damage * 0.80))
+            total[0] = max(1, int(total[0] * 0.80))
         if "black_sun_march" in attacker.statuses:
-            march_power = int(attacker.statuses["black_sun_march"].get("power", 15))
-            damage = max(1, int(damage * (1.0 + march_power / 100.0)))
+            power = int(attacker.statuses["black_sun_march"].get("power", 15))
+            total[0] = max(1, int(total[0] * (1.0 + power / 100.0)))
         if "exposed" in target.statuses:
-            exposed_power = int(target.statuses["exposed"].get("power", 15))
-            damage = max(1, int(damage * (1.0 + exposed_power / 100.0)))
+            power = int(target.statuses["exposed"].get("power", 15))
+            total[0] = max(1, int(total[0] * (1.0 + power / 100.0)))
+
         is_crit = random.random() < min(1.0, attacker.crit / 100.0)
         if is_crit:
             crit_mult = 1.5 + attacker.crit_damage_bonus
-            damage = max(1, int(damage * crit_mult))
+            total[1] = max(1, int(total[0] * (crit_mult - 1.0)))
+
         if "shield" in target.statuses:
-            damage = max(1, int(damage * 0.70))
+            total[0] = max(1, int(total[0] * 0.70))
         if "tether" in target.statuses:
             tether_power = int(target.statuses["tether"].get("power", 25))
-            absorbed = max(1, int(damage * tether_power / 100.0))
-            damage = max(1, damage - absorbed)
+            total_combined = total[0] + total[1]
+            absorbed = max(1, int(total_combined * tether_power / 100.0))
+            total[0] = max(1, total[0] - absorbed)
+
         for passive in (target.weapon.passives if target.weapon else []):
-            if passive.key == "safeguard" and damage > target.max_hp * 0.20:
-                damage = max(1, int(damage * (1.0 - min(0.40, passive.value / 100.0))))
-        target.current_hp = max(0, target.current_hp - damage)
-        return damage, is_crit
+            if passive.key == "safeguard":
+                total_combined = total[0] + total[1]
+                if total_combined > target.max_hp * 0.20:
+                    safeguard_reduction = min(0.40, passive.value / 100.0)
+                    total[0] = max(1, int(total[0] * (1.0 - safeguard_reduction)))
+
+        final_damage = total[0] + total[1]
+        target.current_hp = max(0, target.current_hp - final_damage)
+        return final_damage, is_crit
 
     def _after_hit(self, attacker: Creature, target: Creature, damage: int, turn: int, aoe_group: int = 0) -> None:
         if not attacker.weapon:
