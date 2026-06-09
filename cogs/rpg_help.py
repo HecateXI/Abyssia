@@ -534,7 +534,7 @@ class HelpGuide(commands.Cog):
             await ctx.reply(embed=embed, mention_author=False) if index == 0 else await ctx.send(embed=embed)
 
 
-    @commands.hybrid_command(name="welcome", aliases=["guide", "start"])
+    @commands.hybrid_command(name="welcome", aliases=["guide"])
     async def welcome(self, ctx: commands.Context) -> None:
         """Show the server welcome guide and getting started info."""
         embed = dark_embed(
