@@ -534,5 +534,42 @@ class HelpGuide(commands.Cog):
             await ctx.reply(embed=embed, mention_author=False) if index == 0 else await ctx.send(embed=embed)
 
 
+    @commands.hybrid_command(name="welcome", aliases=["guide", "start"])
+    async def welcome(self, ctx: commands.Context) -> None:
+        """Show the server welcome guide and getting started info."""
+        embed = dark_embed(
+            "Welcome to Abyssia!",
+            color=GOLD_COLOR,
+        )
+        embed.add_field(
+            name="🌐 Server Guide",
+            value=(
+                "A dark fantasy monster-collecting RPG where you hunt, battle, and trade creatures.\n\n"
+                "**Getting Started:**\n"
+                "• `b start` — Create your hunter profile\n"
+                "• `b hunt` — Capture your first monster\n"
+                "• `b team` — Build your battle team\n"
+                "• `b battle` — Fight other hunters\n"
+                "• `b help` — View all commands\n\n"
+                "**Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="👤 Your First Steps",
+            value=(
+                "Before you begin:\n\n"
+                "• This is a dark fantasy monster-collecting RPG.\n"
+                "• Your profile, creatures, and items are stored locally.\n"
+                "• You must follow Discord's Terms of Service.\n\n"
+                "**To get started, use `b start` to create your hunter profile.**\n"
+                "Use `b help` to see all available commands."
+            ),
+            inline=False,
+        )
+        embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
+        await ctx.reply(embed=embed, mention_author=False)
+
+
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(HelpGuide(bot))
