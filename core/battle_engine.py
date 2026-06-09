@@ -570,6 +570,7 @@ class BattleEngine:
         frame["turn_log"] = turn_log
         frame["full_log"] = full_log
         frame["log"] = full_log[-5:]
+        frame["compact_log"] = self._render_compact_log(up_to_events)
 
     def _render_story_log(self, up_to_events: list[BattleEvent], turn_ids: set[int], frame: dict[str, Any]) -> tuple[list[str], list[str]]:
         turn_log: list[str] = []
@@ -665,6 +666,101 @@ class BattleEngine:
         if frame.get("tied") or frame.get("finished"):
             self._append_result_block(turn_log, frame)
         return turn_log, full_log
+
+    def _render_compact_log(self, up_to_events: list[BattleEvent]) -> list[str]:
+        hp: dict[str, int] = {}
+        mx: dict[str, int] = {}
+        for c in self.left + self.right:
+            mx[c.name] = c.max_hp
+            hp[c.name] = c.max_hp
+        lines: list[str] = []
+        current_turn = 0
+        first_in_turn = True
+        for ev in up_to_events:
+            if ev.damage > 0 and ev.target:
+                hp[ev.target] = max(0, hp[ev.target] - ev.damage)
+            if ev.status_damage > 0:
+                hp[ev.actor] = max(0, hp[ev.actor] - ev.status_damage)
+            if ev.healing > 0:
+                hp[ev.actor] = min(mx.get(ev.actor, hp.get(ev.actor, 0)), hp.get(ev.actor, 0) + ev.healing)
+            if ev.heal_from_lifesteal > 0:
+                hp[ev.actor] = min(mx.get(ev.actor, hp.get(ev.actor, 0)), hp.get(ev.actor, 0) + ev.heal_from_lifesteal)
+            if ev.heal_from_regen > 0:
+                hp[ev.actor] = min(mx.get(ev.actor, hp.get(ev.actor, 0)), hp.get(ev.actor, 0) + ev.heal_from_regen)
+
+            if ev.round_no != current_turn:
+                current_turn = ev.round_no
+                first_in_turn = True
+
+            if ev.action_type in ("regen", "energize", "passive_trigger", "charge"):
+                continue
+            if ev.action_type == "skip" and ev.skipped_reason == "dead":
+                continue
+            if ev.action != "" and "debug" in ev.action_type:
+                continue
+
+            if ev.status_damage > 0:
+                lines.append(f"🔥 **{ev.actor}** takes {ev.status_damage} {_STATUS_LABELS.get(ev.action, ev.action)} damage.")
+                if ev.defeated:
+                    lines.append(f"☠️ **{ev.defeated} was defeated!**")
+                continue
+
+            if ev.action_type == "status" and ev.status_applied:
+                if first_in_turn:
+                    lines.append(f"**Turn {current_turn}**")
+                    first_in_turn = False
+                lines.append(f"🩸 **{ev.target}** is now {_STATUS_LABELS.get(ev.status_applied, ev.status_applied)}!")
+                continue
+
+            if ev.action_type == "skip" and ev.skipped_reason == "stunned":
+                if first_in_turn:
+                    lines.append(f"**Turn {current_turn}**")
+                    first_in_turn = False
+                lines.append(f"⏸️ **{ev.actor}** is stunned!")
+                continue
+
+            if ev.action_type == "defeat" and ev.defeated:
+                lines.append(f"☠️ **{ev.defeated} was defeated!**")
+                continue
+
+            if ev.action_type == "lifesteal" and ev.heal_from_lifesteal > 0:
+                lines.append(f"💚 **{ev.actor}** steals {ev.heal_from_lifesteal} HP!")
+                continue
+
+            if ev.action == "":
+                continue
+
+            if first_in_turn:
+                lines.append(f"**Turn {current_turn}**")
+                first_in_turn = False
+
+            action_name = ev.action.replace("Basic Attack", "attacks")
+            tgt = ev.target or "?"
+            tgt_hp = hp.get(tgt, 0)
+            tgt_mx = mx.get(tgt, 0)
+
+            if ev.damage > 0:
+                crit = f" ✨ **CRIT!**" if ev.is_crit else ""
+                lines.append(f"⚔️ **{ev.actor}** → **{tgt}**: **{action_name}**{crit}")
+                lines.append(f"💥 **{ev.damage}** dmg. ❤️ {tgt} HP: `{tgt_hp}/{tgt_mx}`")
+            else:
+                lines.append(f"⚔️ **{ev.actor}** → **{tgt}**: **{action_name}**")
+
+            if ev.defeated:
+                lines.append(f"☠️ **{ev.defeated} was defeated!**")
+
+        if not lines:
+            return lines
+        lines.append("")
+        left_alive = any(c.current_hp > 0 for c in self.left)
+        right_alive = any(c.current_hp > 0 for c in self.right)
+        if self.tied:
+            lines.append("⚖️ **The battle ended in a tie!**")
+        elif left_alive and not right_alive:
+            lines.append("🏆 **Victory!**")
+        elif right_alive and not left_alive:
+            lines.append("💀 **Defeat!**")
+        return lines
 
     def _render_debug_log(self, up_to_events: list[BattleEvent], turn_ids: set[int], frame: dict[str, Any]) -> tuple[list[str], list[str]]:
         turn_log: list[str] = []

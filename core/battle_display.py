@@ -87,3 +87,22 @@ def battle_log_line(line: str) -> str:
 
 def outcome_badge(won: bool) -> str:
     return rarity_emoji("Legendary") if won else status_effect_emoji("bleed")
+
+
+def format_battle_log(log_lines: list[str], *, max_lines: int = 20, max_chars: int = 1000) -> str:
+    """Format a compact battle log for Discord embed display."""
+    if not log_lines:
+        return ""
+    truncated_by_lines = len(log_lines) > max_lines
+    display = list(log_lines[:max_lines]) if truncated_by_lines else list(log_lines)
+    text = "\n".join(display)
+    if len(text) > max_chars and len(display) > 1:
+        while len(display) > 1 and len("\n".join(display)) > max_chars:
+            display.pop()
+        text = "\n".join(display)
+        if len(display) < len(log_lines):
+            omitted = len(log_lines) - len(display)
+            text += f"\n... *{omitted} more events*"
+    elif truncated_by_lines:
+        text += f"\n... *{len(log_lines) - max_lines} more events*"
+    return text[:1024]

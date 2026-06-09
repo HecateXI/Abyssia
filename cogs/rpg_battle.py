@@ -18,6 +18,7 @@ from core.battle_display import (
     battle_overview_embed,
     battle_team_line,
     emoji_prefix,
+    format_battle_log,
     outcome_badge,
     weapon_status,
 )
@@ -403,6 +404,10 @@ class RPGBattle(commands.Cog):
             footer=" | ".join(footer_bits),
             log_lines=log if log_enabled else None,
         )
+        compact_log = result.get("compact_log", [])
+        if compact_log:
+            log_text = format_battle_log(compact_log, max_lines=18)
+            embed.add_field(name="⚔️ Battle Log", value=f"{log_text}", inline=False)
         message_content = None
         if checklist_crates:
             message_content = (
