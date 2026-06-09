@@ -97,17 +97,26 @@ class AbyssiaBot(commands.Bot):
             )
             if not agreed:
                 embed = discord.Embed(
-                    title="Welcome to Abyssia!",
+                    title="🌑 You Are Not Yet Marked",
                     description=(
-                        "Before you begin, please read the following:\n\n"
-                        "• This is a dark fantasy monster-collecting RPG.\n"
-                        "• Your profile, creatures, and items are stored locally.\n"
-                        "• You must follow Discord's Terms of Service.\n\n"
-                        "**To get started, use `b start` to create your hunter profile.**\n"
-                        "Use `b help` to see all available commands.\n\n"
-                        "**Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)"
+                        "*The ledger is blank. No contract bears your name.*\n\n"
+                        "Before you walk the Abyssia path, you must sign the hunter contract.\n\n"
+                        "**By signing, you acknowledge:**\n"
+                        "• This is a dark fantasy monster-collecting RPG\n"
+                        "• Your profile, creatures, and items are stored locally\n"
+                        "• You must follow Discord's Terms of Service"
                     ),
-                    color=0x1a1a2e,
+                    color=0xD7A84B,
+                )
+                embed.add_field(
+                    name="📜 Sign the Contract",
+                    value="Use **`b start`** to ink your name in the ledger and begin your hunt.",
+                    inline=False,
+                )
+                embed.add_field(
+                    name="🌐 Join the Hunt",
+                    value="[Abyssia Support Discord](https://discord.gg/CwRRA98Kx5) — bug reports, suggestions, theorycrafting.",
+                    inline=False,
                 )
                 embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
                 try:
@@ -152,18 +161,41 @@ class AbyssiaBot(commands.Bot):
         if channel is None:
             return
         embed = discord.Embed(
-            title="Welcome to Abyssia!",
+            title="🌑 Abyssia Has Arrived",
             description=(
-                "A dark fantasy monster-collecting RPG where you hunt, battle, and trade creatures.\n\n"
-                "**Getting Started:**\n"
-                "• `b start` — Create your hunter profile\n"
-                "• `b hunt` — Capture your first monster\n"
-                "• `b team` — Build your battle team\n"
-                "• `b battle` — Fight other hunters\n"
-                "• `b help` — View all commands\n\n"
-                "**Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)"
+                "*A chill runs through the air. The veil between worlds grows thin.*\n\n"
+                "Welcome, hunter. This realm is **Abyssia** — a dark fantasy monster-collecting "
+                "RPG where you hunt eldritch creatures, forge weapons from the remains of your foes, "
+                "and rise through the arena in pursuit of glory."
             ),
-            color=0x1a1a2e,
+            color=0xD7A84B,
+        )
+        embed.add_field(
+            name="⚔️ Your First Hunt",
+            value=(
+                "`b start` — Sign the hunter contract\n"
+                "`b hunt` — Bind your first monster\n"
+                "`b team` — Assemble your squad\n"
+                "`b battle` — Test your might\n"
+                "`b help` — Uncover all commands"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="📜 What Waits in the Dark",
+            value=(
+                "• **Hunt & Collect** — over 60 creatures across 6 zones\n"
+                "• **Craft & Forge** — weapons with unique passives and abilities\n"
+                "• **Battle & Raid** — challenge other hunters or face bosses together\n"
+                "• **Trade & Barter** — the market never sleeps\n"
+                "• **Ascend** — earn rating, climb leaderboards, unlock prestige"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="🌐 Join the Hunt",
+            value="[Abyssia Support Server](https://discord.gg/CwRRA98Kx5) — report bugs, suggest features, and theorycraft with fellow hunters.",
+            inline=False,
         )
         embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
         try:

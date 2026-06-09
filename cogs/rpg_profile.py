@@ -443,12 +443,33 @@ class RPGProfile(commands.Cog):
                 (hunter_name, now_ts(), ctx.author.id),
             )
             player = await refresh_player(self.bot.db, ctx.author.id)
-        embed = dark_embed(
-            "Hunter Contract Signed",
-            f"**{player['hunter_name']}** has entered the Abyssia ledger.\nUse `b help` for commands, then `b hunt` to bind your first monster.",
+        embed = discord.Embed(
+            title="📜 Hunter Contract Sealed",
+            description=(
+                f"**{player['hunter_name']}** scrawled their name in the Abyssia ledger.\n"
+                "*The ink smokes. Somewhere, a bell tolls.*\n\n"
+                "You are now bound to this realm. There is no turning back."
+            ),
             color=GOLD_COLOR,
         )
         embed.set_author(name=str(ctx.author), icon_url=ctx.author.display_avatar.url)
+        embed.add_field(
+            name="⛓️ Your First Chains",
+            value=(
+                "`b hunt` — Draw your first blade and bind a monster\n"
+                "`b team` — Organize your growing军团\n"
+                "`b profile` — Inspect your hunter's record\n"
+                "`b help` — Learn the incantations"
+            ),
+            inline=False,
+        )
+        embed.add_field(
+            name="💀 A Warning",
+            value="The deeper you hunt, the darker the prey. Choose your weapons wisely. "
+                  "Not all who enter Abyssia return the same.",
+            inline=False,
+        )
+        embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
         await ctx.reply(embed=embed, mention_author=False)
 
     @commands.hybrid_command(name="profile")

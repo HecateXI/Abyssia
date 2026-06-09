@@ -537,34 +537,40 @@ class HelpGuide(commands.Cog):
     @commands.hybrid_command(name="welcome", aliases=["guide"])
     async def welcome(self, ctx: commands.Context) -> None:
         """Show the server welcome guide and getting started info."""
-        embed = dark_embed(
-            "Welcome to Abyssia!",
+        embed = discord.Embed(
+            title="🌑 Welcome to Abyssia",
+            description=(
+                "*The mist parts. You stand at the threshold of a dying world.*\n\n"
+                "Abyssia is a dark fantasy monster-collecting RPG. "
+                "Hunt creatures, forge weapons, climb the arena. "
+                "Every shadow hides either a prize or your end."
+            ),
             color=GOLD_COLOR,
         )
         embed.add_field(
-            name="🌐 Server Guide",
+            name="⚔️ Rise, Hunter",
             value=(
-                "A dark fantasy monster-collecting RPG where you hunt, battle, and trade creatures.\n\n"
-                "**Getting Started:**\n"
-                "• `b start` — Create your hunter profile\n"
-                "• `b hunt` — Capture your first monster\n"
-                "• `b team` — Build your battle team\n"
-                "• `b battle` — Fight other hunters\n"
-                "• `b help` — View all commands\n\n"
-                "**Support Server:** [Join the Abyssia Discord](https://discord.gg/CwRRA98Kx5)"
+                "`b start` — Sign the contract and begin\n"
+                "`b hunt` — Bind your first monster\n"
+                "`b team` — Build your battle line\n"
+                "`b battle` — Challenge the arena\n"
+                "`b help` — All commands at a glance"
             ),
             inline=False,
         )
         embed.add_field(
-            name="👤 Your First Steps",
+            name="📜 The Hunter's Creed",
             value=(
-                "Before you begin:\n\n"
-                "• This is a dark fantasy monster-collecting RPG.\n"
-                "• Your profile, creatures, and items are stored locally.\n"
-                "• You must follow Discord's Terms of Service.\n\n"
-                "**To get started, use `b start` to create your hunter profile.**\n"
-                "Use `b help` to see all available commands."
+                "• Your profile and progress are stored locally.\n"
+                "• Treat fellow hunters with respect.\n"
+                "• Abyssia does not forgive the unprepared.\n\n"
+                "By using `b start`, you agree to the terms above and Discord's ToS."
             ),
+            inline=False,
+        )
+        embed.add_field(
+            name="🌐 Join the Hunt",
+            value="[Abyssia Support Discord](https://discord.gg/CwRRA98Kx5) — bug reports, suggestions, theorycrafting, and community events.",
             inline=False,
         )
         embed.set_footer(text="Abyssia RPG - Dark Fantasy Monster Collector")
