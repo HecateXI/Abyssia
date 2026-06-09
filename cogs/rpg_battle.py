@@ -191,8 +191,6 @@ class RPGBattle(commands.Cog):
                 "player_wp": list(frame.get("left_wp", [])),
                 "enemy_wp": list(frame.get("right_wp", [])),
                 "zone_key": str(attacker["current_zone"]) if "current_zone" in attacker.keys() else "bloodmoon_forest",
-                "log": list(frame.get("turn_log", [])),
-                "log_enabled": log_enabled,
                 "won": None,
             }
             image = battle_renderer.render_battle_frame(frame_data)
@@ -206,7 +204,6 @@ class RPGBattle(commands.Cog):
                 color=discord.Color.dark_gray(),
                 image_filename=filename,
                 footer=f"Battle animation {frame_index}/{len(preview_frames)}",
-                log_lines=frame.get("turn_log") if log_enabled else None,
             )
             if battle_message is None:
                 battle_message = await ctx.send(embed=embed, file=file)
@@ -365,7 +362,6 @@ class RPGBattle(commands.Cog):
             "mvp": mvp_creature,
             "player_weapons": player_weapons,
             "log": log,
-            "log_enabled": log_enabled,
             "full_log": list(result.get("full_log", log)),
             "xp_reward": rewards.get("xp", 0),
             "gold_reward": rewards.get("gold", 0),
@@ -402,7 +398,6 @@ class RPGBattle(commands.Cog):
             color=discord.Color.dark_gray() if tied else (discord.Color.green() if won else discord.Color.dark_red()),
             image_filename="abyssia_battle.png",
             footer=" | ".join(footer_bits),
-            log_lines=log if log_enabled else None,
         )
         compact_log = result.get("compact_log", [])
         if compact_log:
@@ -708,20 +703,6 @@ class RPGBattle(commands.Cog):
         await ctx.reply(embed=embed, mention_author=False)
 
     # ── Battle Log Toggle ──────────────────────────────────────────
-
-    @commands.hybrid_command(name="battlelog", aliases=["blog"])
-    async def battlelog(self, ctx: commands.Context) -> None:
-        """Toggle detailed turn-by-turn battle logs on the battle card."""
-        assert ctx.guild is not None
-        pref = await self.bot.db.fetchone("SELECT battle_log FROM rpg_user_prefs WHERE user_id = ?", (ctx.author.id,))
-        current = bool(int(pref["battle_log"])) if pref else False
-        new_val = 0 if current else 1
-        await self.bot.db.execute(
-            "INSERT INTO rpg_user_prefs (user_id, battle_log) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET battle_log = excluded.battle_log",
-            (ctx.author.id, new_val),
-        )
-        state = "enabled" if new_val else "disabled"
-        await ctx.reply(embed=status_embed("Battle Logs", f"Turn-by-turn battle logs {state}."), mention_author=False)
 
     # ── Arena Stats ──────────────────────────────────────────────────
 
