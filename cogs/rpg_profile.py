@@ -812,6 +812,7 @@ class RPGProfile(commands.Cog):
         battle_count = min(CHECKLIST_BATTLE_CRATE_TARGET, int(row["battle_crates"]))
         hunt_done = hunt_count >= CHECKLIST_HUNT_LOOTBOX_TARGET
         battle_done = battle_count >= CHECKLIST_BATTLE_CRATE_TARGET
+        voted_done = bool(row["voted"])
 
         def mark(done: bool) -> str:
             return "Done" if done else "Todo"
@@ -820,6 +821,7 @@ class RPGProfile(commands.Cog):
             f"`{mark(daily_done)}` Claim daily reward",
             f"`{mark(hunt_done)}` Find hunt lootboxes `{hunt_count}/{CHECKLIST_HUNT_LOOTBOX_TARGET}`",
             f"`{mark(battle_done)}` Find battle weapon crates `{battle_count}/{CHECKLIST_BATTLE_CRATE_TARGET}`",
+            f"`{mark(voted_done)}` Vote on Top.gg `b vote`",
         ]
         embed = dark_embed("Daily Checklist", "\n".join(lines), color=GOLD_COLOR)
         reward_text = (

@@ -233,6 +233,22 @@ class BotDatabase:
             self._conn.close()
             self._conn = None
 
+    async def _migrate_vote_tables(self) -> None:
+        """Add Top.gg vote tracking tables and columns."""
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS topgg_votes (
+                user_id INTEGER NOT NULL PRIMARY KEY,
+                last_vote_at INTEGER NOT NULL DEFAULT 0,
+                vote_count INTEGER NOT NULL DEFAULT 0,
+                vote_streak INTEGER NOT NULL DEFAULT 0,
+                last_claimed_vote_at INTEGER NOT NULL DEFAULT 0,
+                weekend_bonus_count INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        cl_cols = {row["name"] for row in self.conn.execute("PRAGMA table_info(rpg_daily_checklists)").fetchall()}
+        if "voted" not in cl_cols:
+            self.conn.execute("ALTER TABLE rpg_daily_checklists ADD COLUMN voted INTEGER NOT NULL DEFAULT 0")
+
     async def _migrate_to_global(self) -> None:
         """Migrate RPG tables from guild-scoped to user-global (user_id PK)."""
 
@@ -694,6 +710,7 @@ class BotDatabase:
                     agreed_at INTEGER NOT NULL
                 )
             """)
+            await self._migrate_vote_tables()
             await self._migrate_to_global()
             self.conn.commit()
 

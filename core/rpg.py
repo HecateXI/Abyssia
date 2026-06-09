@@ -240,8 +240,8 @@ async def ensure_daily_checklist(db: BotDatabase, user_id: int) -> sqlite3.Row:
     period = today_key()
     await db.execute(
         """INSERT OR IGNORE INTO rpg_daily_checklists
-           (user_id, period_key, daily_claimed, hunt_lootboxes, battle_crates, reward_claimed, updated_at)
-           VALUES (?, ?, 0, 0, 0, 0, ?)""",
+           (user_id, period_key, daily_claimed, hunt_lootboxes, battle_crates, reward_claimed, voted, updated_at)
+           VALUES (?, ?, 0, 0, 0, 0, 0, ?)""",
         (user_id, period, now_ts()),
     )
     row = await db.fetchone(
@@ -258,6 +258,7 @@ def checklist_is_complete(row: sqlite3.Row) -> bool:
         bool(row["daily_claimed"])
         and int(row["hunt_lootboxes"]) >= CHECKLIST_HUNT_LOOTBOX_TARGET
         and int(row["battle_crates"]) >= CHECKLIST_BATTLE_CRATE_TARGET
+        and bool(row["voted"])
     )
 
 

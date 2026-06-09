@@ -33,6 +33,7 @@ COGS = (
     "cogs.rpg_shop",
     "cogs.rpg_trade",
     "cogs.rpg_buffs",
+    "cogs.rpg_votes",
     "cogs.utility",
 )
 
@@ -254,7 +255,13 @@ class AbyssiaBot(commands.Bot):
         if self.user is not None:
             embed.set_author(name=str(self.user), icon_url=self.user.display_avatar.url)
         embed.add_field(name="Environment", value="Production", inline=True)
-        embed.add_field(name="Latency", value=f"{round(self.latency * 1000)}ms" if self.latency else "Starting", inline=True)
+        latency = self.latency
+        if latency is not None and latency == latency:
+            latency_ms = round(latency * 1000)
+            latency_str = f"{latency_ms}ms"
+        else:
+            latency_str = "Starting"
+        embed.add_field(name="Latency", value=latency_str, inline=True)
         embed.set_footer(text="Automated status notification")
         await self._send_channel_embed(BOT_STATUS_CHANNEL_ID, embed)
 

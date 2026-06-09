@@ -114,9 +114,15 @@ async def simulate():
         if b_count >= CHECKLIST_BATTLE_CRATE_TARGET:
             break
     ok("roll_checklist_battle_crates (hit target)")
+    # Mark vote as complete (voted column is now required)
+    await db.execute(
+        "UPDATE rpg_daily_checklists SET voted = 1, updated_at = ? WHERE user_id = ? AND period_key = ?",
+        (now_ts(), 1001, today_key()),
+    )
+    ok("mark_checklist_voted")
     # Verify checklist is complete, then claim reward
     final_cl = await ensure_daily_checklist(db, 1001)
-    assert checklist_is_complete(final_cl), f"checklist not complete: daily={final_cl['daily_claimed']}, hunt={final_cl['hunt_lootboxes']}/{CHECKLIST_HUNT_LOOTBOX_TARGET}, battle={final_cl['battle_crates']}/{CHECKLIST_BATTLE_CRATE_TARGET}"
+    assert checklist_is_complete(final_cl), f"checklist not complete: daily={final_cl['daily_claimed']}, hunt={final_cl['hunt_lootboxes']}/{CHECKLIST_HUNT_LOOTBOX_TARGET}, battle={final_cl['battle_crates']}/{CHECKLIST_BATTLE_CRATE_TARGET}, voted={final_cl['voted']}"
     reward = await claim_daily_checklist_reward(db, 1001)
     assert "gold" in reward
     ok("claim_daily_checklist_reward")
