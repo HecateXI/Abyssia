@@ -20,23 +20,18 @@ def team_slot_value(slot: int, creature, weapon) -> tuple[str, str]:
     mana = stats['MANA']
     mag = stats['MAG']
     res_pct = stats['RES']
-    spd = stats['SPD']
-    crit = stats['Crit']
 
     lines = [
         f"Lvl **{level}** XP `{xp}/{xp_needed}`",
         f"{stat_emoji('hp')} `{hp:,}`  {stat_emoji('mana')} `{mana:,}`",
         f"{stat_emoji('str')} `{str_val:,}`  {stat_emoji('mag')} `{mag:,}`",
         f"{stat_emoji('def')} `{def_pct}%`  {stat_emoji('res')} `{res_pct}%`",
-        f"{stat_emoji('spd')} `{spd}`  {stat_emoji('crit') or 'Crit'} `{crit}%`",
     ]
     if weapon:
         wtype = str(row_get(weapon, "weapon_type", "sword") or "sword")
         quality_pct = int(row_get(weapon, "quality_pct", 50) or 50)
-        from core.rpg import weapon_quality_rarity
-        wr = weapon_quality_rarity(quality_pct)
         wid = f"{int(row_get(weapon, 'id', 0)):05d}"
-        lines.append(f"`{wid}` {rarity_emoji(wr) or ''} {weapon_emoji(wtype) or ''} `{quality_pct}%`")
+        lines.append(f"`{wid}` {weapon_emoji(wtype) or ''} `{quality_pct}%`")
     else:
         lines.append("*no weapon*")
     return header, "\n".join(lines)

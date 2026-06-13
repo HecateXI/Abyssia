@@ -11,7 +11,6 @@ import time
 from pathlib import Path
 from typing import Any
 
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT_DIR / os.getenv("BOT_CONTENT_CONFIG_PATH", "data/content_config.json")
 ASSET_DIR = ROOT_DIR / os.getenv("BOT_ASSET_DIR", "data/assets")
@@ -290,6 +289,10 @@ def get_asset_record(kind: str, key: str) -> dict[str, Any] | None:
 def get_asset_file_path(kind: str, key: str) -> Path | None:
     kind = validate_kind(kind)
     safe = safe_key(key)
+    if kind in {"weapons", "passives"}:
+        premium = (ROOT_DIR / "assets" / "icons" / kind / f"{safe}.png").resolve()
+        if premium.exists() and premium.is_file() and ROOT_DIR.resolve() in premium.parents:
+            return premium
     record = get_asset_record(kind, key)
     if record and record.get("file"):
         path = (ASSET_DIR / str(record["file"])).resolve()

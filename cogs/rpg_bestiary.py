@@ -54,7 +54,6 @@ class Bestiary(commands.Cog):
             rarity=creature.rarity,
             hp=s7["hp"], str_stat=s7["str"], pr_stat=s7["pr"],
             wp_stat=s7["wp"], mag_stat=s7["mag"], mr_stat=s7["mr"],
-            speed=s7["spd"],
             role=role,
             ability=creature.ability,
             level=int(caught_row["level"]) if caught_row else 1,

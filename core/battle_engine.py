@@ -71,6 +71,22 @@ _STATUS_LABELS = {
     "stun": "stunned",
 }
 
+_WEAPON_TAGS: dict[str, str] = {
+    "sword": "SWORD", "bow": "BOW", "axe": "AXE",
+    "dagger": "DAGGER", "crossbow": "XBOW", "staff": "STAFF",
+    "staff_of_purity": "PSTAFF", "shield": "SHIELD", "hammer": "HAMMER",
+    "orb": "ORB", "rune": "RUNE", "soulreaper": "REAPER",
+    "briar_relic": "BRIAR", "rot_chalice": "CHALICE", "banner": "BANNER",
+    "eye": "EYE", "judgement_blade": "JBLADE", "lantern": "LANTERN",
+    "mirror_relic": "MIRROR", "final_bell_scythe": "SCYTHE",
+}
+
+
+def _weapon_tag(weapon_type: str | None) -> str:
+    if not weapon_type:
+        return "PHYS"
+    return _WEAPON_TAGS.get(weapon_type.lower(), weapon_type[:4].upper())
+
 
 # -- Structured Battle Event --
 
@@ -99,6 +115,8 @@ class BattleEvent:
     heal_from_lifesteal: int = 0
     heal_from_regen: int = 0
     aoe_group: int = 0
+    weapon_tag: str = "PHYS"
+    sub_logs: list[str] | None = None
 
 
 # -- Ability --
@@ -400,6 +418,19 @@ class Creature:
             weapon=Weapon.from_row(row.get("_weapon")),
         )
         creature.calculate_final_stats()
+        current_hp = row.get("current_hp", row.get("_current_hp"))
+        if current_hp is not None:
+            creature.current_hp = max(0, min(creature.max_hp, _int(current_hp, creature.current_hp)))
+        current_wp = row.get("current_wp", row.get("_current_wp"))
+        if current_wp is not None:
+            creature.current_wp = max(0, min(creature.max_wp, _int(current_wp, creature.current_wp)))
+        current_statuses = _parse_json(row.get("current_statuses", row.get("_statuses")), {})
+        if isinstance(current_statuses, dict):
+            creature.statuses = {
+                str(key): dict(value)
+                for key, value in current_statuses.items()
+                if isinstance(value, dict)
+            }
         return creature
 
     def calculate_final_stats(self) -> None:
@@ -579,7 +610,10 @@ class BattleEngine:
         frame["turn_log"] = turn_log
         frame["full_log"] = full_log
         frame["log"] = full_log[-5:]
-        frame["compact_log"] = self._render_compact_log(up_to_events)
+        if self.debug:
+            frame["compact_log"] = self._render_compact_log(up_to_events)
+        else:
+            frame["compact_log"] = []
 
     def _render_story_log(self, up_to_events: list[BattleEvent], turn_ids: set[int], frame: dict[str, Any]) -> tuple[list[str], list[str]]:
         turn_log: list[str] = []
@@ -679,9 +713,11 @@ class BattleEngine:
     def _render_compact_log(self, up_to_events: list[BattleEvent]) -> list[str]:
         hp: dict[str, int] = {}
         mx: dict[str, int] = {}
+        tag_of: dict[str, str] = {}
         for c in self.left + self.right:
             mx[c.name] = c.max_hp
             hp[c.name] = c.max_hp
+            tag_of[c.name] = _weapon_tag(c.weapon.weapon_type if c.weapon else None)
         for ev in up_to_events:
             if ev.damage > 0 and ev.target:
                 hp[ev.target] = max(0, hp[ev.target] - ev.damage)
@@ -694,6 +730,9 @@ class BattleEngine:
             if ev.heal_from_regen > 0:
                 hp[ev.actor] = min(mx.get(ev.actor, hp.get(ev.actor, 0)), hp.get(ev.actor, 0) + ev.heal_from_regen)
 
+        def tag(name: str) -> str:
+            return tag_of.get(name, "PHYS")
+
         lines: list[str] = []
         current_turn = 0
         i = 0
@@ -704,7 +743,6 @@ class BattleEngine:
                 current_turn = ev.round_no
                 if lines:
                     lines.append("")
-                lines.append(f"⚔️ **Turn {current_turn}**")
 
             if ev.action_type in ("regen", "energize", "passive_trigger", "charge"):
                 i += 1
@@ -723,7 +761,6 @@ class BattleEngine:
                 while j < len(up_to_events) and up_to_events[j].aoe_group == ev.aoe_group:
                     group.append(up_to_events[j])
                     j += 1
-                # Also absorb trailing defeat events for targets in this group
                 aoe_targets = {e.target for e in group if e.target}
                 while j < len(up_to_events):
                     next_ev = up_to_events[j]
@@ -732,53 +769,62 @@ class BattleEngine:
                         j += 1
                     else:
                         break
-                # Render AoE block
                 actor_name = group[0].actor
-                action_name = group[0].action.replace("Basic Attack", "attacks")
+                t = tag(actor_name)
                 dmg_events = [e for e in group if e.damage > 0]
-                targets_str = ", ".join(e.target for e in dmg_events)
-                has_crit = any(e.is_crit for e in dmg_events)
-                crit_str = " **CRIT!**" if has_crit else ""
-                lines.append(f"**{actor_name}** → {targets_str}: `{action_name}`{crit_str}")
+                if dmg_events:
+                    dmg_parts = " | ".join(f"{e.target} -{e.damage}" for e in dmg_events)
+                    has_crit = any(e.is_crit for e in dmg_events)
+                    crit_suffix = " (CRIT)" if has_crit else ""
+                    lines.append(f"[{t}] {actor_name} damaged {dmg_parts} HP{crit_suffix}")
+                else:
+                    lines.append(f"[{t}] {actor_name} used {group[0].action}")
+                status_lines = []
                 for ge in group:
-                    if ge.damage > 0:
-                        tgt_hp = hp.get(ge.target, 0)
-                        tgt_mx = mx.get(ge.target, 0)
-                        lines.append(f"  `{ge.damage}` dmg. {ge.target} HP: `{tgt_hp}/{tgt_mx}`")
-                    elif ge.action_type == "status" and ge.status_applied:
+                    if ge.action_type == "status" and ge.status_applied:
                         label = _STATUS_LABELS.get(ge.status_applied, ge.status_applied)
-                        lines.append(f"  {ge.target} is now {label}.")
+                        status_lines.append(f"  {ge.target} is now {label}.")
                     elif ge.action_type == "defeat" and ge.defeated:
-                        lines.append(f"  **{ge.defeated} was defeated!**")
+                        status_lines.append(f"  {ge.defeated} was defeated.")
                     elif ge.action_type == "lifesteal" and ge.heal_from_lifesteal > 0:
-                        lines.append(f"  {ge.actor} steals `{ge.heal_from_lifesteal}` HP.")
+                        status_lines.append(f"  {ge.actor} stole {ge.heal_from_lifesteal} HP.")
+                for sl in status_lines:
+                    lines.append(sl)
+                mana_diff = group[0].mana_after - group[0].mana_before
+                if mana_diff < 0:
+                    lines.append(f"  [{t}] {actor_name} used {-mana_diff} WP")
                 i = j
                 continue
 
             if ev.status_damage > 0:
-                lines.append(f"  {ev.actor} takes `{ev.status_damage}` {_STATUS_LABELS.get(ev.action, ev.action)} damage.")
+                label = _STATUS_LABELS.get(ev.action, ev.action)
+                lines.append(f"  {ev.actor} takes {ev.status_damage} {label} damage.")
                 if ev.defeated:
-                    lines.append(f"  **{ev.defeated} was defeated!**")
+                    lines.append(f"  {ev.defeated} was defeated.")
                 i += 1
                 continue
 
             if ev.action_type == "status" and ev.status_applied:
-                lines.append(f"  {ev.target} is now {_STATUS_LABELS.get(ev.status_applied, ev.status_applied)}.")
+                label = _STATUS_LABELS.get(ev.status_applied, ev.status_applied)
+                lines.append(f"  {ev.target} is now {label}.")
                 i += 1
                 continue
 
             if ev.action_type == "skip" and ev.skipped_reason == "stunned":
-                lines.append(f"  **{ev.actor}** is stunned!")
+                t = tag(ev.actor)
+                lines.append(f"[{t}] {ev.actor} is stunned!")
                 i += 1
                 continue
 
             if ev.action_type == "defeat" and ev.defeated:
-                lines.append(f"  **{ev.defeated} was defeated!**")
+                t = tag(ev.defeated)
+                lines.append(f"  {ev.defeated} was defeated.")
                 i += 1
                 continue
 
             if ev.action_type == "lifesteal" and ev.heal_from_lifesteal > 0:
-                lines.append(f"  {ev.actor} steals `{ev.heal_from_lifesteal}` HP.")
+                t = tag(ev.actor)
+                lines.append(f"  {ev.actor} stole {ev.heal_from_lifesteal} HP.")
                 i += 1
                 continue
 
@@ -786,20 +832,35 @@ class BattleEngine:
                 i += 1
                 continue
 
-            action_name = ev.action.replace("Basic Attack", "attacks")
-            tgt = ev.target or "?"
-            tgt_hp = hp.get(tgt, 0)
-            tgt_mx = mx.get(tgt, 0)
+            t = tag(ev.actor)
+            action_verb = ev.action.replace("Basic Attack", "attacks")
+            target_name = ev.target or "?"
 
             if ev.damage > 0:
-                crit = " **CRIT!**" if ev.is_crit else ""
-                lines.append(f"**{ev.actor}** → {tgt}: `{action_name}`{crit}")
-                lines.append(f"  `{ev.damage}` dmg. {tgt} HP: `{tgt_hp}/{tgt_mx}`")
+                crit_suffix = " (CRIT)" if ev.is_crit else ""
+                lines.append(f"[{t}] {ev.actor} damaged {target_name} for {ev.damage} HP{crit_suffix}")
+            elif ev.healing > 0:
+                lines.append(f"[{t}] {ev.actor} healed {target_name} for {ev.healing} HP")
+            elif ev.action_type == "guard":
+                lines.append(f"[{t}] {ev.actor} used {action_verb}")
+            elif ev.action_type == "buff":
+                lines.append(f"[{t}] {ev.actor} used {action_verb}")
+            elif ev.action_type == "heal":
+                lines.append(f"[{t}] {ev.actor} healed {target_name} for {ev.healing} HP")
             else:
-                lines.append(f"**{ev.actor}** → {tgt}: `{action_name}`")
+                lines.append(f"[{t}] {ev.actor} used {action_verb}")
+
+            if ev.status_applied and ev.damage == 0:
+                label = _STATUS_LABELS.get(ev.status_applied, ev.status_applied)
+                lines.append(f"  {target_name} is now {label}.")
+
+            mana_diff = ev.mana_after - ev.mana_before
+            if mana_diff < 0:
+                lines.append(f"  [{t}] {ev.actor} used {-mana_diff} WP")
 
             if ev.defeated:
-                lines.append(f"  **{ev.defeated} was defeated!**")
+                lines.append(f"  {ev.defeated} was defeated.")
+
             i += 1
 
         if not lines:
@@ -808,13 +869,13 @@ class BattleEngine:
         right_alive = any(c.current_hp > 0 for c in self.right)
         if self.tied:
             lines.append("")
-            lines.append("Battle ends in a tie.")
+            lines.append("The battle ended in a tie.")
         elif left_alive and not right_alive:
             lines.append("")
-            lines.append("🏆 **Victory!**")
+            lines.append("Victory!")
         elif right_alive and not left_alive:
             lines.append("")
-            lines.append("💀 **Defeat!**")
+            lines.append("Defeat!")
         return lines
 
     def _render_debug_log(self, up_to_events: list[BattleEvent], turn_ids: set[int], frame: dict[str, Any]) -> tuple[list[str], list[str]]:
@@ -1854,6 +1915,4 @@ def compute_display_stats(row: Any) -> dict[str, int]:
         "MANA": max_wp,
         "DEF": round(pr * 100, 1),
         "RES": round(mr * 100, 1),
-        "SPD": max(1, speed),
-        "Crit": _int(_row_get(row, "crit", 5), 5),
     }

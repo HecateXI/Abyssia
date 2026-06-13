@@ -3,6 +3,7 @@ from __future__ import annotations
 import discord
 from discord.ext import commands
 
+from core.card_controls import add_shortcuts, shortcut_view
 from core.cards import render_collection_card, render_profile_card
 from core.items import HUNT_SWORD_KEY, HUNT_SWORD_NAME
 
@@ -33,14 +34,12 @@ from core.theme import (
     GOLD_COLOR,
     consumable_label,
     creature_emoji,
-    crate_emoji,
     crate_label,
     currency_label,
     dark_embed,
     equipment_label,
     material_label,
     rarity_emoji,
-    rarity_label,
     status_embed,
 )
 
@@ -244,21 +243,6 @@ class InventoryView(discord.ui.View):
             return
         embed = discord.Embed(title="Open Box", description="Choose a lootbox or weapon crate to open.", color=discord.Color.orange())
         await interaction.followup.send(embed=embed, view=view, ephemeral=True)
-        return
-        options = [
-            discord.SelectOption(
-                label=name,
-                value=ck,
-                description=f"Owned: {qty}",
-                emoji=discord.PartialEmoji.from_str(crate_emoji(ck)) if crate_emoji(ck) else "📦",
-            )
-            for ck, name, qty in owned
-        ]
-        view = CrateOpenView(self.ctx)
-        view.crate_select.options = options
-        view.crate_select.placeholder = f"You own {sum(q for _, _, q in owned)} crate(s)..."
-        embed = discord.Embed(title=crate_label(owned[0][0], "Open Crate"), description="Choose a crate to open from your inventory.", color=discord.Color.orange())
-        await interaction.followup.send(embed=embed, view=view, ephemeral=True)
 
     @discord.ui.button(label="Use Hunt Sword", style=discord.ButtonStyle.primary, emoji="⚔️", row=0)
     async def use_sword(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -300,15 +284,15 @@ class RaritySelect(discord.ui.Select):
         view: BestiaryView = self.view  # type: ignore
         view.selected_rarity = self.values[0]
         view.page = 1
-        embed, files = await view._build_page()
-        await interaction.response.edit_message(embed=embed, attachments=files, view=view)
+        await view._edit_page(interaction)
 
 
 class BestiaryView(discord.ui.View):
-    def __init__(self, bot, target_id: int, target_name: str, target_avatar_url: str, page: int) -> None:
+    def __init__(self, bot, target_id: int, target_name: str, target_avatar_url: str, page: int, *, viewer_id: int | None = None) -> None:
         super().__init__(timeout=180)
         self.bot = bot
         self.target_id = target_id
+        self.viewer_id = viewer_id or target_id
         self.target_name = target_name
         self.target_avatar_url = target_avatar_url
         self.page = page
@@ -368,23 +352,33 @@ class BestiaryView(discord.ui.View):
 
         return embed, [card_file]
 
-    @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
+    async def _edit_page(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        embed, files = await self._build_page()
+        if interaction.message is not None:
+            await interaction.message.edit(embed=embed, attachments=files, view=self)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.viewer_id:
+            return True
+        await interaction.response.send_message("This collection view belongs to another hunter.", ephemeral=True)
+        return False
+
+    @discord.ui.button(label="Prev", style=discord.ButtonStyle.secondary)
     async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.page <= 1:
             await interaction.response.defer()
             return
         self.page -= 1
-        embed, files = await self._build_page()
-        await interaction.response.edit_message(embed=embed, attachments=files, view=self)
+        await self._edit_page(interaction)
 
-    @discord.ui.button(label="▶", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if self.page >= self.total_pages:
             await interaction.response.defer()
             return
         self.page += 1
-        embed, files = await self._build_page()
-        await interaction.response.edit_message(embed=embed, attachments=files, view=self)
+        await self._edit_page(interaction)
 
 
 class RPGProfile(commands.Cog):
@@ -518,7 +512,20 @@ class RPGProfile(commands.Cog):
         )
         file = discord.File(image, filename="abyssia_profile.png")
         embed.set_image(url="attachment://abyssia_profile.png")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
+        await ctx.reply(
+            embed=embed,
+            file=file,
+            view=shortcut_view(
+                ctx.author.id,
+                [
+                    ("Team", "b team"),
+                    ("Weapons", "b weapons"),
+                    ("Zoo", "b zoo"),
+                    ("Customize", "b profilecustomize"),
+                ],
+            ),
+            mention_author=False,
+        )
 
     @commands.hybrid_group(name="profilecustomize", aliases=["profilecard", "pcard", "pc"], invoke_without_command=True)
     async def profilecustomize(self, ctx: commands.Context) -> None:
@@ -655,7 +662,8 @@ class RPGProfile(commands.Cog):
                     pass
 
         await ensure_player(self.bot.db, target.id, target.display_name)
-        view = BestiaryView(self.bot, target.id, target.display_name, str(target.display_avatar.url), page)
+        view = BestiaryView(self.bot, target.id, target.display_name, str(target.display_avatar.url), page, viewer_id=ctx.author.id)
+        add_shortcuts(view, [("Profile", "b profile"), ("Team", "b team"), ("Inventory", "b inventory")])
         embed, files = await view._build_page()
 
         if embed.description:

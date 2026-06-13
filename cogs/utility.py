@@ -20,6 +20,10 @@ class Utility(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx: commands.Context, error: commands.CommandError) -> None:
+        if ctx.command and ctx.command.has_error_handler():
+            return
+        if ctx.cog and ctx.cog.has_error_handler():
+            return
         if isinstance(error, commands.CommandNotFound):
             return
         if isinstance(error, commands.HybridCommandError):

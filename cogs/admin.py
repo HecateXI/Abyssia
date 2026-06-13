@@ -58,8 +58,8 @@ class Admin(commands.Cog):
 
     @config.command(name="setup-emojis")
     @is_staff()
-    async def setup_emojis(self, ctx: commands.Context, replace_existing: bool = False) -> None:
-        """Upload generated PNG assets as application emojis."""
+    async def setup_emojis(self, ctx: commands.Context, replace_existing: bool = True) -> None:
+        """Upload or refresh generated PNG assets as application emojis."""
         assert ctx.guild is not None
         await ctx.defer()
 

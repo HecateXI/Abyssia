@@ -1,247 +1,262 @@
-"""
-Sync Abyssia asset icons to Discord application emoji bank.
-
-This script uploads weapon, passive, and other asset icons as Discord application emojis.
-It reads from the data/assets directory and uploads missing emojis.
-
-Usage:
-    python scripts/sync_emojis.py
-
-Environment variables:
-    DISCORD_TOKEN - Bot token (required)
-    EMOJI_GUILD_ID - Guild ID for emoji upload (optional, defaults to application emojis)
-
-The script will:
-1. Scan data/assets for PNG files
-2. Check which emojis already exist
-3. Upload missing emojis
-4. Print a summary of what was uploaded/skipped/failed
-"""
+"""Sync processed Abyssia weapon/passive PNGs to a Discord guild emoji bank."""
 from __future__ import annotations
 
-import asyncio
+import argparse
 import base64
 import json
 import os
-import sys
+import re
+import time
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
 from pathlib import Path
-
-# Add parent directory to path
-ROOT_DIR = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT_DIR))
+from typing import Any
 
 from PIL import Image
-from io import BytesIO
 
-# Discord API limits
-EMOJI_IMAGE_SIZE = 128
-MAX_EMOJI_IMAGE_BYTES = 256 * 1024  # 256KB
-
-# Asset directory
-ASSET_DIR = ROOT_DIR / "data" / "assets"
-
-# Emoji name prefix mapping
-PREFIX_MAP = {
-    "weapons": "weapon",
-    "passives": "passive",
-    "status": "status",
-    "creatures": "cr",
-    "rarity": "rarity",
-    "materials": "material",
-    "currency": "currency",
-    "ui": "ui",
-    "consumable": "item",
-    "equipment": "eq",
-    "buffs": "buff",
-    "crate": "crate",
-    "zones": "zone",
-    "bosses": "boss",
-}
+ROOT_DIR = Path(__file__).resolve().parents[1]
+EMOJI_ROOT = ROOT_DIR / "assets" / "emojis"
+EMOJI_MAP_PATH = ROOT_DIR / "data" / "emoji_map.json"
+DISCORD_API = "https://discord.com/api/v10"
+MAX_EMOJI_BYTES = 256 * 1024
+DISCORD_NAME_RE = re.compile(r"^[A-Za-z0-9_]{2,32}$")
 
 
-def safe_key(key: str) -> str:
-    """Normalize key for emoji name."""
-    return key.strip().lower().replace("'", "").replace(" ", "_").replace("-", "_")[:80]
+@dataclass(frozen=True)
+class EmojiTarget:
+    category: str
+    key: str
+    name: str
+    path: Path
 
 
-def prepared_emoji_png(path: Path) -> bytes:
-    """Prepare emoji PNG for Discord upload."""
-    with Image.open(path) as source:
-        image = source.convert("RGBA")
-    
-    # Crop to bounding box
-    bbox = image.getbbox()
-    if bbox:
-        image = image.crop(bbox)
-    
-    # Resize to fit
-    image.thumbnail((EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), Image.Resampling.LANCZOS)
-    
-    # Center on transparent canvas
-    canvas = Image.new("RGBA", (EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), (0, 0, 0, 0))
-    x = (EMOJI_IMAGE_SIZE - image.width) // 2
-    y = (EMOJI_IMAGE_SIZE - image.height) // 2
-    canvas.alpha_composite(image, (x, y))
-    
-    # Save as PNG
-    output = BytesIO()
-    canvas.save(output, format="PNG", optimize=True)
-    raw = output.getvalue()
-    
-    # If too large, quantize
-    if len(raw) > MAX_EMOJI_IMAGE_BYTES:
-        compact = canvas.quantize(colors=256, method=Image.Quantize.FASTOCTREE).convert("RGBA")
-        output = BytesIO()
-        compact.save(output, format="PNG", optimize=True)
-        raw = output.getvalue()
-    
-    return raw
+def _load_dotenv() -> None:
+    env_path = ROOT_DIR / ".env"
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
 
-def emoji_image_data_url(path: Path) -> str:
-    """Create data URL for emoji image."""
-    encoded = base64.b64encode(prepared_emoji_png(path)).decode("ascii")
+def _setup_message() -> None:
+    print("DISCORD_TOKEN and EMOJI_GUILD_ID are required to sync guild emojis.")
+    print("PowerShell example:")
+    print("  $env:DISCORD_TOKEN = 'your-bot-token'")
+    print("  $env:EMOJI_GUILD_ID = '123456789012345678'")
+    print("  python scripts/sync_emojis.py")
+    print("No emojis were uploaded and data/emoji_map.json was not changed.")
+
+
+def _headers(token: str) -> dict[str, str]:
+    return {
+        "Authorization": f"Bot {token}",
+        "Content-Type": "application/json",
+        "User-Agent": "AbyssiaIconSync/1.0",
+    }
+
+
+def _request(method: str, url: str, token: str, payload: dict[str, Any] | None = None) -> Any:
+    data = None if payload is None else json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(url, data=data, headers=_headers(token), method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            body = response.read().decode("utf-8")
+            return json.loads(body) if body else None
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        try:
+            parsed = json.loads(body)
+        except json.JSONDecodeError:
+            parsed = {"message": body}
+        message = parsed.get("message", body) if isinstance(parsed, dict) else body
+        if exc.code == 401:
+            raise RuntimeError("Discord rejected DISCORD_TOKEN (401 Unauthorized).") from exc
+        if exc.code == 403:
+            raise RuntimeError("Missing Discord permission. The bot needs Manage Expressions in the emoji guild.") from exc
+        if exc.code == 429 and isinstance(parsed, dict):
+            retry_after = float(parsed.get("retry_after", 1.0))
+            time.sleep(min(10.0, retry_after))
+            return _request(method, url, token, payload)
+        raise RuntimeError(f"Discord API error {exc.code}: {message}") from exc
+
+
+def _emoji_data_url(path: Path) -> str:
+    with Image.open(path) as image:
+        if image.format != "PNG":
+            raise ValueError(f"{path} is not a PNG")
+        if image.size != (128, 128):
+            raise ValueError(f"{path} is {image.size}, expected 128x128. Run scripts/process_icons.py.")
+        image.load()
+    raw = path.read_bytes()
+    if len(raw) > MAX_EMOJI_BYTES:
+        raise ValueError(f"{path} is {len(raw)} bytes, over Discord's 256 KB emoji limit")
+    encoded = base64.b64encode(raw).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
 
-def emoji_asset_name(kind: str, key: str) -> str:
-    """Generate emoji name."""
-    prefix = PREFIX_MAP.get(kind, kind)
-    safe = safe_key(key).lower()
-    max_key_length = 32 - len(prefix) - 1
-    return f"{prefix}_{safe[:max_key_length]}"
+def _load_emoji_map() -> dict[str, str]:
+    if not EMOJI_MAP_PATH.exists():
+        return {}
+    try:
+        payload = json.loads(EMOJI_MAP_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    result: dict[str, str] = {}
+    for key, value in payload.items():
+        if isinstance(value, str):
+            result[str(key)] = value
+        elif isinstance(value, dict):
+            for nested_key, nested_value in value.items():
+                if isinstance(nested_value, str):
+                    result[str(nested_key)] = nested_value
+    return result
 
 
-async def sync_emojis():
-    """Main sync function."""
-    import aiohttp
-    
-    token = os.environ.get("DISCORD_TOKEN")
-    if not token:
-        print("ERROR: DISCORD_TOKEN environment variable not set")
-        print("Set it with: $env:DISCORD_TOKEN = 'your-bot-token-here'")
-        sys.exit(1)
-    
-    guild_id = os.environ.get("EMOJI_GUILD_ID")
-    
-    # Get application ID
-    async with aiohttp.ClientSession() as session:
-        # Get current application info
-        async with session.get(
-            "https://discord.com/api/v10/oauth2/applications/@me",
-            headers={"Authorization": f"Bot {token}"}
-        ) as resp:
-            if resp.status != 200:
-                print(f"ERROR: Failed to get application info: {resp.status}")
-                print(await resp.text())
-                sys.exit(1)
-            app_data = await resp.json()
-            app_id = app_data["id"]
-            print(f"Application ID: {app_id}")
-        
-        # Get existing emojis
-        if guild_id:
-            emoji_url = f"https://discord.com/api/v10/guilds/{guild_id}/emojis"
-        else:
-            emoji_url = f"https://discord.com/api/v10/applications/{app_id}/emojis"
-        
-        async with session.get(
-            emoji_url,
-            headers={"Authorization": f"Bot {token}"}
-        ) as resp:
-            if resp.status != 200:
-                print(f"ERROR: Failed to get existing emojis: {resp.status}")
-                print(await resp.text())
-                sys.exit(1)
-            existing_emojis = await resp.json()
-            if isinstance(existing_emojis, list):
-                existing_by_name = {e["name"]: e for e in existing_emojis}
-            else:
-                existing_by_name = {e["name"]: e for e in existing_emojis.get("items", [])}
-        
-        print(f"Existing emojis: {len(existing_by_name)}")
-        
-        # Scan for assets to upload
-        uploaded = 0
-        skipped = 0
-        failed = 0
-        failed_list = []
-        
-        for kind in PREFIX_MAP.keys():
-            kind_dir = ASSET_DIR / kind
-            if not kind_dir.exists():
+def _save_emoji_map(mapping: dict[str, str]) -> None:
+    EMOJI_MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
+    EMOJI_MAP_PATH.write_text(json.dumps(dict(sorted(mapping.items())), indent=2) + "\n", encoding="utf-8")
+
+
+def _scan_targets() -> list[EmojiTarget]:
+    targets: list[EmojiTarget] = []
+    for category, prefix in (("weapons", "weapon"), ("passives", "passive")):
+        directory = EMOJI_ROOT / category
+        if not directory.exists():
+            continue
+        for path in sorted(directory.glob("*.png")):
+            key = path.stem
+            name = f"{prefix}_{key}"
+            targets.append(EmojiTarget(category, key, name, path))
+    return targets
+
+
+def _existing_by_name(guild_id: str, token: str) -> dict[str, dict[str, Any]]:
+    payload = _request("GET", f"{DISCORD_API}/guilds/{guild_id}/emojis", token)
+    if not isinstance(payload, list):
+        raise RuntimeError("Discord returned an unexpected emoji list payload.")
+    return {str(item.get("name")): item for item in payload if item.get("name") and item.get("id")}
+
+
+def _custom_emoji_string(item: dict[str, Any]) -> str:
+    name = str(item["name"])
+    emoji_id = str(item["id"])
+    animated = bool(item.get("animated"))
+    prefix = "a" if animated else ""
+    return f"<{prefix}:{name}:{emoji_id}>"
+
+
+def _warn_capacity(existing_count: int, target_count: int, missing_count: int) -> None:
+    if target_count > 50 or existing_count + missing_count > 50:
+        print("WARNING: This sync may exceed the base 50 static emoji guild limit.")
+        print("Consider splitting icons into emoji servers/packs if Discord rejects uploads for capacity.")
+
+
+def sync(*, token: str, guild_id: str, delete_missing: bool, dry_run: bool) -> int:
+    targets = _scan_targets()
+    if not targets:
+        print("No processed emoji PNGs found under assets/emojis/weapons or assets/emojis/passives.")
+        print("Run python scripts/process_icons.py after adding 512x512 master icons.")
+        return 0
+
+    invalid = [target.name for target in targets if not DISCORD_NAME_RE.match(target.name)]
+    if invalid:
+        print("Invalid Discord emoji names:")
+        for name in invalid:
+            print(f"  - {name}")
+        return 1
+
+    existing = _existing_by_name(guild_id, token)
+    target_names = {target.name for target in targets}
+    missing = [target for target in targets if target.name not in existing]
+    _warn_capacity(len(existing), len(targets), len(missing))
+
+    emoji_map = _load_emoji_map()
+    for target in targets:
+        item = existing.get(target.name)
+        if item:
+            emoji_map[target.name] = _custom_emoji_string(item)
+
+    uploaded = 0
+    skipped = len(targets) - len(missing)
+    failed: list[str] = []
+
+    for target in missing:
+        try:
+            image = _emoji_data_url(target.path)
+            if dry_run:
+                print(f"DRY RUN upload: {target.name}")
                 continue
-            
-            for png_path in sorted(kind_dir.glob("*.png")):
-                key = png_path.stem
-                emoji_name = emoji_asset_name(kind, key)
-                
-                # Check if already exists
-                if emoji_name in existing_by_name:
-                    skipped += 1
+            item = _request(
+                "POST",
+                f"{DISCORD_API}/guilds/{guild_id}/emojis",
+                token,
+                {"name": target.name, "image": image},
+            )
+            if isinstance(item, dict) and item.get("id"):
+                emoji_map[target.name] = _custom_emoji_string(item)
+                uploaded += 1
+                print(f"Uploaded: {target.name} ({item['id']})")
+            else:
+                failed.append(f"{target.name}: unexpected upload response")
+        except Exception as exc:
+            failed.append(f"{target.name}: {exc}")
+            print(f"FAILED: {target.name} - {exc}")
+
+    deleted = 0
+    if delete_missing:
+        extra = [item for name, item in existing.items() if name.startswith(("weapon_", "passive_")) and name not in target_names]
+        for item in extra:
+            name = str(item.get("name"))
+            emoji_id = str(item.get("id"))
+            try:
+                if dry_run:
+                    print(f"DRY RUN delete: {name}")
                     continue
-                
-                # Upload emoji
-                try:
-                    image_data = emoji_image_data_url(png_path)
-                    
-                    if guild_id:
-                        # Guild emoji upload
-                        payload = {"name": emoji_name, "image": image_data}
-                        async with session.post(
-                            emoji_url,
-                            headers={"Authorization": f"Bot {token}"},
-                            json=payload
-                        ) as resp:
-                            if resp.status not in (200, 201):
-                                error_text = await resp.text()
-                                print(f"  FAILED: {emoji_name} - {resp.status}: {error_text[:100]}")
-                                failed += 1
-                                failed_list.append(emoji_name)
-                            else:
-                                print(f"  Uploaded: {emoji_name}")
-                                uploaded += 1
-                    else:
-                        # Application emoji upload
-                        payload = {"name": emoji_name, "image": image_data}
-                        async with session.post(
-                            emoji_url,
-                            headers={"Authorization": f"Bot {token}"},
-                            json=payload
-                        ) as resp:
-                            if resp.status not in (200, 201):
-                                error_text = await resp.text()
-                                print(f"  FAILED: {emoji_name} - {resp.status}: {error_text[:100]}")
-                                failed += 1
-                                failed_list.append(emoji_name)
-                            else:
-                                print(f"  Uploaded: {emoji_name}")
-                                uploaded += 1
-                
-                except Exception as e:
-                    print(f"  ERROR: {emoji_name} - {e}")
-                    failed += 1
-                    failed_list.append(emoji_name)
-        
-        # Summary
-        print(f"\n{'='*50}")
-        print(f"Sync Complete:")
-        print(f"  Uploaded: {uploaded}")
-        print(f"  Skipped (already exists): {skipped}")
-        print(f"  Failed: {failed}")
-        if failed_list:
-            print(f"\nFailed emojis:")
-            for name in failed_list[:20]:
-                print(f"  - {name}")
-            if len(failed_list) > 20:
-                print(f"  ... and {len(failed_list) - 20} more")
+                _request("DELETE", f"{DISCORD_API}/guilds/{guild_id}/emojis/{emoji_id}", token)
+                emoji_map.pop(name, None)
+                deleted += 1
+                print(f"Deleted: {name}")
+            except Exception as exc:
+                failed.append(f"{name}: {exc}")
+                print(f"FAILED delete: {name} - {exc}")
+
+    if not dry_run:
+        _save_emoji_map(emoji_map)
+        print(f"Wrote {EMOJI_MAP_PATH.relative_to(ROOT_DIR)}")
+
+    print("Sync complete:")
+    print(f"  Uploaded: {uploaded}")
+    print(f"  Skipped existing: {skipped}")
+    print(f"  Deleted: {deleted}")
+    print(f"  Failed: {len(failed)}")
+    if failed:
+        for line in failed[:20]:
+            print(f"  - {line}")
+        return 1
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--delete-missing", action="store_true", help="Delete weapon_/passive_ guild emojis missing from local processed files.")
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args()
+
+    _load_dotenv()
+    token = os.environ.get("DISCORD_TOKEN", "").strip()
+    guild_id = os.environ.get("EMOJI_GUILD_ID", "").strip()
+    if not token or not guild_id:
+        _setup_message()
+        return 0
+    return sync(token=token, guild_id=guild_id, delete_missing=args.delete_missing, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
-    print("Abyssia Emoji Sync")
-    print(f"Asset directory: {ASSET_DIR}")
-    print(f"Token set: {'Yes' if os.environ.get('DISCORD_TOKEN') else 'No'}")
-    print(f"Guild ID: {os.environ.get('EMOJI_GUILD_ID', 'Not set (using application emojis)')}")
-    print()
-    
-    asyncio.run(sync_emojis())
+    raise SystemExit(main())

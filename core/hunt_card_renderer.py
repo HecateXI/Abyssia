@@ -10,6 +10,7 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
+from core import card_ui as cui
 from core.content_config import ASSET_DIR, get_asset_file_path, get_creature_asset_path
 from core.rpg_data import normalize_key
 
@@ -221,12 +222,8 @@ class HuntCardRenderer:
     def render_hunt_card(self, data: dict[str, Any]) -> BytesIO:
         monster = data.get("monster")
         if not monster:
-            return self._render_failed_hunt(data)
-            
-        rarity = str(monster.get("rarity", "Common"))
-        if rarity in _ULTRA_RARITIES:
-            return self._render_ultra_rare(data)
-        return self._render_standard(data)
+            return self._render_premium_failed_hunt(data)
+        return self._render_premium_single_hunt(data)
 
     def _render_failed_hunt(self, data: dict[str, Any]) -> BytesIO:
         cfg = self.layout["card"]
@@ -260,11 +257,296 @@ class HuntCardRenderer:
         if count <= 0:
             # Fallback: render single hunt if no monsters list
             return self.render_hunt_card(data)
-        if count <= 5:
-            return self._render_loot_grid(data)
-        if count <= 10:
-            return self._render_compact_grid(data)
-        return self._render_mass_hunt(data)
+        if count <= 9:
+            return self.render_hunt_grid_card(data)
+        return self.render_dense_hunt_card(data)
+
+    def render_hunt_grid_card(self, data: dict[str, Any]) -> BytesIO:
+        return self._render_premium_hunt_grid(data)
+
+    def render_dense_hunt_card(self, data: dict[str, Any]) -> BytesIO:
+        return self._render_premium_hunt_list(data)
+
+    def _hunt_asset(self, kind: str, key: str, size: int) -> Image.Image:
+        return cui.load_asset_icon(kind, key, (size, size), pixel=kind in {"creatures", "weapons", "passives"})
+
+    def _render_premium_failed_hunt(self, data: dict[str, Any]) -> BytesIO:
+        W, H = 1200, 720
+        img = cui.new_card(W, H, cui.PURPLE)
+        draw = ImageDraw.Draw(img)
+        zone_name = str(data.get("zone_name", "Unknown Zone"))
+        top = cui.draw_header(img, "Hunt Result", zone_name, right_label="ABYSSIA", accent=cui.PURPLE)
+        panel = (110, top + 80, W - 110, H - 130)
+        cui.draw_panel(img, panel, fill=cui.PANEL, border=cui.PURPLE, radius=22, glow=True)
+        cui.draw_text_fit(
+            draw,
+            "Nothing was found in the shadows.",
+            (panel[0] + 40, panel[1] + 110, panel[2] - 40, panel[1] + 170),
+            cui.get_font(42, bold=True),
+            cui.TEXT_BRIGHT,
+            24,
+            "center",
+            True,
+        )
+        hunter = str(data.get("hunter_name", "Hunter"))
+        rank = str(data.get("hunter_rank", "Hunter"))
+        cui.draw_tag(
+            img,
+            (panel[0] + 260, panel[1] + 210, panel[2] - 260, panel[1] + 250),
+            f"{hunter} | {rank}",
+            cui.GOLD,
+        )
+        cui.draw_footer(img, "Try another hunt or move deeper into Abyssia.", cui.PURPLE)
+        return self._save(img)
+
+    def _render_premium_single_hunt(self, data: dict[str, Any]) -> BytesIO:
+        monster = data.get("monster", {})
+        rarity = str(monster.get("rarity", "Common"))
+        rc = cui.rarity_color(rarity)
+        W, H = 1200, 720
+        img = cui.new_card(W, H, rc)
+        draw = ImageDraw.Draw(img)
+        zone_name = str(data.get("zone_name", "Unknown Zone"))
+        top = cui.draw_header(img, "Hunt Result", zone_name, right_label=rarity.upper(), accent=rc)
+        left = (58, top + 10, 508, H - 86)
+        right = (538, top + 10, W - 58, H - 86)
+        cui.draw_floating_frame(img, left, rc, rc)
+        name = str(monster.get("name", "Unknown Spirit"))
+        art = self._hunt_asset("creatures", normalize_key(name), 330)
+        cui.paste_icon_3d(img, art, ((left[0] + left[2]) // 2, left[1] + 220), 340, rc)
+        cui.draw_text_fit(
+            draw,
+            name,
+            (left[0] + 28, left[3] - 142, left[2] - 28, left[3] - 96),
+            cui.get_font(38, bold=True),
+            cui.TEXT_BRIGHT,
+            22,
+            "center",
+            True,
+        )
+        status = str(data.get("collection_status", monster.get("collection_status", "DUPLICATE"))).replace(" DISCOVERY", "")
+        cui.draw_rarity_badge(img, (left[0] + 84, left[3] - 88, left[2] - 84, left[3] - 50), rarity)
+        cui.draw_tag(
+            img,
+            (left[0] + 106, left[3] - 42, left[2] - 106, left[3] - 10),
+            status,
+            cui.GREEN if "NEW" in status else cui.TEXT_MUTED,
+        )
+        cui.draw_panel(img, right, fill=cui.PANEL, border=rc, radius=20)
+        draw.text((right[0] + 32, right[1] + 34), "Rewards", font=cui.get_font(26, bold=True), fill=cui.TEXT_MUTED)
+        rewards = list(data.get("rewards", []))
+        if not rewards:
+            rewards = [
+                {
+                    "label": "Souls",
+                    "amount": monster.get("value", 0),
+                    "kind": "currency",
+                    "icon_key": "souls",
+                    "color": cui.GOLD,
+                }
+            ]
+        y = right[1] + 82
+        for reward in rewards[:6]:
+            label = str(reward.get("label", "Reward"))
+            amount = reward.get("amount", 0)
+            color = tuple(reward.get("color", cui.GOLD))
+            kind = str(reward.get("kind", "currency"))
+            key = str(reward.get("icon_key", "souls"))
+            value = f"+{int(amount):,}" if isinstance(amount, int) and amount else str(label)
+            display_label = label if amount else "Effect"
+            cui.draw_reward_pill(
+                img,
+                (right[0] + 32, y, right[2] - 32, y + 68),
+                display_label,
+                value,
+                color,
+                self._hunt_asset(kind, key, 42),
+            )
+            y += 82
+        drop = data.get("special_drop")
+        if drop:
+            drop_name = str(drop.get("name", "Special Drop"))
+            drop_rarity = str(drop.get("rarity", rarity))
+            drop_color = cui.rarity_color(drop_rarity)
+            cui.draw_tag(
+                img,
+                (right[0] + 32, right[3] - 58, right[2] - 32, right[3] - 20),
+                f"Special Drop: {drop_name}",
+                drop_color,
+            )
+        cui.draw_footer(img, f"{data.get('hunter_name', 'Hunter')} | {data.get('hunter_rank', 'Hunter')}", rc)
+        return self._save(img)
+
+    def _draw_premium_hunt_tile(self, img: Image.Image, mon: dict[str, Any], box: tuple[int, int, int, int]) -> None:
+        draw = ImageDraw.Draw(img)
+        draw.fontmode = "1"
+        rarity = str(mon.get("rarity", "Common"))
+        rc = cui.rarity_color(rarity)
+        name = str(mon.get("name", "Unknown"))
+        x1, y1, x2, y2 = box
+        w, h = x2 - x1, y2 - y1
+
+        shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        sd = ImageDraw.Draw(shadow)
+        cui.draw_pixel_box(sd, (x1 + 4, y1 + 5, x2 + 4, y2 + 5), (0, 0, 0, 78), None, cut=12)
+        img.alpha_composite(shadow)
+
+        fill = cui.rgba(cui.lerp_color((9, 8, 16), rc, 0.055), 226)
+        cui.draw_generated_panel_fill(img, box, fill, cui.rgba(rc, 170), cut=12, texture_alpha=48)
+        if not cui.paste_ai_frame(img, box, cui.PIXEL_FRAME_CARD, rc, strength=0.12, opacity=245):
+            cui.draw_pixel_box(draw, box, (0, 0, 0, 0), cui.rgba(rc, 158), cut=12, width=2)
+        draw = ImageDraw.Draw(img)
+        draw.fontmode = "1"
+
+        icon_box = (x1 + 18, y1 + 24, x1 + 118, y1 + 124)
+        cui.draw_pixel_box(draw, icon_box, (4, 4, 10, 174), cui.rgba(rc, 118), cut=10, width=1)
+        icon = self._hunt_asset("creatures", normalize_key(name), 96)
+        img.alpha_composite(icon, (icon_box[0] + 2, icon_box[1] + 2))
+
+        name_box = (x1 + 136, y1 + 24, x2 - 20, y1 + 56)
+        cui.draw_text_fit(
+            draw,
+            name,
+            name_box,
+            cui.get_font(24, bold=True),
+            cui.TEXT_BRIGHT,
+            16,
+            "left",
+            True,
+        )
+
+        def chip(chip_box: tuple[int, int, int, int], label: str, color: tuple[int, int, int]) -> None:
+            cui.draw_pixel_box(draw, chip_box, cui.rgba(color, 42), cui.rgba(color, 145), cut=6, width=1)
+            cui.draw_text_fit(
+                draw,
+                label.upper(),
+                (chip_box[0] + 8, chip_box[1], chip_box[2] - 8, chip_box[3]),
+                cui.get_font(14, bold=True),
+                cui.lerp_color(color, cui.TEXT_BRIGHT, 0.45),
+                10,
+                "center",
+                True,
+            )
+
+        chip((x1 + 136, y1 + 66, x1 + 238, y1 + 92), rarity, rc)
+        status = str(mon.get("collection_status", "DUPLICATE")).replace(" DISCOVERY", "")
+        if status.upper() == "DUPLICATE":
+            status = "OWNED"
+        chip((x1 + 248, y1 + 66, x2 - 20, y1 + 92), status, cui.GREEN if "NEW" in status else cui.TEXT_MUTED)
+        value = int(mon.get("value", 0) or 0)
+        souls = f"{value:,} Souls"
+        draw.text((x1 + 137, y1 + h - 42), souls, font=cui.get_font(23, bold=True), fill=(0, 0, 0, 180))
+        draw.text((x1 + 136, y1 + h - 44), souls, font=cui.get_font(23, bold=True), fill=cui.GOLD)
+
+    def _render_premium_hunt_grid(self, data: dict[str, Any]) -> BytesIO:
+        monsters = list(data.get("monsters", []))
+        total_found = len(monsters)
+        displayed = min(total_found, 9)
+        W, H = 1200, 720
+        has_rare = any(_RARITY_ORDER.get(str(m.get("rarity", "Common")), 0) >= 4 for m in monsters)
+        accent = cui.GOLD if has_rare else cui.CYAN
+        img = cui.new_card(W, H, accent)
+        draw = ImageDraw.Draw(img)
+        draw.fontmode = "1"
+        if cui.PIXEL_CARD_BG.exists():
+            try:
+                bg = cui.cover_resize(Image.open(cui.PIXEL_CARD_BG), (W, H)).convert("RGBA")
+                img.alpha_composite(bg)
+                draw.rectangle((0, 0, W, H), fill=(0, 0, 0, 34))
+            except OSError:
+                pass
+        draw.rectangle((0, H - 34, W, H), fill=(7, 7, 10, 214))
+        zone_name = str(data.get("zone_name", "Unknown Zone"))
+        subtitle = f"{total_found} monster{'s' if total_found != 1 else ''} found"
+        if displayed < total_found:
+            subtitle += f" | Showing {displayed} of {total_found}"
+
+        title_font = cui.get_font(40, bold=True)
+        sub_font = cui.get_font(19)
+        draw.text((43, 29), zone_name.upper(), font=title_font, fill=(0, 0, 0, 190))
+        draw.text((40, 26), zone_name.upper(), font=title_font, fill=cui.TEXT_BRIGHT)
+        draw.text((42, 74), subtitle, font=sub_font, fill=cui.TEXT_MUTED)
+        hunt_w = 78
+        cui.draw_pixel_box(draw, (W - hunt_w - 42, 33, W - 42, 63), (0, 0, 0, 112), cui.rgba(accent, 135), cut=7, width=1)
+        cui.draw_text_fit(draw, "HUNT", (W - hunt_w - 34, 33, W - 50, 63), cui.get_font(16, bold=True), accent, 11, "center", True)
+        draw.rectangle((40, 100, W - 40, 102), fill=cui.rgba(accent, 135))
+
+        cols, gap = 3, 18
+        tile_w = (W - 88 - gap * 2) // 3
+        tile_h = 156
+        start_x, start_y = 44, 126
+        for idx, mon in enumerate(monsters[:displayed]):
+            col, row = idx % cols, idx // cols
+            x = start_x + col * (tile_w + gap)
+            y = start_y + row * (tile_h + gap)
+            self._draw_premium_hunt_tile(img, mon, (x, y, x + tile_w, y + tile_h))
+        if displayed < total_found:
+            remaining = total_found - displayed
+            footer = f"{remaining} more monsters"
+        else:
+            footer = f"{data.get('hunter_name', 'Hunter')} | {data.get('hunter_rank', 'Hunter')}"
+        footer_font = cui.get_font(18)
+        fw = cui.text_width(draw, footer, footer_font)
+        draw.text(((W - fw) // 2, H - 58), footer, font=footer_font, fill=cui.TEXT_MUTED)
+        return self._save(img)
+
+    def _render_premium_hunt_list(self, data: dict[str, Any]) -> BytesIO:
+        monsters = list(data.get("monsters", []))
+        total_found = len(monsters)
+        max_rows = 9
+        displayed = min(total_found, max_rows)
+        W, H = 1200, 900
+        accent = cui.CYAN
+        img = cui.new_card(W, H, accent)
+        draw = ImageDraw.Draw(img)
+        zone_name = str(data.get("zone_name", "Unknown Zone"))
+        subtitle = f"{total_found} monsters found"
+        if displayed < total_found:
+            subtitle += f" | Showing {displayed} of {total_found}"
+        top = cui.draw_header(img, zone_name, subtitle, right_label="LOOT LIST", accent=accent)
+        panel = (48, top + 6, W - 48, H - 82)
+        cui.draw_panel(img, panel, fill=cui.PANEL, border=accent, radius=20)
+        sorted_monsters = self._sort_by_rarity(monsters)
+        row_h = 62
+        y = panel[1] + 24
+        for idx, mon in enumerate(sorted_monsters[:displayed]):
+            rarity = str(mon.get("rarity", "Common"))
+            rc = cui.rarity_color(rarity)
+            row = (panel[0] + 24, y, panel[2] - 24, y + row_h)
+            fill = cui.rgba(cui.lerp_color((13, 10, 22), rc, 0.045 if idx % 2 else 0.075), 222)
+            cui.draw_panel(img, row, fill=fill, border=cui.lerp_color(rc, cui.BORDER, 0.38), radius=14)
+            draw.rounded_rectangle((row[0], row[1] + 8, row[0] + 7, row[3] - 8), radius=3, fill=rc)
+            name = str(mon.get("name", "Unknown"))
+            icon = self._hunt_asset("creatures", normalize_key(name), 50)
+            img.alpha_composite(icon, (row[0] + 20, row[1] + 6))
+            cui.draw_text_fit(
+                draw,
+                name,
+                (row[0] + 86, row[1], row[0] + 430, row[3]),
+                cui.get_font(24, bold=True),
+                cui.TEXT_BRIGHT,
+                18,
+                "left",
+                True,
+            )
+            cui.draw_rarity_badge(img, (row[0] + 450, row[1] + 14, row[0] + 592, row[1] + 48), rarity)
+            status = str(mon.get("collection_status", "DUPLICATE")).replace(" DISCOVERY", "")
+            cui.draw_tag(
+                img,
+                (row[0] + 612, row[1] + 14, row[0] + 760, row[1] + 48),
+                status,
+                cui.GREEN if "NEW" in status else cui.TEXT_MUTED,
+            )
+            souls = f"{int(mon.get('value', 0) or 0):,} Souls"
+            souls_font = cui.get_font(24, bold=True)
+            draw.text((row[2] - cui.text_width(draw, souls, souls_font) - 22, row[1] + 17), souls, font=souls_font, fill=cui.GOLD)
+            y += row_h + 8
+        if displayed < total_found:
+            remaining = total_found - displayed
+            cui.draw_tag(img, (W // 2 - 170, H - 72, W // 2 + 170, H - 34), f"... and {remaining} more monsters", cui.TEXT_MUTED)
+        else:
+            cui.draw_footer(img, f"{data.get('hunter_name', 'Hunter')} | {data.get('hunter_rank', 'Hunter')}", accent)
+        return self._save(img)
 
     # ── Background ─────────────────────────────────────────────
 

@@ -5,8 +5,9 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
+from core import card_ui as cui
 from core.content_config import ASSET_DIR, get_asset_file_path, get_creature_asset_path
 from core.rpg_data import normalize_key
 
@@ -33,6 +34,7 @@ _GOLD_BRIGHT = (255, 230, 130)
 _RED = (235, 80, 90)
 _GREEN = (90, 225, 130)
 _BLUE = (80, 175, 245)
+_CYAN = (34, 211, 238)
 _PURPLE = (180, 110, 255)
 _ORANGE = (255, 165, 55)
 _WHITE = (255, 255, 255)
@@ -78,8 +80,110 @@ _RARITY_FALLBACK_ASSET: dict[str, str] = {
 }
 
 _FONT_CACHE: dict[str, ImageFont.ImageFont] = {}
+_TEXTURE_CACHE: dict[Path, Image.Image | None] = {}
 
 W, H = 1600, 900
+_BATTLE_BG = ASSET_DIR / "ui" / "battle_bg_abyssia_pixel.png"
+_BATTLE_PANEL_BG = ASSET_DIR / "ui" / "battle_panel_bg_abyssia_pixel.png"
+
+
+def _load_texture(path: Path) -> Image.Image | None:
+    if path not in _TEXTURE_CACHE:
+        try:
+            _TEXTURE_CACHE[path] = Image.open(path).convert("RGB") if path.exists() else None
+        except OSError:
+            _TEXTURE_CACHE[path] = None
+    cached = _TEXTURE_CACHE.get(path)
+    return cached.copy() if cached is not None else None
+
+
+def _battle_background(w: int, h: int) -> Image.Image:
+    texture = _load_texture(_BATTLE_BG)
+    if texture is not None:
+        bg = cui.cover_resize(texture, (w, h)).convert("RGBA")
+        overlay = Image.new("RGBA", (w, h), (0, 0, 0, 8))
+        bg.alpha_composite(overlay)
+        return bg
+    return Image.new("RGBA", (w, h), (7, 6, 13, 255))
+
+
+def _draw_cut_outline(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    color: tuple[int, int, int, int],
+    *,
+    cut: int = 14,
+    width: int = 2,
+) -> None:
+    for offset in range(max(1, width)):
+        inner = (box[0] + offset, box[1] + offset, box[2] - offset, box[3] - offset)
+        pts = cui.cut_box_points(inner, max(0, cut - offset))
+        draw.line(pts + [pts[0]], fill=color, width=1)
+
+
+def _fill_cut_box(
+    img: Image.Image,
+    box: tuple[int, int, int, int],
+    fill: tuple[int, int, int, int],
+    *,
+    cut: int = 10,
+) -> None:
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    layer_draw = ImageDraw.Draw(layer)
+    layer_draw.polygon(cui.cut_box_points(box, cut), fill=fill)
+    img.alpha_composite(layer)
+
+
+def _draw_clean_portrait_frame(
+    img: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    border: tuple[int, int, int],
+    accent: tuple[int, int, int],
+    *,
+    cut: int = 10,
+) -> None:
+    x1, y1, x2, y2 = box
+    _fill_cut_box(img, (x1 + 3, y1 + 4, x2 + 3, y2 + 4), (0, 0, 0, 120), cut=cut)
+    _fill_cut_box(img, box, (4, 5, 11, 210), cut=cut)
+    _draw_cut_outline(draw, box, (*border, 225), cut=cut, width=1)
+    inner = (x1 + 5, y1 + 5, x2 - 5, y2 - 5)
+    _draw_cut_outline(draw, inner, (*accent, 130), cut=max(3, cut - 5), width=1)
+
+
+def _draw_battle_panel(
+    img: Image.Image,
+    box: tuple[int, int, int, int],
+    border: tuple[int, int, int],
+    *,
+    fill: tuple[int, int, int, int] = (6, 6, 12, 202),
+    cut: int = 14,
+    texture_alpha: int = 255,
+    shadow: bool = True,
+) -> None:
+    x1, y1, x2, y2 = box
+    width, height = x2 - x1, y2 - y1
+    if width <= 0 or height <= 0:
+        return
+    draw = ImageDraw.Draw(img)
+    if shadow:
+        cui.draw_pixel_box(draw, (x1 + 5, y1 + 6, x2 + 5, y2 + 6), (0, 0, 0, 82), None, cut=cut)
+
+    mask = cui.pixel_box_mask((width, height), cut=cut)
+    texture = _load_texture(_BATTLE_PANEL_BG)
+    if texture is not None and texture_alpha > 0:
+        panel = cui.cover_resize(texture, (width, height)).convert("RGBA")
+        panel = ImageEnhance.Brightness(panel).enhance(1.08)
+        panel = ImageEnhance.Contrast(panel).enhance(0.92)
+        panel.putalpha(mask.point(lambda p: int(p * texture_alpha / 255)))
+        tint = Image.new("RGBA", (width, height), fill)
+        tint.putalpha(mask.point(lambda p: int(p * fill[3] / 255)))
+        panel.alpha_composite(tint)
+    else:
+        panel = Image.new("RGBA", (width, height), fill)
+        panel.putalpha(mask.point(lambda p: int(p * fill[3] / 255)))
+    img.alpha_composite(panel, (x1, y1))
+    _draw_cut_outline(draw, box, (*border, 185), cut=cut, width=1)
 
 
 def _font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
@@ -136,6 +240,70 @@ def _fit_name(draw: ImageDraw.ImageDraw, text: str, max_w: int, font: ImageFont.
     return "..."
 
 
+def _compact_num(value: int | float | str) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    sign = "-" if number < 0 else ""
+    number = abs(number)
+    if number >= 1_000_000_000:
+        text = f"{number / 1_000_000_000:.1f}B"
+    elif number >= 1_000_000:
+        text = f"{number / 1_000_000:.1f}M"
+    elif number >= 10_000:
+        text = f"{number / 1_000:.1f}K"
+    else:
+        return f"{sign}{int(number):,}"
+    return sign + text.replace(".0", "")
+
+
+def _fit_font(draw: ImageDraw.ImageDraw, text: str, max_w: int, size: int, *, bold: bool = True, min_size: int = 9) -> ImageFont.ImageFont:
+    chosen = _font(size, bold=bold)
+    while getattr(chosen, "size", size) > min_size and _tw(draw, text, chosen) > max_w:
+        chosen = _font(chosen.size - 1, bold=bold)
+    return chosen
+
+
+def _draw_battle_bar(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    cur: int,
+    mx: int,
+    color: tuple[int, int, int],
+    label: str,
+) -> None:
+    x1, y1, x2, y2 = box
+    cut = max(3, min(7, (y2 - y1) // 3))
+    cui.draw_pixel_box(draw, box, (7, 6, 14, 236), (*_BORDER, 190), cut=cut, width=1)
+    ratio = max(0.0, min(1.0, cur / max(1, mx)))
+    fill_w = int(max(0, x2 - x1 - 6) * ratio)
+    if fill_w > 0:
+        fill = (x1 + 3, y1 + 3, min(x2 - 3, x1 + 3 + fill_w), y2 - 3)
+        cui.draw_pixel_box(draw, fill, (*color, 224), None, cut=max(1, cut - 2))
+        for sx in range(fill[0] + 5, fill[2] - 3, 14):
+            draw.rectangle((sx, fill[1] + 2, sx + 5, fill[1] + 4), fill=(*_WHITE, 60))
+    font = _fit_font(draw, label, x2 - x1 - 12, max(11, y2 - y1 - 7), bold=True, min_size=8)
+    tw = _tw(draw, label, font)
+    tx = x1 + (x2 - x1 - tw) // 2
+    ty = y1 + max(0, (y2 - y1 - font.size) // 2) - 1
+    _shadow_text(draw, tx, ty, label, font, _WHITE, offset=1)
+
+
+def _draw_battle_badge(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    label: str,
+    color: tuple[int, int, int],
+) -> None:
+    cui.draw_pixel_box(draw, box, (3, 4, 9, 208), (*color, 190), cut=5, width=1)
+    font = _fit_font(draw, label, box[2] - box[0] - 14, 12, bold=True, min_size=8)
+    tw = _tw(draw, label, font)
+    tx = box[0] + (box[2] - box[0] - tw) // 2
+    ty = box[1] + max(0, (box[3] - box[1] - font.size) // 2) - 1
+    _shadow_text(draw, tx, ty, label, font, _TEXT_BRIGHT, offset=1)
+
+
 def _creature_asset_candidates(cr: dict[str, Any], name: str, rarity: str) -> list[str]:
     candidates: list[str] = []
     for field in ("image_key", "asset_key", "image"):
@@ -187,25 +355,22 @@ class BattleCardRenderer:
         W, H = 1600, 900
         top_margin = 16
         bottom_margin = 16
-        side_margin = 36
+        side_margin = 32
         header_h = 38
         card_gap = 10
-        col_w = 620
+        team_gap = 24
+        col_w = (W - side_margin * 2 - team_gap) // 2
         col_left_x = side_margin
-        col_right_x = W - side_margin - col_w
-        center_x = col_left_x + col_w + 16
-        center_w = col_right_x - center_x - 16
+        col_right_x = col_left_x + col_w + team_gap
         usable_h = H - top_margin - bottom_margin - header_h
         card_h = (usable_h - card_gap * 2) // 3
         card_start_y = top_margin + header_h
 
-        img = self._get_zone_bg(str(data.get("zone_key", "bloodmoon_forest")), W, H)
-        darken = Image.new("RGB", (W, H), (0, 0, 0))
-        img = Image.blend(img, darken, 0.66)
+        img = _battle_background(W, H)
         vignette = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         vd = ImageDraw.Draw(vignette)
-        vd.rectangle((0, 0, W, H), outline=(0, 0, 0, 180), width=14)
-        img.paste(vignette, (0, 0), vignette)
+        vd.rectangle((0, 0, W, H), outline=(0, 0, 0, 150), width=14)
+        img.alpha_composite(vignette)
         draw = ImageDraw.Draw(img)
 
         if data.get("has_ultra_rare"):
@@ -226,8 +391,8 @@ class BattleCardRenderer:
 
         name_font = _font(18, bold=True)
         rank_font = _font(11)
-        left_name = _fit_name(draw, player_name, 400, name_font)
-        right_name = _fit_name(draw, enemy_name, 400, name_font)
+        left_name = _fit_name(draw, player_name, col_w - 120, name_font)
+        right_name = _fit_name(draw, enemy_name, col_w - 120, name_font)
         draw.text((col_left_x, top_margin), left_name, font=name_font, fill=_TEXT_BRIGHT if left_leading else _TEXT)
         draw.text((col_right_x + col_w - _tw(draw, right_name, name_font), top_margin), right_name, font=name_font, fill=_TEXT_BRIGHT if not left_leading else _TEXT)
         player_rank = str(data.get("player_rank", ""))[:34]
@@ -236,20 +401,10 @@ class BattleCardRenderer:
         draw.text((col_right_x + col_w - _tw(draw, enemy_rank, rank_font), top_margin + 22), enemy_rank, font=rank_font, fill=_TEXT_MUTED)
 
         bar_y = top_margin + 24
-        side_w = col_w - 20
+        side_w = col_w - 8
         def team_bar(x: int, cur: int, mx: int, color: tuple[int, int, int], align_right: bool = False) -> None:
-            draw.rounded_rectangle((x, bar_y, x + side_w, bar_y + 12), radius=6, fill=(30, 18, 22), outline=(80, 55, 58))
-            ratio = max(0.0, min(1.0, cur / max(1, mx)))
-            fw = int(side_w * ratio)
-            if fw > 0:
-                if align_right:
-                    draw.rounded_rectangle((x + side_w - fw, bar_y + 1, x + side_w - 1, bar_y + 11), radius=5, fill=color)
-                else:
-                    draw.rounded_rectangle((x + 1, bar_y + 1, x + fw, bar_y + 11), radius=5, fill=color)
-            txt = f"{cur:,}/{mx:,}"
-            font = _font(10, bold=True)
-            tx = x + side_w - _tw(draw, txt, font) - 6 if not align_right else x + 6
-            _shadow_text(draw, tx, bar_y - 1, txt, font, _WHITE, offset=1)
+            txt = f"{_compact_num(cur)}/{_compact_num(mx)}"
+            _draw_battle_bar(draw, (x, bar_y, x + side_w, bar_y + 14), cur, mx, color, txt)
 
         team_bar(col_left_x, left_cur_total, left_max_total, _GREEN if left_ratio > 0.35 else _RED)
         team_bar(col_right_x, right_cur_total, right_max_total, _GREEN if right_ratio > 0.35 else _RED, align_right=True)
@@ -273,68 +428,6 @@ class BattleCardRenderer:
             cur_hp = right_hp[i] if i < len(right_hp) else max_hp
             cur_mp = right_wp[i] if i < len(right_wp) else max_mp
             self._draw_compact_creature_card(draw, img, col_right_x, y, col_w, card_h, cr, cur_hp, max_hp, cur_mp, max_mp, is_left=False)
-
-        center_top = card_start_y
-        center_bottom = card_start_y + 3 * card_h + 2 * card_gap
-        draw.rounded_rectangle((center_x, center_top, center_x + center_w, center_bottom), radius=10,
-                               fill=(10, 9, 16, 180), outline=(64, 58, 76), width=1)
-
-        rating_change = data.get("rating_change")
-        rewards = data.get("rewards") or {}
-        mvp = data.get("mvp") or {}
-        win_streak = int(data.get("win_streak", 0))
-        cy = center_top + 18
-        draw.text((center_x + 18, cy), "BATTLE STATUS", font=_font(14, bold=True), fill=_TEXT_MUTED)
-        cy += 26
-        draw.text((center_x + 18, cy), _fit_name(draw, player_name, center_w - 36, _font(18, bold=True)),
-                  font=_font(18, bold=True), fill=_TEXT)
-        cy += 24
-        draw.text((center_x + 18, cy), "versus", font=_font(13, bold=True), fill=_TEXT_MUTED)
-        cy += 18
-        draw.text((center_x + 18, cy), _fit_name(draw, enemy_name, center_w - 36, _font(18, bold=True)),
-                  font=_font(18, bold=True), fill=_GOLD)
-        cy += 34
-        if rating_change is not None:
-            sign = "+" if int(rating_change) > 0 else ""
-            color = _GREEN if int(rating_change) >= 0 else _RED
-            draw.text((center_x + 18, cy), "RATING", font=_font(12), fill=_TEXT_MUTED)
-            cy += 18
-            draw.text((center_x + 18, cy), f"{sign}{int(rating_change)}", font=_font(24, bold=True), fill=color)
-            cy += 32
-        if win_streak >= 3:
-            from core.rpg_data import get_streak_tier
-            tier = get_streak_tier(win_streak)
-            if tier.label:
-                draw.line((center_x + 18, cy, center_x + center_w - 18, cy), fill=(54, 48, 66), width=1)
-                cy += 12
-                streak_text = f"{tier.emoji} {win_streak}x STREAK"
-                draw.text((center_x + 18, cy), "STREAK", font=_font(12), fill=_TEXT_MUTED)
-                cy += 16
-                draw.text((center_x + 18, cy), streak_text, font=_font(16, bold=True), fill=_ORANGE)
-                cy += 22
-                bonus_parts = []
-                if tier.xp_boost > 0:
-                    bonus_parts.append(f"+{tier.xp_boost:.0%} XP")
-                if tier.gold_boost > 0:
-                    bonus_parts.append(f"+{tier.gold_boost:.0%} Gold")
-                if tier.catch_boost > 0:
-                    bonus_parts.append(f"+{tier.catch_boost:.0%} Catch")
-                if bonus_parts:
-                    draw.text((center_x + 18, cy), " / ".join(bonus_parts), font=_font(13, bold=True), fill=_GREEN)
-                    cy += 18
-        draw.line((center_x + 18, cy, center_x + center_w - 18, cy), fill=(54, 48, 66), width=1)
-        cy += 14
-        if mvp:
-            draw.text((center_x + 18, cy), "MVP", font=_font(12), fill=_TEXT_MUTED)
-            cy += 18
-            draw.text((center_x + 18, cy), _fit_name(draw, str(mvp.get("name", "")), center_w - 36, _font(16, bold=True)),
-                      font=_font(16, bold=True), fill=_GOLD)
-        elif isinstance(rewards, dict) and rewards:
-            gold = int(rewards.get("gold", 0))
-            gems = int(rewards.get("gems", 0))
-            draw.text((center_x + 18, cy), "REWARDS", font=_font(12), fill=_TEXT_MUTED)
-            cy += 18
-            draw.text((center_x + 18, cy), f"{gold:,} souls  /  {gems} gems", font=_font(15, bold=True), fill=_GOLD)
 
         return self._save(img)
 
@@ -364,20 +457,14 @@ class BattleCardRenderer:
         stat_mana = computed.get("MANA", 0)
         stat_mag = computed.get("MAG", 0)
         stat_res = computed.get("RES", 0)
-        stat_spd = computed.get("SPD", 0)
-        stat_crit = computed.get("Crit", 5)
-
-        pw = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        pd = ImageDraw.Draw(pw)
-        fill_col = _lerp(_PANEL_DARK, rc, 0.035)
-        alpha = 148 if dead else 218
+        fill_col = _lerp(_PANEL_DARK, rc, 0.05)
+        alpha = 102 if dead else 62
         outline = _lerp(rc, _BORDER, 0.24 if not dead else 0.65)
-        pd.rounded_rectangle((0, 0, w - 1, h - 1), radius=12, fill=(*fill_col, alpha), outline=(*outline, 210), width=2)
-        pd.rectangle((1, 1, w - 2, 6), fill=(*rc, 190 if not dead else 70))
-        img.paste(pw, (x, y), pw)
+        _draw_battle_panel(img, (x, y, x + w, y + h), outline, fill=(*fill_col, alpha), cut=14, texture_alpha=255)
+        draw = ImageDraw.Draw(img)
 
-        ps = min(180, h - 24)
-        pad = 14
+        ps = min(218, max(156, h - 34))
+        pad = 18
         p_x = x + pad if is_left else x + w - ps - pad
         p_y = y + (h - ps) // 2
 
@@ -389,10 +476,9 @@ class BattleCardRenderer:
         if portrait is None:
             portrait = Image.new("RGBA", (ps, ps), (0, 0, 0, 0))
             pdd = ImageDraw.Draw(portrait)
-            pdd.rounded_rectangle((2, 2, ps - 2, ps - 2), radius=12, fill=(*_PANEL_DARK, 255), outline=_BORDER)
+            cui.draw_pixel_box(pdd, (2, 2, ps - 2, ps - 2), (*_PANEL_DARK, 255), (*_BORDER, 255), cut=12, width=2)
 
-        mask = Image.new("L", (ps, ps), 0)
-        ImageDraw.Draw(mask).rounded_rectangle((0, 0, ps - 1, ps - 1), radius=12, fill=255)
+        mask = cui.pixel_box_mask((ps, ps), cut=12)
         r, g, b, a = portrait.split()
         from PIL import ImageChops
         a = ImageChops.multiply(a, mask)
@@ -408,9 +494,11 @@ class BattleCardRenderer:
             glow = glow.filter(ImageFilter.GaussianBlur(6))
             img.paste(glow, (p_x - 14, p_y - 14), glow)
 
-        draw.rounded_rectangle((p_x - 4, p_y - 4, p_x + ps + 4, p_y + ps + 4),
-                               radius=12, fill=(8, 7, 12), outline=outline, width=2)
+        portrait_frame = (p_x - 8, p_y - 8, p_x + ps + 8, p_y + ps + 8)
+        _draw_clean_portrait_frame(img, draw, portrait_frame, outline, rc if not dead else _BORDER, cut=10)
         img.paste(portrait, (p_x, p_y), portrait)
+        _draw_cut_outline(draw, portrait_frame, (*outline, 230), cut=10, width=1)
+        _draw_cut_outline(draw, (p_x - 2, p_y - 2, p_x + ps + 2, p_y + ps + 2), (*rc, 150 if not dead else 75), cut=6, width=1)
 
         info_x = x + ps + pad * 2 if is_left else x + pad
         info_w = w - ps - pad * 3
@@ -427,19 +515,19 @@ class BattleCardRenderer:
 
         rarity_text = rarity.upper()
         rarity_font = _font(11, bold=True)
-        rw = _tw(draw, rarity_text, rarity_font) + 14
-        draw.rounded_rectangle((info_x + info_w - rw, y + 16, info_x + info_w, y + 38), radius=5,
-                               fill=(12, 10, 18), outline=rc if not dead else _BORDER)
-        draw.text((info_x + info_w - rw + 7, y + 21), rarity_text, font=rarity_font, fill=rc if not dead else _TEXT_MUTED)
+        rw = min(info_w - 18, max(78, _tw(draw, rarity_text, rarity_font) + 24))
+        _draw_battle_badge(
+            draw,
+            (info_x + info_w - rw, y + 15, info_x + info_w, y + 39),
+            rarity_text,
+            rc if not dead else _BORDER,
+        )
 
         bar_x = info_x
         bar_y = y + 46
         bar_w = info_w
         bar_h = 28
         ratio = max(0.0, min(1.0, cur_hp / max(1, max_hp)))
-
-        draw.rounded_rectangle((bar_x, bar_y, bar_x + bar_w, bar_y + bar_h), radius=7,
-                               fill=(27, 17, 20), outline=(68, 42, 46))
 
         if dead:
             hp_color = (60, 60, 60)
@@ -450,22 +538,13 @@ class BattleCardRenderer:
         else:
             hp_color = (235, 80, 90)
 
-        fw = int((bar_w - 2) * ratio)
-        if fw > 0:
-            draw.rounded_rectangle((bar_x + 1, bar_y + 1, bar_x + 1 + fw, bar_y + bar_h - 1), radius=6, fill=hp_color)
-
-        font_hp = _font(15, bold=True)
-        hp_text = f"{cur_hp:,}/{max_hp:,}"
-        hw = _tw(draw, hp_text, font_hp)
-        _shadow_text(draw, bar_x + bar_w - hw - 8, bar_y + 5, hp_text, font_hp, _WHITE, offset=1)
         pct_text = f"{int(ratio*100)}%"
-        _shadow_text(draw, bar_x + 8, bar_y + 5, pct_text, font_hp, _WHITE, offset=1)
+        hp_text = f"{_compact_num(cur_hp)}/{_compact_num(max_hp)}"
+        _draw_battle_bar(draw, (bar_x, bar_y, bar_x + bar_w, bar_y + bar_h), cur_hp, max_hp, hp_color, f"{pct_text}   {hp_text}")
 
         # Mana bar
         mp_bar_y = bar_y + bar_h + 6
         mp_ratio = max(0.0, min(1.0, cur_mp / max(1, max_mp)))
-        draw.rounded_rectangle((bar_x, mp_bar_y, bar_x + bar_w, mp_bar_y + bar_h), radius=7,
-                               fill=(18, 18, 30), outline=(42, 42, 68))
 
         if mp_ratio > 0.5:
             mp_color = (80, 140, 235)
@@ -474,20 +553,13 @@ class BattleCardRenderer:
         else:
             mp_color = (60, 80, 180)
 
-        mp_fw = int((bar_w - 2) * mp_ratio)
-        if mp_fw > 0:
-            draw.rounded_rectangle((bar_x + 1, mp_bar_y + 1, bar_x + 1 + mp_fw, mp_bar_y + bar_h - 1), radius=6, fill=mp_color)
-
-        font_mp = _font(14, bold=True)
-        mp_text = f"{cur_mp:,}/{max_mp:,}"
-        mp_w = _tw(draw, mp_text, font_mp)
-        _shadow_text(draw, bar_x + bar_w - mp_w - 8, mp_bar_y + 5, mp_text, font_mp, _WHITE, offset=1)
         mp_pct_text = f"{int(mp_ratio*100)}%"
-        _shadow_text(draw, bar_x + 8, mp_bar_y + 5, mp_pct_text, font_mp, _WHITE, offset=1)
+        mp_text = f"{_compact_num(cur_mp)}/{_compact_num(max_mp)}"
+        _draw_battle_bar(draw, (bar_x, mp_bar_y, bar_x + bar_w, mp_bar_y + bar_h), cur_mp, max_mp, mp_color, f"{mp_pct_text}   {mp_text}")
 
         stat_y = mp_bar_y + bar_h + 12
-        font_stat_val = _font(14, bold=True)
-        icon_size = 18
+        font_stat_val = _font(20, bold=True)
+        icon_size = 32
         stat_pairs = [
             ("hp", max_hp, _GREEN),
             ("mana", stat_mana, (80, 140, 235)),
@@ -495,97 +567,50 @@ class BattleCardRenderer:
             ("mag", stat_mag, (255, 165, 55)),
             ("def", stat_def, _BLUE),
             ("res", stat_res, (130, 180, 235)),
-            ("spd", stat_spd, (180, 130, 255)),
         ]
-        stat_col_w = info_w / 2
+        w_data = cr.get("_weapon") if isinstance(cr.get("_weapon"), dict) else None
+        w_sz = 96 if w_data else 0
+        weapon_gap = 18 if w_data else 0
+        stat_area_x = info_x
+        stat_area_w = info_w - (w_sz + weapon_gap if w_data else 0)
+        if w_data and not is_left:
+            stat_area_x = info_x + w_sz + weapon_gap
+        stat_col_w = stat_area_w / 2
         for idx, (key, value, color) in enumerate(stat_pairs):
             row = idx // 2
             col = idx % 2
-            sx = info_x + col * int(stat_col_w)
-            sy = stat_y + row * 22
-            val_text = f"{value:,}{'%' if key in ('def','res') else ''}"
-            icon = self._load_asset("stats", key, (icon_size, icon_size))
-            if is_left:
-                if icon:
-                    img.paste(icon, (sx, sy), icon)
-                    draw.text((sx + icon_size + 6, sy - 1), val_text,
-                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
-                else:
-                    lbl = key.upper()
-                    draw.text((sx, sy), lbl, font=_font(11, bold=True), fill=_TEXT_MUTED if dead else color)
-                    draw.text((sx + 30, sy), val_text,
-                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
+            sx = stat_area_x + col * int(stat_col_w)
+            sy = stat_y + row * 35
+            val_text = f"{_compact_num(value)}{'%' if key in ('def','res') else ''}"
+            chip_w = max(92, int(stat_col_w) - 8)
+            chip = (int(sx), sy - 2, int(sx) + chip_w, sy + 32)
+            cui.draw_pixel_box(draw, chip, (3, 4, 9, 150), (*color, 92 if not dead else 48), cut=5, width=1)
+            icon = self._load_asset("stats_battle", key, (icon_size, icon_size)) or self._load_asset("stats", key, (icon_size, icon_size))
+            text_color = _TEXT_MUTED if dead else color
+            if icon:
+                img.paste(icon, (int(sx) + 4, sy - 1), icon)
+                draw.text((int(sx) + icon_size + 12, sy + 4), val_text, font=font_stat_val, fill=text_color)
             else:
-                val_w = _tw(draw, val_text, font_stat_val)
-                if icon:
-                    icon_x = sx + int(stat_col_w) - icon_size
-                    draw.text((icon_x - 6 - val_w, sy - 1), val_text,
-                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
-                    img.paste(icon, (icon_x, sy), icon)
-                else:
-                    lbl = key.upper()
-                    draw.text((sx + int(stat_col_w) - 30 - val_w, sy), val_text,
-                             font=font_stat_val, fill=_TEXT_MUTED if dead else color)
-                    draw.text((sx + int(stat_col_w) - 30, sy), lbl,
-                             font=_font(11, bold=True), fill=_TEXT_MUTED if dead else color)
-        # Crit on its own line
-        crit_y = stat_y + 4 * 22
-        if dead:
-            crit_text = f"Crit {stat_crit}%"
-            if is_left:
-                draw.text((info_x, crit_y), crit_text, font=_font(11, bold=True), fill=_TEXT_MUTED)
-            else:
-                cw = _tw(draw, crit_text, _font(11, bold=True))
-                draw.text((info_x + int(stat_col_w) * 2 - cw, crit_y), crit_text, font=_font(11, bold=True), fill=_TEXT_MUTED)
-        else:
-            if is_left:
-                draw.text((info_x, crit_y), "Crit", font=_font(11, bold=True), fill=_TEXT_MUTED)
-                draw.text((info_x + 30, crit_y), f"{stat_crit}%", font=font_stat_val, fill=(236, 201, 75))
-            else:
-                pct_text = f"{stat_crit}%"
-                pct_w = _tw(draw, pct_text, font_stat_val)
-                label_w = _tw(draw, "Crit", _font(11, bold=True))
-                draw.text((info_x + int(stat_col_w) * 2 - label_w - 6 - pct_w, crit_y), pct_text, font=font_stat_val, fill=(236, 201, 75))
-                draw.text((info_x + int(stat_col_w) * 2 - label_w, crit_y), "Crit", font=_font(11, bold=True), fill=_TEXT_MUTED)
-
-        w_data = cr.get("_weapon") if isinstance(cr.get("_weapon"), dict) else None
+                draw.text((int(sx) + 8, sy + 4), key.upper(), font=_font(12, bold=True), fill=text_color)
+                draw.text((int(sx) + 44, sy + 4), val_text, font=font_stat_val, fill=text_color)
         if w_data:
             w_rarity = str(w_data.get("rarity", "Common"))
             w_rc = _col(w_rarity)
-            w_sz = 48
             if is_left:
                 wi_x = info_x + info_w - w_sz
             else:
                 wi_x = info_x
-            wi_y = stat_y + 48
+            wi_y = stat_y + 12
 
-            w_bg = Image.new("RGBA", (w_sz, w_sz), (0, 0, 0, 0))
-            w_d = ImageDraw.Draw(w_bg)
-            w_d.rounded_rectangle((0, 0, w_sz - 1, w_sz - 1), radius=6, fill=(*_PANEL, 200), outline=w_rc, width=2)
-            img.paste(w_bg, (wi_x, wi_y), w_bg)
+            cui.draw_pixel_box(draw, (wi_x, wi_y, wi_x + w_sz, wi_y + w_sz), (4, 5, 11, 180), (*w_rc, 190), cut=10, width=1)
 
             weapon_type = str(w_data.get("weapon_type", "sword") or "sword")
-            weapon_icon = self._load_asset("weapons", weapon_type, (w_sz - 10, w_sz - 10))
+            weapon_icon = self._load_asset("weapons", weapon_type, (w_sz - 14, w_sz - 14))
             if weapon_icon:
-                img.paste(weapon_icon, (wi_x + 5, wi_y + 5), weapon_icon)
+                img.paste(weapon_icon, (wi_x + 7, wi_y + 7), weapon_icon)
             else:
-                draw.line((wi_x + 14, wi_y + 36, wi_x + 32, wi_y + 12), fill=w_rc, width=4)
-                draw.line((wi_x + 12, wi_y + 34, wi_x + 26, wi_y + 42), fill=w_rc, width=3)
-
-            passive_raw = w_data.get("passive")
-            if passive_raw:
-                try:
-                    passive = json.loads(str(passive_raw))
-                    passive_key = str(passive.get("key", "")) if isinstance(passive, dict) else ""
-                except Exception:
-                    passive_key = ""
-                if passive_key:
-                    passive_icon = self._load_asset("passives", passive_key, (28, 28))
-                    if passive_icon:
-                        if is_left:
-                            img.paste(passive_icon, (wi_x - 32, wi_y + 10), passive_icon)
-                        else:
-                            img.paste(passive_icon, (wi_x + w_sz + 4, wi_y + 10), passive_icon)
+                draw.line((wi_x + 22, wi_y + 58, wi_x + 56, wi_y + 18), fill=w_rc, width=6)
+                draw.line((wi_x + 20, wi_y + 56, wi_x + 46, wi_y + 68), fill=w_rc, width=4)
 
     # ── Background ─────────────────────────────────────
 
@@ -629,18 +654,18 @@ class BattleCardRenderer:
     def _load_asset(self, kind: str, key: str, size: tuple[int, int]) -> Image.Image | None:
         if kind == "creatures":
             path = get_creature_asset_path(key)
+        elif kind == "stats_battle":
+            path = ASSET_DIR / "stats_battle" / f"{normalize_key(key)}.png"
         else:
             path = get_asset_file_path(kind, key)
         if path and path.exists():
             try:
                 a = Image.open(path).convert("RGBA")
-                if kind == "creatures":
-                    bbox = a.getbbox()
-                    if bbox:
-                        a = a.crop(bbox)
-                    a = a.resize(size, Image.Resampling.NEAREST)
-                else:
-                    a.thumbnail(size, Image.Resampling.LANCZOS)
+                bbox = a.getbbox()
+                if bbox:
+                    a = a.crop(bbox)
+                resample = Image.Resampling.NEAREST if kind in ("creatures", "weapons", "passives", "stats", "stats_battle") else Image.Resampling.LANCZOS
+                a.thumbnail(size, resample)
                 c = Image.new("RGBA", size, (0, 0, 0, 0))
                 c.alpha_composite(a, ((size[0] - a.width) // 2, (size[1] - a.height) // 2))
                 return c

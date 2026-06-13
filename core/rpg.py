@@ -27,8 +27,6 @@ from core.rpg_data import (
     WEAPON_BASE_ATTACK,
     WEAPON_BASE_DEFENSE,
     WEAPON_BASE_STATS,
-    WEAPON_NAME_PREFIX,
-    WEAPON_NAME_SUFFIX,
     WEAPON_PASSIVES,
     WEAPON_PASSIVE_CHANCE,
     WEAPON_QUALITIES,
@@ -361,12 +359,12 @@ def calculate_creature_stats(template: CreatureTemplate, level: int, *, variance
     level = max(1, min(100, int(level)))
     rarity_tilt = rarity.stat_multiplier
 
-    hp = max(1, round((120 + template.hp * (12 + level * 1.85)) * rarity_tilt * variance))
-    str_score = max(1, round((18 + template.attack * (3.2 + level * 0.62)) * rarity_tilt * variance))
-    pr_score = max(1, round((12 + template.defense * (2.6 + level * 0.50)) * rarity_tilt * variance))
-    wp_score = max(1, round((100 + template.wp_stat * (5 + level * 0.8)) * rarity_tilt * variance))
-    mag_score = max(1, round((18 + template.mag_stat * (3.2 + level * 0.62)) * rarity_tilt * variance))
-    mr_score = max(1, round((12 + template.mr_stat * (2.6 + level * 0.50)) * rarity_tilt * variance))
+    hp = max(1, round((120 + template.hpr * (12 + level * 1.85)) * rarity_tilt * variance))
+    str_score = max(1, round((18 + template.attr * (3.2 + level * 0.62)) * rarity_tilt * variance))
+    pr_score = max(1, round((12 + template.prr * (2.6 + level * 0.50)) * rarity_tilt * variance))
+    wp_score = max(1, round((100 + template.wpr * (5 + level * 0.8)) * rarity_tilt * variance))
+    mag_score = max(1, round((18 + template.magr * (3.2 + level * 0.62)) * rarity_tilt * variance))
+    mr_score = max(1, round((12 + template.mrr * (2.6 + level * 0.50)) * rarity_tilt * variance))
     spd = max(1, round((8 + template.speed * (1.5 + level * 0.22)) * rarity_tilt * variance))
     value = max(10, round((str_score * 1.5 + mag_score * 1.5 + pr_score * 1.2 + mr_score * 1.2 + hp * 0.55 + spd * 4.0 + wp_score * 0.8) * (1 + rarity_index * 0.06)))
     role = determine_role(template)
@@ -660,9 +658,7 @@ def _roll_weapon(
         wtype_key = random.choices(wtype_keys, weights=wtype_weights, k=1)[0]
     wtype = WEAPON_TYPES[wtype_key]
     if name is None:
-        prefix = random.choice(WEAPON_NAME_PREFIX)
-        suffix = random.choice(WEAPON_NAME_SUFFIX.get(wtype_key, ["Blade"]))
-        name = f"{prefix} {suffix}"
+        name = str(wtype.get("name", wtype_key.replace("_", " ").title()))
     wear = wear if wear in WEAPON_WEAR_STAGES else _roll_wear()
     stat_rolls: dict[str, int] = {
         "active": random.randint(*weapon_quality_range_for_rarity(rarity)),
@@ -804,14 +800,10 @@ def _roll_quality() -> dict[str, object]:
 
 
 def weapon_display_name(weapon_row) -> str:
-    quality_pct = int(row_get(weapon_row, "quality_pct", 50))
-    quality = weapon_quality_rarity(quality_pct)
     wtype = str(row_get(weapon_row, "weapon_type", "sword"))
     type_data = WEAPON_TYPES.get(wtype, {})
     type_name = str(type_data.get("name", wtype.replace("_", " ").title()))
-    if quality == "Common":
-        return type_name
-    return f"{quality} {type_name}"
+    return type_name
 
 
 async def insert_weapon(db: BotDatabase, weapon: dict[str, object]) -> int:

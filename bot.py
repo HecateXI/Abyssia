@@ -28,6 +28,7 @@ COGS = (
     "cogs.rpg_hunting",
     "cogs.rpg_summoning",
     "cogs.rpg_battle",
+    "cogs.rpg_incursion",
     "cogs.rpg_economy",
     "cogs.rpg_equipment",
     "cogs.rpg_shop",

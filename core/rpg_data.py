@@ -16,14 +16,14 @@ class Rarity:
 class CreatureTemplate:
     name: str
     rarity: str
-    attack: int
-    defense: int
-    hp: int
-    speed: int
+    attr: int
+    prr: int
+    hpr: int
+    speed: int  # unused (turn order is position-based), kept for compat
     ability: str
-    wp_stat: int = 1
-    mag_stat: int = 1
-    mr_stat: int = 1
+    wpr: int = 1
+    magr: int = 1
+    mrr: int = 1
 
 
 @dataclass(frozen=True)
@@ -118,137 +118,137 @@ RARITY_CATCH_RATES: dict[str, float] = {
 CREATURES: tuple[CreatureTemplate, ...] = (
     # --- COMMON ---
     CreatureTemplate('Skeleton', 'Common', 100, 1, 1, 1, 'Blood Pact'),
-    CreatureTemplate('Zombie', 'Common', 1, 100, 30, 1, 'Soul Drain', wp_stat=20, mr_stat=40),
+    CreatureTemplate('Zombie', 'Common', 1, 100, 30, 1, 'Soul Drain', wpr=20, mrr=40),
     CreatureTemplate('Giant Rat', 'Common', 40, 1, 1, 120, 'Shadow Cloak'),
-    CreatureTemplate('Slime', 'Common', 1, 1, 40, 1, 'Blood Pact', mr_stat=120),
-    CreatureTemplate('Grave Moth', 'Common', 1, 20, 1, 80, 'Shadow Cloak', mag_stat=50),
+    CreatureTemplate('Slime', 'Common', 1, 1, 40, 1, 'Blood Pact', mrr=120),
+    CreatureTemplate('Grave Moth', 'Common', 1, 20, 1, 80, 'Shadow Cloak', magr=50),
     CreatureTemplate('Ribcage Hound', 'Common', 40, 30, 30, 40, 'Blood Pact'),
-    CreatureTemplate('Ash Imp', 'Common', 100, 1, 1, 20, 'Infernal Rage', mag_stat=40),
-    CreatureTemplate('Crypt Skitter', 'Common', 20, 1, 1, 40, 'Shadow Cloak', mag_stat=100),
-    CreatureTemplate('Lantern Rat', 'Common', 1, 30, 1, 1, 'Soul Drain', wp_stat=120, mr_stat=20),
-    CreatureTemplate('Mourning Toad', 'Common', 1, 60, 40, 1, 'Blood Pact', wp_stat=50, mr_stat=20),
+    CreatureTemplate('Ash Imp', 'Common', 100, 1, 1, 20, 'Infernal Rage', magr=40),
+    CreatureTemplate('Crypt Skitter', 'Common', 20, 1, 1, 40, 'Shadow Cloak', magr=100),
+    CreatureTemplate('Lantern Rat', 'Common', 1, 30, 1, 1, 'Soul Drain', wpr=120, mrr=20),
+    CreatureTemplate('Mourning Toad', 'Common', 1, 60, 40, 1, 'Blood Pact', wpr=50, mrr=20),
     # --- UNCOMMON ---
     CreatureTemplate('Bone Stalker', 'Uncommon', 150, 1, 1, 50, 'Abyssal Howl'),
-    CreatureTemplate('Mire Wisp', 'Uncommon', 1, 1, 1, 20, 'Soul Drain', mag_stat=150),
+    CreatureTemplate('Mire Wisp', 'Uncommon', 1, 1, 1, 20, 'Soul Drain', magr=150),
     CreatureTemplate('Dusk Harrier', 'Uncommon', 50, 1, 1, 120, 'Shadow Cloak'),
-    CreatureTemplate('Briar Ghast', 'Uncommon', 1, 130, 40, 1, 'Shadow Cloak', mr_stat=20),
-    CreatureTemplate('Cinder Pup', 'Uncommon', 110, 1, 1, 40, 'Infernal Rage', mag_stat=30),
+    CreatureTemplate('Briar Ghast', 'Uncommon', 1, 130, 40, 1, 'Shadow Cloak', mrr=20),
+    CreatureTemplate('Cinder Pup', 'Uncommon', 110, 1, 1, 40, 'Infernal Rage', magr=30),
     CreatureTemplate('Hollow Lynx', 'Uncommon', 70, 1, 1, 110, 'Abyssal Howl'),
-    CreatureTemplate('Sootscale Newt', 'Uncommon', 1, 20, 20, 1, 'Blood Pact', wp_stat=130),
-    CreatureTemplate('Ravenous Reliquary', 'Uncommon', 1, 1, 1, 40, 'Soul Drain', mag_stat=50, mr_stat=120),
-    CreatureTemplate('Frozen Shade', 'Uncommon', 30, 30, 30, 30, 'Void Corruption', wp_stat=30, mag_stat=30, mr_stat=30),
-    CreatureTemplate('Bog Serpent', 'Uncommon', 1, 80, 30, 1, 'Blood Pact', wp_stat=50, mr_stat=20),
+    CreatureTemplate('Sootscale Newt', 'Uncommon', 1, 20, 20, 1, 'Blood Pact', wpr=130),
+    CreatureTemplate('Ravenous Reliquary', 'Uncommon', 1, 1, 1, 40, 'Soul Drain', magr=50, mrr=120),
+    CreatureTemplate('Frozen Shade', 'Uncommon', 30, 30, 30, 30, 'Void Corruption', wpr=30, magr=30, mrr=30),
+    CreatureTemplate('Bog Serpent', 'Uncommon', 1, 80, 30, 1, 'Blood Pact', wpr=50, mrr=20),
     # --- RARE ---
     CreatureTemplate('Rot Chapel Knight', 'Rare', 150, 30, 1, 1, 'Blood Pact'),
-    CreatureTemplate('Moonless Basilisk', 'Rare', 1, 1, 1, 1, 'Void Corruption', mag_stat=150, mr_stat=20),
-    CreatureTemplate('Thornbound Revenant', 'Rare', 1, 100, 40, 1, 'Soul Drain', wp_stat=30),
+    CreatureTemplate('Moonless Basilisk', 'Rare', 1, 1, 1, 1, 'Void Corruption', magr=150, mrr=20),
+    CreatureTemplate('Thornbound Revenant', 'Rare', 1, 100, 40, 1, 'Soul Drain', wpr=30),
     CreatureTemplate('Glassbone Jackal', 'Rare', 80, 1, 1, 90, 'Shadow Cloak'),
-    CreatureTemplate('Marrow Siren', 'Rare', 1, 1, 1, 40, 'Soul Drain', mag_stat=100, mr_stat=30),
-    CreatureTemplate('Coffinback Beetle', 'Rare', 1, 80, 40, 1, 'Blood Pact', mr_stat=50),
+    CreatureTemplate('Marrow Siren', 'Rare', 1, 1, 1, 40, 'Soul Drain', magr=100, mrr=30),
+    CreatureTemplate('Coffinback Beetle', 'Rare', 1, 80, 40, 1, 'Blood Pact', mrr=50),
     CreatureTemplate('Nocturne Eel', 'Rare', 110, 1, 1, 60, 'Void Corruption'),
     CreatureTemplate('Ember-Horned Stag', 'Rare', 70, 30, 30, 50, 'Infernal Rage'),
-    CreatureTemplate('Grave Warden', 'Rare', 1, 80, 30, 1, 'Blood Pact', wp_stat=60),
-    CreatureTemplate('Plague Doctor', 'Rare', 1, 1, 20, 1, 'Soul Drain', wp_stat=110, mr_stat=40),
+    CreatureTemplate('Grave Warden', 'Rare', 1, 80, 30, 1, 'Blood Pact', wpr=60),
+    CreatureTemplate('Plague Doctor', 'Rare', 1, 1, 20, 1, 'Soul Drain', wpr=110, mrr=40),
     # --- EPIC ---
     CreatureTemplate('Bloodmoon Drake', 'Epic', 150, 1, 1, 30, 'Infernal Rage'),
-    CreatureTemplate('Witchfire Seraph', 'Epic', 1, 1, 1, 1, 'Void Corruption', mag_stat=150, mr_stat=20),
-    CreatureTemplate('Carrion Oracle', 'Epic', 1, 40, 30, 1, 'Soul Drain', mag_stat=40, mr_stat=60),
+    CreatureTemplate('Witchfire Seraph', 'Epic', 1, 1, 1, 1, 'Void Corruption', magr=150, mrr=20),
+    CreatureTemplate('Carrion Oracle', 'Epic', 1, 40, 30, 1, 'Soul Drain', magr=40, mrr=60),
     CreatureTemplate('Gallows Gryphon', 'Epic', 70, 1, 1, 100, 'Abyssal Howl'),
-    CreatureTemplate('Velvet Hexcat', 'Epic', 40, 1, 1, 110, 'Shadow Cloak', mr_stat=20),
-    CreatureTemplate('Sable Manticore', 'Epic', 1, 1, 30, 20, 'Infernal Rage', wp_stat=110),
-    CreatureTemplate('Choirbone Swan', 'Epic', 30, 20, 30, 20, 'Soul Drain', wp_stat=30, mag_stat=30, mr_stat=20),
-    CreatureTemplate('Voidglass Angler', 'Epic', 1, 1, 1, 60, 'Void Corruption', mag_stat=100, mr_stat=20),
-    CreatureTemplate('Bone Hydra', 'Epic', 80, 1, 40, 20, 'Abyssal Howl', mag_stat=40),
-    CreatureTemplate('Spectre Knight', 'Epic', 20, 50, 30, 1, 'Shadow Cloak', wp_stat=60, mr_stat=30),
+    CreatureTemplate('Velvet Hexcat', 'Epic', 40, 1, 1, 110, 'Shadow Cloak', mrr=20),
+    CreatureTemplate('Sable Manticore', 'Epic', 1, 1, 30, 20, 'Infernal Rage', wpr=110),
+    CreatureTemplate('Choirbone Swan', 'Epic', 30, 20, 30, 20, 'Soul Drain', wpr=30, magr=30, mrr=20),
+    CreatureTemplate('Voidglass Angler', 'Epic', 1, 1, 1, 60, 'Void Corruption', magr=100, mrr=20),
+    CreatureTemplate('Bone Hydra', 'Epic', 80, 1, 40, 20, 'Abyssal Howl', magr=40),
+    CreatureTemplate('Spectre Knight', 'Epic', 20, 50, 30, 1, 'Shadow Cloak', wpr=60, mrr=30),
     # --- LEGENDARY ---
     CreatureTemplate('The Pale Chimera', 'Legendary', 150, 1, 1, 30, 'Abyssal Howl'),
-    CreatureTemplate('Gilded Wraith', 'Legendary', 1, 1, 1, 1, 'Shadow Cloak', mag_stat=150, mr_stat=30),
-    CreatureTemplate('Hellroot Colossus', 'Legendary', 1, 110, 50, 1, 'Blood Pact', mr_stat=30),
-    CreatureTemplate('Warden of Wax', 'Legendary', 1, 50, 40, 1, 'Blood Pact', wp_stat=60, mr_stat=30),
-    CreatureTemplate('Ebon Antler Saint', 'Legendary', 80, 1, 1, 40, 'Soul Drain', mag_stat=60),
-    CreatureTemplate('Crimson Moon Kirin', 'Legendary', 100, 1, 1, 50, 'Infernal Rage', mag_stat=30),
-    CreatureTemplate('Sepulcher Leviathan', 'Legendary', 70, 1, 1, 90, 'Abyssal Howl', mr_stat=20),
-    CreatureTemplate('Mirror-Eyed Roc', 'Legendary', 1, 1, 1, 60, 'Void Corruption', mag_stat=90, mr_stat=30),
-    CreatureTemplate('Lich King', 'Legendary', 30, 1, 1, 1, 'Soul Drain', wp_stat=120, mr_stat=30),
-    CreatureTemplate('Abyssal Hound', 'Legendary', 60, 40, 40, 1, 'Infernal Rage', mag_stat=40),
+    CreatureTemplate('Gilded Wraith', 'Legendary', 1, 1, 1, 1, 'Shadow Cloak', magr=150, mrr=30),
+    CreatureTemplate('Hellroot Colossus', 'Legendary', 1, 110, 50, 1, 'Blood Pact', mrr=30),
+    CreatureTemplate('Warden of Wax', 'Legendary', 1, 50, 40, 1, 'Blood Pact', wpr=60, mrr=30),
+    CreatureTemplate('Ebon Antler Saint', 'Legendary', 80, 1, 1, 40, 'Soul Drain', magr=60),
+    CreatureTemplate('Crimson Moon Kirin', 'Legendary', 100, 1, 1, 50, 'Infernal Rage', magr=30),
+    CreatureTemplate('Sepulcher Leviathan', 'Legendary', 70, 1, 1, 90, 'Abyssal Howl', mrr=20),
+    CreatureTemplate('Mirror-Eyed Roc', 'Legendary', 1, 1, 1, 60, 'Void Corruption', magr=90, mrr=30),
+    CreatureTemplate('Lich King', 'Legendary', 30, 1, 1, 1, 'Soul Drain', wpr=120, mrr=30),
+    CreatureTemplate('Abyssal Hound', 'Legendary', 60, 40, 40, 1, 'Infernal Rage', magr=40),
     # --- MYTHIC ---
     CreatureTemplate('Soulreaper Wyvern', 'Mythic', 150, 1, 1, 40, 'Soul Drain'),
-    CreatureTemplate('Demon of Black Glass', 'Mythic', 1, 30, 1, 1, 'Infernal Rage', mag_stat=130, mr_stat=20),
-    CreatureTemplate('Choir of Teeth', 'Mythic', 1, 90, 40, 1, 'Void Corruption', mr_stat=50),
-    CreatureTemplate("Thorn Queen's Hound", 'Mythic', 1, 70, 40, 1, 'Shadow Cloak', wp_stat=70),
-    CreatureTemplate('Black Chalice Hydra', 'Mythic', 60, 1, 1, 50, 'Soul Drain', mag_stat=70),
-    CreatureTemplate('Doompetal Phoenix', 'Mythic', 50, 1, 1, 110, 'Infernal Rage', mag_stat=20),
-    CreatureTemplate('Silent Bell Kraken', 'Mythic', 80, 1, 1, 80, 'Abyssal Howl', mag_stat=20),
-    CreatureTemplate('Void-Thread Spider', 'Mythic', 1, 1, 1, 50, 'Void Corruption', mag_stat=100, mr_stat=30),
-    CreatureTemplate('Infernal Warlord', 'Mythic', 80, 60, 20, 1, 'Blood Pact', mag_stat=20),
-    CreatureTemplate('Titan of Rust', 'Mythic', 1, 50, 40, 1, 'Abyssal Howl', wp_stat=60, mr_stat=30),
+    CreatureTemplate('Demon of Black Glass', 'Mythic', 1, 30, 1, 1, 'Infernal Rage', magr=130, mrr=20),
+    CreatureTemplate('Choir of Teeth', 'Mythic', 1, 90, 40, 1, 'Void Corruption', mrr=50),
+    CreatureTemplate("Thorn Queen's Hound", 'Mythic', 1, 70, 40, 1, 'Shadow Cloak', wpr=70),
+    CreatureTemplate('Black Chalice Hydra', 'Mythic', 60, 1, 1, 50, 'Soul Drain', magr=70),
+    CreatureTemplate('Doompetal Phoenix', 'Mythic', 50, 1, 1, 110, 'Infernal Rage', magr=20),
+    CreatureTemplate('Silent Bell Kraken', 'Mythic', 80, 1, 1, 80, 'Abyssal Howl', magr=20),
+    CreatureTemplate('Void-Thread Spider', 'Mythic', 1, 1, 1, 50, 'Void Corruption', magr=100, mrr=30),
+    CreatureTemplate('Infernal Warlord', 'Mythic', 80, 60, 20, 1, 'Blood Pact', magr=20),
+    CreatureTemplate('Titan of Rust', 'Mythic', 1, 50, 40, 1, 'Abyssal Howl', wpr=60, mrr=30),
     # --- ANCIENT ---
     CreatureTemplate('Ancient Starved Dragon', 'Ancient', 150, 1, 1, 30, 'Abyssal Howl'),
-    CreatureTemplate('Forgotten King', 'Ancient', 1, 1, 1, 1, 'Blood Pact', mag_stat=150, mr_stat=30),
-    CreatureTemplate('First Grave Dragon', 'Ancient', 1, 110, 50, 1, 'Abyssal Howl', mr_stat=30),
-    CreatureTemplate('Ashen Oracle Beast', 'Ancient', 1, 40, 50, 1, 'Soul Drain', wp_stat=70, mr_stat=30),
-    CreatureTemplate('The Old Hunger', 'Ancient', 40, 1, 1, 130, 'Blood Pact', mr_stat=20),
-    CreatureTemplate('Crownless Sunwyrm', 'Ancient', 90, 1, 1, 80, 'Infernal Rage', mag_stat=20),
-    CreatureTemplate('Memory-Eating Hart', 'Ancient', 110, 1, 1, 60, 'Void Corruption', mr_stat=20),
-    CreatureTemplate('World Serpent', 'Ancient', 1, 1, 1, 60, 'Soul Drain', mag_stat=100, mr_stat=30),
-    CreatureTemplate('Fallen Star Beast', 'Ancient', 30, 1, 1, 1, 'Shadow Cloak', wp_stat=130, mr_stat=30),
+    CreatureTemplate('Forgotten King', 'Ancient', 1, 1, 1, 1, 'Blood Pact', magr=150, mrr=30),
+    CreatureTemplate('First Grave Dragon', 'Ancient', 1, 110, 50, 1, 'Abyssal Howl', mrr=30),
+    CreatureTemplate('Ashen Oracle Beast', 'Ancient', 1, 40, 50, 1, 'Soul Drain', wpr=70, mrr=30),
+    CreatureTemplate('The Old Hunger', 'Ancient', 40, 1, 1, 130, 'Blood Pact', mrr=20),
+    CreatureTemplate('Crownless Sunwyrm', 'Ancient', 90, 1, 1, 80, 'Infernal Rage', magr=20),
+    CreatureTemplate('Memory-Eating Hart', 'Ancient', 110, 1, 1, 60, 'Void Corruption', mrr=20),
+    CreatureTemplate('World Serpent', 'Ancient', 1, 1, 1, 60, 'Soul Drain', magr=100, mrr=30),
+    CreatureTemplate('Fallen Star Beast', 'Ancient', 30, 1, 1, 1, 'Shadow Cloak', wpr=130, mrr=30),
     # --- PATREON ---
     # --- DIVINE ---
     CreatureTemplate('Saint of Cinders', 'Divine', 150, 1, 1, 40, 'Infernal Rage'),
-    CreatureTemplate('Dawnless Valkyr', 'Divine', 1, 1, 1, 1, 'Shadow Cloak', mag_stat=150, mr_stat=30),
-    CreatureTemplate('Seraph of Black Rain', 'Divine', 1, 110, 50, 1, 'Soul Drain', mr_stat=30),
-    CreatureTemplate('Moonlit Executioner', 'Divine', 80, 1, 1, 100, 'Shadow Cloak', mr_stat=20),
-    CreatureTemplate('Saint Hydra of Ash', 'Divine', 70, 1, 1, 60, 'Infernal Rage', mag_stat=70),
-    CreatureTemplate('Ivory Void Paladin', 'Divine', 1, 80, 40, 1, 'Abyssal Howl', wp_stat=70),
-    CreatureTemplate('Halo-Eater Moth', 'Divine', 1, 1, 30, 1, 'Void Corruption', wp_stat=130, mr_stat=30),
-    CreatureTemplate('Celestial Judge', 'Divine', 1, 1, 1, 60, 'Blood Pact', mag_stat=110, mr_stat=20),
+    CreatureTemplate('Dawnless Valkyr', 'Divine', 1, 1, 1, 1, 'Shadow Cloak', magr=150, mrr=30),
+    CreatureTemplate('Seraph of Black Rain', 'Divine', 1, 110, 50, 1, 'Soul Drain', mrr=30),
+    CreatureTemplate('Moonlit Executioner', 'Divine', 80, 1, 1, 100, 'Shadow Cloak', mrr=20),
+    CreatureTemplate('Saint Hydra of Ash', 'Divine', 70, 1, 1, 60, 'Infernal Rage', magr=70),
+    CreatureTemplate('Ivory Void Paladin', 'Divine', 1, 80, 40, 1, 'Abyssal Howl', wpr=70),
+    CreatureTemplate('Halo-Eater Moth', 'Divine', 1, 1, 30, 1, 'Void Corruption', wpr=130, mrr=30),
+    CreatureTemplate('Celestial Judge', 'Divine', 1, 1, 1, 60, 'Blood Pact', magr=110, mrr=20),
     # --- ELDRITCH ---
     CreatureTemplate('Eater Beneath Names', 'Eldritch', 150, 1, 1, 40, 'Void Corruption'),
-    CreatureTemplate('Oracle of the Last Door', 'Eldritch', 1, 1, 1, 1, 'Soul Drain', mag_stat=150, mr_stat=30),
-    CreatureTemplate('The Eye Behind Winter', 'Eldritch', 1, 50, 50, 1, 'Void Corruption', mag_stat=50, mr_stat=50),
-    CreatureTemplate('Choirmaster Below', 'Eldritch', 1, 60, 50, 1, 'Soul Drain', wp_stat=80, mr_stat=30),
-    CreatureTemplate('Nameless Thorn Serpent', 'Eldritch', 80, 1, 1, 60, 'Blood Pact', mag_stat=70),
-    CreatureTemplate('Lullaby of Knives', 'Eldritch', 90, 1, 1, 90, 'Shadow Cloak', mr_stat=20),
-    CreatureTemplate('Apostle of the Deep Door', 'Eldritch', 30, 1, 1, 130, 'Abyssal Howl', mag_stat=30),
+    CreatureTemplate('Oracle of the Last Door', 'Eldritch', 1, 1, 1, 1, 'Soul Drain', magr=150, mrr=30),
+    CreatureTemplate('The Eye Behind Winter', 'Eldritch', 1, 50, 50, 1, 'Void Corruption', magr=50, mrr=50),
+    CreatureTemplate('Choirmaster Below', 'Eldritch', 1, 60, 50, 1, 'Soul Drain', wpr=80, mrr=30),
+    CreatureTemplate('Nameless Thorn Serpent', 'Eldritch', 80, 1, 1, 60, 'Blood Pact', magr=70),
+    CreatureTemplate('Lullaby of Knives', 'Eldritch', 90, 1, 1, 90, 'Shadow Cloak', mrr=20),
+    CreatureTemplate('Apostle of the Deep Door', 'Eldritch', 30, 1, 1, 130, 'Abyssal Howl', magr=30),
     # --- ABYSSAL ---
     CreatureTemplate('Abyssal Godling', 'Abyssal', 150, 1, 1, 40, 'Abyssal Howl'),
-    CreatureTemplate('The Night That Hunts', 'Abyssal', 1, 1, 1, 1, 'Void Corruption', mag_stat=150, mr_stat=30),
-    CreatureTemplate('Godling of Unlit Stars', 'Abyssal', 1, 110, 50, 1, 'Void Corruption', mr_stat=30),
-    CreatureTemplate('The Grave That Breathes', 'Abyssal', 1, 60, 50, 1, 'Blood Pact', wp_stat=80),
-    CreatureTemplate('Crown of Endless Teeth', 'Abyssal', 80, 1, 1, 50, 'Infernal Rage', mag_stat=80),
-    CreatureTemplate('Daughter of No Dawn', 'Abyssal', 70, 1, 1, 100, 'Soul Drain', mag_stat=20),
+    CreatureTemplate('The Night That Hunts', 'Abyssal', 1, 1, 1, 1, 'Void Corruption', magr=150, mrr=30),
+    CreatureTemplate('Godling of Unlit Stars', 'Abyssal', 1, 110, 50, 1, 'Void Corruption', mrr=30),
+    CreatureTemplate('The Grave That Breathes', 'Abyssal', 1, 60, 50, 1, 'Blood Pact', wpr=80),
+    CreatureTemplate('Crown of Endless Teeth', 'Abyssal', 80, 1, 1, 50, 'Infernal Rage', magr=80),
+    CreatureTemplate('Daughter of No Dawn', 'Abyssal', 70, 1, 1, 100, 'Soul Drain', magr=20),
     # --- PRISMATIC ---
     CreatureTemplate('Spectrum Reaver', 'Prismatic', 150, 1, 1, 40, 'Void Corruption'),
-    CreatureTemplate('Glass Star Phoenix', 'Prismatic', 1, 1, 1, 1, 'Infernal Rage', mag_stat=150, mr_stat=30),
-    CreatureTemplate('Aurora Fang Serpent', 'Prismatic', 1, 110, 50, 1, 'Abyssal Howl', mr_stat=30),
-    CreatureTemplate('Chromabone Archon', 'Prismatic', 1, 50, 60, 1, 'Soul Drain', wp_stat=80, mr_stat=20),
-    CreatureTemplate('Prism Maw Leviathan', 'Prismatic', 80, 1, 1, 60, 'Blood Pact', mag_stat=80),
-    CreatureTemplate('Rainbow Crypt Saint', 'Prismatic', 1, 1, 30, 1, 'Void Corruption', wp_stat=130, mr_stat=30),
-    CreatureTemplate('Opal-Mirror Ravager', 'Prismatic', 50, 1, 1, 130, 'Infernal Rage', mr_stat=20),
+    CreatureTemplate('Glass Star Phoenix', 'Prismatic', 1, 1, 1, 1, 'Infernal Rage', magr=150, mrr=30),
+    CreatureTemplate('Aurora Fang Serpent', 'Prismatic', 1, 110, 50, 1, 'Abyssal Howl', mrr=30),
+    CreatureTemplate('Chromabone Archon', 'Prismatic', 1, 50, 60, 1, 'Soul Drain', wpr=80, mrr=20),
+    CreatureTemplate('Prism Maw Leviathan', 'Prismatic', 80, 1, 1, 60, 'Blood Pact', magr=80),
+    CreatureTemplate('Rainbow Crypt Saint', 'Prismatic', 1, 1, 30, 1, 'Void Corruption', wpr=130, mrr=30),
+    CreatureTemplate('Opal-Mirror Ravager', 'Prismatic', 50, 1, 1, 130, 'Infernal Rage', mrr=20),
     # --- ETHEREAL ---
     CreatureTemplate('Mistbound Sovereign', 'Ethereal', 150, 1, 1, 40, 'Soul Drain'),
-    CreatureTemplate('Ghostlight Behemoth', 'Ethereal', 1, 1, 1, 1, 'Abyssal Howl', mag_stat=150, mr_stat=30),
-    CreatureTemplate('The Pale Between', 'Ethereal', 1, 90, 50, 1, 'Shadow Cloak', mr_stat=50),
-    CreatureTemplate('Warden of Silent Stars', 'Ethereal', 1, 60, 60, 1, 'Void Corruption', wp_stat=80, mr_stat=20),
-    CreatureTemplate('Halo of Quiet Graves', 'Ethereal', 80, 1, 1, 60, 'Soul Drain', mag_stat=80),
-    CreatureTemplate('Dreamless Lantern Titan', 'Ethereal', 110, 1, 1, 40, 'Blood Pact', mag_stat=30),
+    CreatureTemplate('Ghostlight Behemoth', 'Ethereal', 1, 1, 1, 1, 'Abyssal Howl', magr=150, mrr=30),
+    CreatureTemplate('The Pale Between', 'Ethereal', 1, 90, 50, 1, 'Shadow Cloak', mrr=50),
+    CreatureTemplate('Warden of Silent Stars', 'Ethereal', 1, 60, 60, 1, 'Void Corruption', wpr=80, mrr=20),
+    CreatureTemplate('Halo of Quiet Graves', 'Ethereal', 80, 1, 1, 60, 'Soul Drain', magr=80),
+    CreatureTemplate('Dreamless Lantern Titan', 'Ethereal', 110, 1, 1, 40, 'Blood Pact', magr=30),
     # --- VOID LORD ---
     CreatureTemplate('Void Lord Asterion', 'Void Lord', 150, 1, 1, 40, 'Abyssal Howl'),
-    CreatureTemplate('Black Sun Monarch', 'Void Lord', 1, 1, 1, 1, 'Infernal Rage', mag_stat=150, mr_stat=30),
-    CreatureTemplate('Nameless Void Regent', 'Void Lord', 1, 110, 50, 1, 'Blood Pact', mr_stat=30),
-    CreatureTemplate('Lord of the Last Orbit', 'Void Lord', 1, 60, 60, 1, 'Void Corruption', wp_stat=80, mr_stat=30),
-    CreatureTemplate('Crowned Event Horizon', 'Void Lord', 80, 1, 1, 60, 'Soul Drain', mag_stat=80),
+    CreatureTemplate('Black Sun Monarch', 'Void Lord', 1, 1, 1, 1, 'Infernal Rage', magr=150, mrr=30),
+    CreatureTemplate('Nameless Void Regent', 'Void Lord', 1, 110, 50, 1, 'Blood Pact', mrr=30),
+    CreatureTemplate('Lord of the Last Orbit', 'Void Lord', 1, 60, 60, 1, 'Void Corruption', wpr=80, mrr=30),
+    CreatureTemplate('Crowned Event Horizon', 'Void Lord', 80, 1, 1, 60, 'Soul Drain', magr=80),
     # --- HIDDEN ---
     CreatureTemplate('The Unlisted Hunger', 'Hidden', 150, 1, 1, 40, 'Void Corruption'),
-    CreatureTemplate('Secret That Devours Dawn', 'Hidden', 1, 1, 1, 1, 'Soul Drain', mag_stat=150, mr_stat=30),
-    CreatureTemplate('No-Name Apocalypse', 'Hidden', 60, 1, 1, 110, 'Abyssal Howl', mag_stat=20),
-    CreatureTemplate('The Final Unwritten God', 'Hidden', 80, 1, 1, 60, 'Blood Pact', mag_stat=80),
+    CreatureTemplate('Secret That Devours Dawn', 'Hidden', 1, 1, 1, 1, 'Soul Drain', magr=150, mrr=30),
+    CreatureTemplate('No-Name Apocalypse', 'Hidden', 60, 1, 1, 110, 'Abyssal Howl', magr=20),
+    CreatureTemplate('The Final Unwritten God', 'Hidden', 80, 1, 1, 60, 'Blood Pact', magr=80),
 )
 
 
 def derive_7stats(template: CreatureTemplate) -> dict[str, int]:
-    return {"hp": template.hp, "str": template.attack, "pr": template.defense,
-            "wp": template.wp_stat, "mag": template.mag_stat, "mr": template.mr_stat,
+    return {"hp": template.hpr, "str": template.attr, "pr": template.prr,
+            "wp": template.wpr, "mag": template.magr, "mr": template.mrr,
             "spd": template.speed}
 
 
@@ -285,12 +285,12 @@ def _rebalance_creature_templates(templates: tuple[CreatureTemplate, ...], *, ma
         budget = min(max_total, 4 + 8 + min(24, max(0, rank) * 2))
 
         weights = (
-            max(1.0, creature.hp * 1.05),
-            max(1.0, creature.attack * 1.05),
-            max(1.0, creature.defense),
-            max(1.0, creature.wp_stat),
-            max(1.0, creature.mag_stat),
-            max(1.0, creature.mr_stat),
+            max(1.0, creature.hpr * 1.05),
+            max(1.0, creature.attr * 1.05),
+            max(1.0, creature.prr),
+            max(1.0, creature.wpr),
+            max(1.0, creature.magr),
+            max(1.0, creature.mrr),
             max(1.0, creature.speed * 0.9),
         )
         weight_total = sum(weights) or 1.0
@@ -314,7 +314,7 @@ def _rebalance_creature_templates(templates: tuple[CreatureTemplate, ...], *, ma
         balanced.append(CreatureTemplate(
             creature.name, creature.rarity,
             values[1], values[2], values[0], values[6], creature.ability,
-            wp_stat=values[3], mag_stat=values[4], mr_stat=values[5],
+            wpr=values[3], magr=values[4], mrr=values[5],
         ))
     return tuple(balanced)
 
@@ -349,42 +349,42 @@ WEAPON_WEAR_BONUS: dict[str, int] = {
 
 WEAPON_TYPES: dict[str, dict[str, object]] = {
     "sword": {
-        "name": "Graveblade", "desc": "A blade made for ending things that should have stayed buried.",
+        "name": "Sword", "desc": "A blade made for ending things that should have stayed buried.",
         "atk_range": (8, 14), "def_range": (3, 7), "scale_stat": "STR",
         "passive_pool": ["strength", "bleed", "crit", "life_steal"],
         "crate_weight": 12,
         "active": "gravecut",
     },
     "bow": {
-        "name": "Dreadbow", "desc": "Every arrow remembers the name of the corpse it is owed.",
+        "name": "Bow", "desc": "Every arrow remembers the name of the corpse it is owed.",
         "atk_range": (7, 13), "def_range": (1, 4), "scale_stat": "STR",
         "passive_pool": ["strength", "crit", "stun", "rare_finder"],
         "crate_weight": 10,
         "active": "black_arrow",
     },
     "axe": {
-        "name": "Goreaxe", "desc": "A rusted executioner's axe that grows heavier after every kill.",
+        "name": "Axe", "desc": "A rusted executioner's axe that grows heavier after every kill.",
         "atk_range": (12, 20), "def_range": (1, 4), "scale_stat": "STR",
         "passive_pool": ["strength", "bleed", "sacrifice", "thorns"],
         "crate_weight": 10,
         "active": "butcher_sweep",
     },
     "dagger": {
-        "name": "Nightfang", "desc": "A knife so thin the wound opens before the blade arrives.",
+        "name": "Dagger", "desc": "A knife so thin the wound opens before the blade arrives.",
         "atk_range": (6, 11), "def_range": (2, 5), "scale_stat": "STR",
         "passive_pool": ["bleed", "poison", "crit", "life_steal"],
         "crate_weight": 10,
         "active": "vein_pierce",
     },
     "crossbow": {
-        "name": "Corpsebolt", "desc": "It does not fire arrows. It delivers verdicts.",
+        "name": "Crossbow", "desc": "It does not fire arrows. It delivers verdicts.",
         "atk_range": (9, 15), "def_range": (1, 4), "scale_stat": "STR",
         "passive_pool": ["crit", "stun", "strength", "bleed"],
         "crate_weight": 8,
         "active": "coffin_nail",
     },
     "staff": {
-        "name": "Hexstaff", "desc": "A staff crowned with fire that whispers in the voices of dead witches.",
+        "name": "Staff", "desc": "A staff crowned with fire that whispers in the voices of dead witches.",
         "atk_range": (7, 13), "def_range": (4, 8), "scale_stat": "MAG",
         "passive_pool": ["magic", "burn", "stun", "xp_boost"],
         "crate_weight": 10,
@@ -398,28 +398,28 @@ WEAPON_TYPES: dict[str, dict[str, object]] = {
         "active": "black_benediction",
     },
     "shield": {
-        "name": "Defender's Aegis", "desc": "A shield carried by knights who died standing.",
+        "name": "Shield", "desc": "A shield carried by knights who died standing.",
         "atk_range": (2, 5), "def_range": (10, 18), "scale_stat": "HP",
         "passive_pool": ["shield", "safeguard", "thorns", "regeneration"],
         "crate_weight": 8,
         "active": "oath_of_the_last_wall",
     },
     "hammer": {
-        "name": "Doomhammer", "desc": "The hammer sounds like a funeral bell when it meets bone.",
+        "name": "Hammer", "desc": "The hammer sounds like a funeral bell when it meets bone.",
         "atk_range": (14, 24), "def_range": (0, 3), "scale_stat": "STR",
         "passive_pool": ["stun", "thorns", "strength", "safeguard"],
         "crate_weight": 8,
         "active": "bellringer",
     },
     "orb": {
-        "name": "Void Orb", "desc": "Crystallized void essence that channels the wielder's magic into restorative energies, carrying two passive affinities.",
+        "name": "Orb", "desc": "Crystallized void essence that channels the wielder's magic into restorative energies, carrying two passive affinities.",
         "atk_range": (8, 14), "def_range": (3, 6), "scale_stat": "MAG",
         "passive_pool": ["magic", "burn", "poison", "soul_gain", "adaptation", "crit"],
         "crate_weight": 7,
         "active": "void_resonance",
     },
     "rune": {
-        "name": "Eldritch Rune", "desc": "A rune older than language, carved into the idea of pain.",
+        "name": "Rune", "desc": "A rune older than language, carved into the idea of pain.",
         "atk_range": (6, 11), "def_range": (2, 5), "scale_stat": "MAG",
         "passive_pool": ["adaptation", "safeguard", "xp_boost", "soul_gain", "gem_finder"],
         "crate_weight": 6,
@@ -447,35 +447,35 @@ WEAPON_TYPES: dict[str, dict[str, object]] = {
         "active": "rotten_communion",
     },
     "banner": {
-        "name": "Black Sun Standard", "desc": "A war banner that darkens the sky and emboldens the march.",
+        "name": "Banner", "desc": "A war banner that darkens the sky and emboldens the march.",
         "atk_range": (4, 8), "def_range": (5, 10), "scale_stat": "MAG",
         "passive_pool": ["safeguard", "regeneration", "xp_boost", "soul_gain"],
         "crate_weight": 4,
         "active": "war_under_no_dawn",
     },
     "eye": {
-        "name": "Eye of the Deep Door", "desc": "An eye that sees madness and reflects it back tenfold.",
+        "name": "Eye", "desc": "An eye that sees madness and reflects it back tenfold.",
         "atk_range": (8, 14), "def_range": (3, 7), "scale_stat": "MAG",
         "passive_pool": ["magic", "fear", "poison", "adaptation"],
         "crate_weight": 4,
         "active": "witness_madness",
     },
     "judgement_blade": {
-        "name": "Crownless Verdict", "desc": "A blade that weighs sin and virtue in equal measure.",
+        "name": "Judgement Blade", "desc": "A blade that weighs sin and virtue in equal measure.",
         "atk_range": (9, 15), "def_range": (3, 7), "scale_stat": "STR",
         "passive_pool": ["crit", "magic", "strength", "adaptation"],
         "crate_weight": 4,
         "active": "sin_and_sentence",
     },
     "lantern": {
-        "name": "Hunger Lantern", "desc": "A light that does not illuminate. It devours.",
+        "name": "Lantern", "desc": "A light that does not illuminate. It devours.",
         "atk_range": (7, 13), "def_range": (3, 7), "scale_stat": "MAG",
         "passive_pool": ["mana_tap", "magic", "poison", "soul_gain"],
         "crate_weight": 5,
         "active": "light_that_starves",
     },
     "mirror_relic": {
-        "name": "Mirror-Eyed Relic", "desc": "A mirror that shows not your face, but your curse.",
+        "name": "Mirror Relic", "desc": "A mirror that shows not your face, but your curse.",
         "atk_range": (4, 8), "def_range": (6, 12), "scale_stat": "HP",
         "passive_pool": ["safeguard", "adaptation", "regeneration", "shield"],
         "crate_weight": 4,
@@ -691,10 +691,10 @@ EQUIPMENT: dict[str, Equipment] = {
 }
 
 BOSSES: tuple[Boss, ...] = (
-    Boss("hollow_king", "The Hollow King", 45000, 12, "ancient_relics", "Kingbreaker"),
-    Boss("mother_of_rot", "Mother of Rot", 62000, 18, "corrupted_essence", "Rotbane"),
-    Boss("void_leviathan", "Void Leviathan", 88000, 25, "void_crystals", "Deepbreaker"),
-    Boss("nameless_god", "The Nameless God", 130000, 35, "abyssal_ichor", "Godhunter"),
+    Boss("hollow_king", "The Hollow King", 6_250_000, 12, "ancient_relics", "Kingbreaker"),
+    Boss("mother_of_rot", "Mother of Rot", 8_250_000, 18, "corrupted_essence", "Rotbane"),
+    Boss("void_leviathan", "Void Leviathan", 11_250_000, 25, "void_crystals", "Deepbreaker"),
+    Boss("nameless_god", "The Nameless God", 16_250_000, 35, "abyssal_ichor", "Godhunter"),
 )
 
 QUESTS: dict[str, dict[str, int | str]] = {
@@ -867,14 +867,14 @@ def _apply_content_overrides() -> None:
         data = {
             "name": base.name if base else safe.replace("_", " ").title(),
             "rarity": base.rarity if base else "Common",
-            "attack": base.attack if base else 10,
-            "defense": base.defense if base else 8,
-            "hp": base.hp if base else 35,
+            "attr": base.attr if base else 10,
+            "prr": base.prr if base else 8,
+            "hpr": base.hpr if base else 35,
             "speed": base.speed if base else 10,
             "ability": base.ability if base else "Shadow Cloak",
-            "wp_stat": base.wp_stat if base else 1,
-            "mag_stat": base.mag_stat if base else 1,
-            "mr_stat": base.mr_stat if base else 1,
+            "wpr": base.wpr if base else 1,
+            "magr": base.magr if base else 1,
+            "mrr": base.mrr if base else 1,
             "crit": 0,
         }
         data.update({field: value for field, value in patch.items() if field in data})
@@ -883,14 +883,14 @@ def _apply_content_overrides() -> None:
         creatures[safe] = CreatureTemplate(
             str(data["name"]),
             str(data["rarity"]),
-            _as_int(data["attack"], 10),
-            _as_int(data["defense"], 8),
-            _as_int(data["hp"], 35),
+            _as_int(data["attr"], 10),
+            _as_int(data["prr"], 8),
+            _as_int(data["hpr"], 35),
             _as_int(data["speed"], 10),
             str(data["ability"]),
-            wp_stat=_as_int(data["wp_stat"], 1),
-            mag_stat=_as_int(data["mag_stat"], 1),
-            mr_stat=_as_int(data["mr_stat"], 1),
+            wpr=_as_int(data.get("wpr"), 1),
+            magr=_as_int(data.get("magr"), 1),
+            mrr=_as_int(data.get("mrr"), 1),
         )
         if safe not in creature_order:
             creature_order.append(safe)

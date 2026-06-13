@@ -23,7 +23,6 @@ def weapon_status(creature: dict) -> str:
     weapon = creature.get("_weapon") if isinstance(creature.get("_weapon"), dict) else None
     if not weapon:
         return ""
-    rarity = str(weapon.get("rarity", "Common") or "Common")
     weapon_type = str(weapon.get("weapon_type", "sword") or "sword")
     wep = weapon_emoji(weapon_type) or weapon_type[:1].upper()
     passive_raw = weapon.get("passive")
@@ -35,7 +34,7 @@ def weapon_status(creature: dict) -> str:
                 passive = f" {passive_emoji(str(pdata['key']))}" if passive_emoji(str(pdata["key"])) else ""
         except Exception:
             pass
-    return f"{rarity_emoji(rarity) or rarity[0].upper()}{wep}{passive}"
+    return f"{wep}{passive}"
 
 
 def battle_team_line(creature: dict) -> str:
@@ -68,7 +67,7 @@ def battle_overview_embed(
     embed.add_field(name="Enemy Team", value="\n".join(enemy_lines) if enemy_lines else "None", inline=True)
     if log_lines:
         log_text = "\n".join(log_lines[-12:])
-        embed.add_field(name="Turn Log", value=f"```{log_text}```", inline=False)
+        embed.add_field(name="Turn Log", value=f"```ini\n{log_text}```", inline=False)
     if footer:
         embed.set_footer(text=footer)
     embed.set_image(url=f"attachment://{image_filename}")
@@ -81,7 +80,7 @@ def battle_log_line(line: str) -> str:
         if key in lowered:
             return f"{emoji_prefix(status_effect_emoji(key))}{line}"
     if "crit" in lowered:
-        return f"{emoji_prefix(asset_emoji('passives', 'crit'))}{line}"
+        return f"{emoji_prefix(passive_emoji('crit'))}{line}"
     return f"{emoji_prefix(asset_emoji('ui', 'battle'))}{line}"
 
 
@@ -90,7 +89,7 @@ def outcome_badge(won: bool) -> str:
 
 
 def format_battle_log(log_lines: list[str], *, max_lines: int = 20, max_chars: int = 1000) -> str:
-    """Format a compact battle log for Discord embed display."""
+    """Format a compact battle log for Discord embed display, OwO-style."""
     if not log_lines:
         return ""
     truncated_by_lines = len(log_lines) > max_lines
@@ -101,11 +100,7 @@ def format_battle_log(log_lines: list[str], *, max_lines: int = 20, max_chars: i
             display.pop()
         text = "\n".join(display)
         if len(display) < len(log_lines):
-            omitted = len(log_lines) - len(display)
-            total = len(log_lines)
-            text += f"\n… and {omitted} more lines (full log attached)"
+            text += "\n; Log is too long..."
     elif truncated_by_lines:
-        omitted = len(log_lines) - max_lines
-        total = len(log_lines)
-        text += f"\n… and {omitted} more lines (full log attached)"
-    return text[:1024]
+        text += "\n; Log is too long..."
+    return f"```ini\n{text}```"

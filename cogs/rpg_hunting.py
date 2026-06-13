@@ -5,6 +5,7 @@ import random
 import discord
 from discord.ext import commands
 
+from core.card_controls import add_shortcuts, shortcut_view
 from core.cards import render_autohunt_card
 from core.hunt_card_renderer import HuntCardRenderer
 from core.discord_assets import embed_asset, ensure_application_emojis
@@ -527,6 +528,12 @@ class RPGHunting(commands.Cog):
                         child.style = discord.ButtonStyle.grey
             elif sword_qty <= 0:
                 view._disable_all()
+            add_shortcuts(view, [("Explore", "b explore"), ("Inventory", "b inventory"), ("Profile", "b profile")])
+        else:
+            view = shortcut_view(
+                ctx.author.id,
+                [("Explore", "b explore"), ("Inventory", "b inventory"), ("Profile", "b profile")],
+            )
         await ctx.reply(embed=embed, file=card_file, mention_author=False, view=view)
 
     @commands.hybrid_command(name="use", aliases=["activate"])
@@ -707,7 +714,15 @@ class RPGHunting(commands.Cog):
         files = [card_file]
         if file:
             files.append(file)
-        await ctx.reply(embed=embed, files=files, mention_author=False)
+        await ctx.reply(
+            embed=embed,
+            files=files,
+            view=shortcut_view(
+                ctx.author.id,
+                [("Profile", "b profile"), ("Inventory", "b inventory"), ("Explore", "b explore")],
+            ),
+            mention_author=False,
+        )
 
     @commands.hybrid_command(name="zones")
     async def zones(self, ctx: commands.Context) -> None:

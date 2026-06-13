@@ -10,10 +10,10 @@ import discord
 from discord.http import Route
 from PIL import Image
 
-from core.content_config import ASSET_DIR, get_asset_file_path, get_public_asset_url, safe_key
-
+from core.content_config import ASSET_DIR, ROOT_DIR, get_asset_file_path, get_public_asset_url, safe_key
 
 EMOJI_IMAGE_SIZE = 128
+EMOJI_CONTENT_SIZE = 112
 MAX_EMOJI_IMAGE_BYTES = 256 * 1024
 
 CURRENCY_KEYS = ("gold", "gems", "souls", "corrupted_essence", "void_crystals")
@@ -28,6 +28,8 @@ UI_KEYS = (
     "boss_raid",
     "leaderboard",
     "profile",
+    "hp_full",
+    "hp_empty",
 )
 
 APP_EMOJI_CACHE: dict[str, str] = {}
@@ -58,13 +60,14 @@ def emoji_asset_name(kind: str, key: str) -> str:
     return f"{prefix}_{safe[:max_key_length]}"
 
 
-def prepared_emoji_png(path: str | Path) -> bytes:
+def prepared_emoji_png(path: str | Path, *, pixel: bool = False) -> bytes:
     with Image.open(path) as source:
         image = source.convert("RGBA")
     bbox = image.getbbox()
     if bbox:
         image = image.crop(bbox)
-    image.thumbnail((EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), Image.Resampling.LANCZOS)
+    resample = Image.Resampling.NEAREST if pixel else Image.Resampling.LANCZOS
+    image.thumbnail((EMOJI_CONTENT_SIZE, EMOJI_CONTENT_SIZE), resample)
     canvas = Image.new("RGBA", (EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), (0, 0, 0, 0))
     x = (EMOJI_IMAGE_SIZE - image.width) // 2
     y = (EMOJI_IMAGE_SIZE - image.height) // 2
@@ -85,8 +88,8 @@ def prepared_emoji_png(path: str | Path) -> bytes:
     return raw
 
 
-def emoji_image_data_url(path: str | Path) -> str:
-    encoded = base64.b64encode(prepared_emoji_png(path)).decode("ascii")
+def emoji_image_data_url(path: str | Path, *, pixel: bool = False) -> str:
+    encoded = base64.b64encode(prepared_emoji_png(path, pixel=pixel)).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
 
@@ -153,6 +156,7 @@ async def upload_application_asset_emojis(bot: discord.Client, *, replace_existi
     failed: list[str] = []
 
     for kind, keys in asset_emoji_targets():
+        pixel = kind == "creatures"
         for key in keys:
             emoji_name = emoji_asset_name(kind, key)
             current = existing_by_name.get(emoji_name)
@@ -174,7 +178,7 @@ async def upload_application_asset_emojis(bot: discord.Client, *, replace_existi
                     replaced += 1
                 await bot.http.request(
                     Route("POST", "/applications/{application_id}/emojis", application_id=app_id),
-                    json={"name": emoji_name, "image": emoji_image_data_url(path)},
+                    json={"name": emoji_name, "image": emoji_image_data_url(path, pixel=pixel)},
                 )
                 uploaded += 1
             except Exception as exc:
@@ -195,6 +199,14 @@ def custom_asset_emoji(bot: discord.Client | None, kind: str, key: str) -> str:
 
 
 def asset_file_path(kind: str, key: str):
+    if kind in {"weapons", "passives"}:
+        icon_path = ROOT_DIR / "assets" / "icons" / kind / f"{safe_key(key)}.png"
+        if icon_path.exists() and icon_path.is_file():
+            return icon_path
+    if kind in {"weapons", "passives", "stats"}:
+        emoji_path = ROOT_DIR / "assets" / "emojis" / kind / f"{safe_key(key)}.png"
+        if emoji_path.exists() and emoji_path.is_file():
+            return emoji_path
     path = get_asset_file_path(kind, key)
     if path is not None:
         return path
@@ -219,8 +231,8 @@ def asset_emoji_targets() -> list[tuple[str, list[str]]]:
     from core.rpg_data import (
         BOSSES,
         CHARMS,
-        CREATURES,
         CRATE_TYPES,
+        CREATURES,
         EQUIPMENT,
         MATERIALS,
         RARITIES,
@@ -252,7 +264,7 @@ def asset_emoji_targets() -> list[tuple[str, list[str]]]:
         ("weapons", list(WEAPON_TYPES.keys())),
         ("passives", list(WEAPON_PASSIVES.keys())),
         ("status", [effect.key for effect in STATUS_EFFECTS]),
-        ("stats", ["hp", "str", "def", "mana", "mag", "res", "spd"]),
+        ("stats", ["hp", "str", "def", "mana", "mag", "res"]),
         ("creatures", [creature.name for creature in CREATURES]),
         ("crate", list(CRATE_TYPES.keys())),
         ("consumable", ["hunt_sword"]),

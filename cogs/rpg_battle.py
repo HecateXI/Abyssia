@@ -4,26 +4,23 @@ from __future__ import annotations
 import asyncio
 import io
 import random
+import sqlite3
 
 import discord
 from discord.ext import commands
 
 from core.battle_card_renderer import BattleCardRenderer
+from core.card_controls import shortcut_view
 from core.cards import render_arena_card, render_team_card
-from core.team_display import team_slot_value
-from core.battle_rewards import creature_power, daily_reset_timer, streak_milestone_reward
+from core.battle_rewards import daily_reset_timer, streak_milestone_reward
 from core.battle_matchmaking import get_or_make_opponent
 from core.battle_images import select_battle_preview_frames, simulate_battle_timeline
 from core.battle_display import (
-    battle_log_line,
     battle_overview_embed,
-    battle_team_line,
-    emoji_prefix,
     format_battle_log,
     outcome_badge,
-    weapon_status,
 )
-from core.discord_assets import embed_asset, ensure_application_emojis
+from core.discord_assets import ensure_application_emojis
 from core.rpg import (
     add_item,
     award_currency,
@@ -34,15 +31,10 @@ from core.rpg import (
     ensure_arena_stats,
     ensure_player,
     generate_npc_team,
-    get_bounty_targets,
-    get_quantity,
     join_battle_queue,
-    leave_battle_queue,
     load_team_snapshot,
-    now_ts,
     prepare_battle,
     progress_quest,
-    readable_seconds,
     record_battle_history,
     roll_checklist_battle_crates,
     save_team_snapshot,
@@ -53,18 +45,14 @@ from core.rpg import (
     update_arena_after_battle,
 )
 from core.rpg_data import (
-    BOSSES,
     BOUNTY_STREAK,
-    WEAPON_SHARD_KEY,
     arena_rank,
     get_npc_pool,
-    normalize_key,
     streak_multiplier,
 )
 from core.theme import (
     BLOOD_COLOR,
     GOLD_COLOR,
-    boss_label,
     creature_label,
     currency_label,
     crate_label,
@@ -246,9 +234,8 @@ class RPGBattle(commands.Cog):
             # Streak milestone reward
             milestone = streak_milestone_reward(streak)
             if milestone:
-                need, mname, rtype = milestone
+                _, mname, rtype = milestone
                 if rtype == "cache":
-                    qty = await get_quantity(self.bot.db, ctx.author.id, "crate", rtype)
                     await add_item(self.bot.db, ctx.author.id, "crate", rtype, 1)
                     streak_bonus_str += f"\nMilestone: **{mname}** awarded!"
                 elif rtype == "title":
@@ -258,13 +245,7 @@ class RPGBattle(commands.Cog):
 
         checklist_crates, checklist_crate_count = await roll_checklist_battle_crates(self.bot.db, ctx.author.id, 1)
 
-        # Bounty check
-        bounty_str = ""
-        if won and streak >= BOUNTY_STREAK:
-            bounty_str = f"\n**BOUNTY!** {ctx.author.display_name} has reached a {streak} win streak! Bonus rewards are available for defeating them."
-
         new_rating = int(arena["rating"]) + rating_change
-        rank = arena_rank(max(0, new_rating))
 
         log = list(result.get("full_log") or result["log"])
         await record_battle_history(
@@ -400,14 +381,15 @@ class RPGBattle(commands.Cog):
             image_filename="abyssia_battle.png",
             footer=" | ".join(footer_bits),
         )
-        compact_log = result.get("compact_log", [])
         log_file = None
-        if compact_log:
-            log_text = format_battle_log(compact_log, max_lines=18)
-            embed.add_field(name="⚔️ Battle Log", value=f"{log_text}", inline=False)
-            if len(compact_log) > 18:
-                log_bytes = io.BytesIO("\n".join(compact_log).encode("utf-8"))
-                log_file = discord.File(log_bytes, filename="battle_log.txt")
+        if log_enabled:
+            compact_log = result.get("compact_log", [])
+            if compact_log:
+                log_text = format_battle_log(compact_log, max_lines=18)
+                embed.add_field(name="⚔️ Battle Log", value=f"{log_text}", inline=False)
+                if len(compact_log) > 18:
+                    log_bytes = io.BytesIO("\n".join(compact_log).encode("utf-8"))
+                    log_file = discord.File(log_bytes, filename="battle_log.txt")
         message_content = None
         if checklist_crates:
             message_content = (
@@ -415,12 +397,20 @@ class RPGBattle(commands.Cog):
                 f"You found a **weapon crate!** `[{checklist_crate_count}/3]` "
                 f"**RESETS IN:** `{daily_reset_timer()}`"
             )
+        view = shortcut_view(
+            ctx.author.id,
+            [
+                ("Team", "b team"),
+                ("Weapons", "b weapons"),
+                ("Arena", "b arena"),
+            ],
+        )
         if battle_message is not None:
             attachments = [file] + ([log_file] if log_file else [])
-            await battle_message.edit(content=message_content, embed=embed, attachments=attachments)
+            await battle_message.edit(content=message_content, embed=embed, attachments=attachments, view=view)
         else:
             send_files = [file] + ([log_file] if log_file else [])
-            await ctx.reply(content=message_content, embed=embed, files=send_files, mention_author=False)
+            await ctx.reply(content=message_content, embed=embed, files=send_files, view=view, mention_author=False)
 
         # Bounty announcement
         if won and streak >= BOUNTY_STREAK:
@@ -453,9 +443,13 @@ class RPGBattle(commands.Cog):
                     "Battle Team",
                     "You have no monsters yet.\n\n"
                     f"Use `{prefix}hunt` to find monsters in the wild.",
-                    color=discord.Color.dark_gray(),
+                color=discord.Color.dark_gray(),
+            )
+                await ctx.reply(
+                    embed=embed,
+                    view=shortcut_view(ctx.author.id, [("Zoo", "b zoo"), ("Profile", "b profile")]),
+                    mention_author=False,
                 )
-                await ctx.reply(embed=embed, mention_author=False)
                 return
             lines = []
             for c in your_creatures:
@@ -469,7 +463,18 @@ class RPGBattle(commands.Cog):
                 f"Example: `{prefix}team set 1 {your_creatures[0]['name']}`",
                 color=GOLD_COLOR,
             )
-            await ctx.reply(embed=embed, mention_author=False)
+            await ctx.reply(
+                embed=embed,
+                view=shortcut_view(
+                    ctx.author.id,
+                    [
+                        ("Set Slot 1", f"b team set 1 {your_creatures[0]['name']}"),
+                        ("Zoo", "b zoo"),
+                        ("Weapons", "b weapons"),
+                    ],
+                ),
+                mention_author=False,
+            )
             return
 
         power = team_power(creatures)
@@ -477,36 +482,31 @@ class RPGBattle(commands.Cog):
         weapons = await creature_weapons(self.bot.db, cids)
         arena = await ensure_arena_stats(self.bot.db, target.id, ctx.guild.id)
         streak = int(arena['win_streak'])
-        title = ui_label("team", f"{target.display_name}'s Team")
-        description = (
-            "`b team set <slot> <name>` set a team slot\n"
-            "`b weaponequip <weapon id> <creature>` equip a weapon"
-        )
-        embed = discord.Embed(title=title, description=description, color=GOLD_COLOR)
-        embed.set_author(name=str(target), icon_url=target.display_avatar.url)
-        for index, creature in enumerate(creatures[:3], start=1):
-            field_name, field_value = team_slot_value(index, creature, weapons.get(int(creature["id"])))
-            embed.add_field(name=field_name, value=field_value, inline=True)
         streak_text = f"Current Streak: {streak}"
         if streak >= 3:
-            from core.rpg_data import get_streak_tier, streak_bonus_text
+            from core.rpg_data import get_streak_tier
             tier = get_streak_tier(streak)
             if tier.label:
                 streak_text = f"{tier.emoji} Streak: {streak} ({tier.label})"
-        embed.set_footer(
-            text=(
-                f"Team Power: {power:,} | {streak_text} | "
-                f"Best: {int(arena['highest_win_streak'])}"
-            )
-        )
-        await ctx.reply(embed=embed, mention_author=False)
-        return
         image = render_team_card(target.display_name, creatures, team_power=power, weapons=weapons)
         file = discord.File(image, filename="abyssia_team.png")
         embed = discord.Embed(color=GOLD_COLOR)
         embed.set_author(name=str(target), icon_url=target.display_avatar.url)
         embed.set_image(url="attachment://abyssia_team.png")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
+        embed.set_footer(text=f"Team Power: {power:,} | {streak_text} | Best: {int(arena['highest_win_streak'])}")
+        await ctx.reply(
+            embed=embed,
+            file=file,
+            view=shortcut_view(
+                ctx.author.id,
+                [
+                    ("Weapons", "b weapons"),
+                    ("Profile", "b profile"),
+                    ("Zoo", "b zoo"),
+                ],
+            ),
+            mention_author=False,
+        )
 
     @team.command(name="set")
     async def team_set(self, ctx: commands.Context, slot: int, *, creature_name: str) -> None:
@@ -572,7 +572,7 @@ class RPGBattle(commands.Cog):
                 raise commands.BadArgument("You cannot battle bots.")
             if opponent.id == ctx.author.id:
                 raise commands.BadArgument("You cannot battle yourself.")
-            defender = await ensure_player(self.bot.db, opponent.id, opponent.display_name)
+            await ensure_player(self.bot.db, opponent.id, opponent.display_name)
             left_team = await prepare_battle(self.bot.db, ctx.author.id)
             right_team = await prepare_battle(self.bot.db, opponent.id)
             if not left_team or not right_team:
@@ -644,7 +644,7 @@ class RPGBattle(commands.Cog):
         """Rematch against your last opponent."""
         assert ctx.guild is not None
         await ensure_application_emojis(self.bot, max_age=60.0)
-        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
+        await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         last = await self.bot.db.fetchone(
             "SELECT * FROM rpg_battle_history WHERE user_id = ? ORDER BY fought_at DESC LIMIT 1",
             (ctx.author.id,),
@@ -655,6 +655,7 @@ class RPGBattle(commands.Cog):
         opp_name = str(last["opponent_name"])
         is_npc = bool(last["is_npc"])
 
+        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         left_team = await prepare_battle(self.bot.db, ctx.author.id)
         if not left_team:
             raise commands.BadArgument("You need at least one creature.")
@@ -676,6 +677,23 @@ class RPGBattle(commands.Cog):
                 right_team = snap
 
         await self._run_battle_and_reward(ctx, player, left_team, opp_name, opp_id, right_team, is_npc=is_npc)
+
+    # ── Battle Log Toggle ──────────────────────────────────────────────
+
+    @commands.hybrid_command(name="blog")
+    async def blog(self, ctx: commands.Context) -> None:
+        """Toggle battle logs on/off for your battles."""
+        assert ctx.guild is not None
+        pref = await self.bot.db.fetchone("SELECT battle_log FROM rpg_user_prefs WHERE user_id = ?", (ctx.author.id,))
+        current = bool(int(pref["battle_log"])) if pref else False
+        new_val = 0 if current else 1
+        await self.bot.db.execute(
+            "INSERT INTO rpg_user_prefs (user_id, battle_log) VALUES (?, ?) "
+            "ON CONFLICT(user_id) DO UPDATE SET battle_log = ?",
+            (ctx.author.id, new_val, new_val),
+        )
+        status = "ON" if new_val else "OFF"
+        await ctx.reply(f"Battle logs are now **{status}**.", mention_author=False)
 
     # ── History ──────────────────────────────────────────────────────
 
@@ -758,7 +776,15 @@ class RPGBattle(commands.Cog):
         image = render_arena_card(ctx.author.display_name, player, rank=rank, last_match=last_match)
         file = discord.File(image, filename="abyssia_arena.png")
         embed.set_image(url="attachment://abyssia_arena.png")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
+        await ctx.reply(
+            embed=embed,
+            file=file,
+            view=shortcut_view(
+                ctx.author.id,
+                [("Team", "b team"), ("Leaderboard", "b leaderboard"), ("History", "b history")],
+            ),
+            mention_author=False,
+        )
 
     # ── Leaderboard ──────────────────────────────────────────────────
 
@@ -812,117 +838,6 @@ class RPGBattle(commands.Cog):
         lines = [f"`#{i}` {fmt(r)}" for i, r in enumerate(rows, start=1)]
         embed = dark_embed(ui_label("leaderboard", f"{label} Leaderboard"), "\n".join(lines), color=GOLD_COLOR)
         await ctx.reply(embed=embed, mention_author=False)
-
-    # ── Raid Commands (unchanged) ────────────────────────────────────
-
-    @commands.hybrid_group(name="raid", invoke_without_command=True)
-    async def raid(self, ctx: commands.Context) -> None:
-        """Show active server raid."""
-        assert ctx.guild is not None
-        row = await self.bot.db.fetchone("SELECT * FROM rpg_raid_state WHERE guild_id = ?", (ctx.guild.id,))
-        if row is None:
-            await ctx.reply(embed=status_embed("Raid", "No raid is active. Use `b raid awaken` to call a server boss."), mention_author=False)
-            return
-        boss = next(boss for boss in BOSSES if boss.key == row["boss_key"])
-        embed = dark_embed(boss_label(boss.key, boss.name), f"HP: **{row['hp']}/{row['max_hp']}**\nEnds in **{readable_seconds(row['ends_at'] - now_ts())}**", color=BLOOD_COLOR)
-        asset_url, file = embed_asset("bosses", boss.key)
-        if asset_url:
-            embed.set_thumbnail(url=asset_url)
-        await ctx.reply(embed=embed, file=file, mention_author=False)
-
-    @raid.command(name="awaken")
-    async def raid_awaken(self, ctx: commands.Context) -> None:
-        """Start a server-wide boss raid."""
-        assert ctx.guild is not None
-        current = await self.bot.db.fetchone("SELECT 1 FROM rpg_raid_state WHERE guild_id = ?", (ctx.guild.id,))
-        if current is not None:
-            raise commands.BadArgument("A raid is already active.")
-        boss = random.choice(BOSSES)
-        started = now_ts()
-        await self.bot.db.execute(
-            "INSERT INTO rpg_raid_state (guild_id, boss_key, hp, max_hp, started_at, ends_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (ctx.guild.id, boss.key, boss.hp, boss.hp, started, started + 86400),
-        )
-        await self.bot.db.execute("DELETE FROM rpg_raid_damage WHERE guild_id = ?", (ctx.guild.id,))
-        embed = dark_embed(f"{boss.name} Has Awakened", f"HP: **{boss.hp}**\nUse `b raid attack` before the server is swallowed.", color=BLOOD_COLOR)
-        asset_url, file = embed_asset("bosses", boss.key)
-        if asset_url:
-            embed.set_thumbnail(url=asset_url)
-        await ctx.reply(embed=embed, file=file, mention_author=False)
-
-    @raid.command(name="attack")
-    @commands.cooldown(1, 300, commands.BucketType.user)
-    async def raid_attack(self, ctx: commands.Context) -> None:
-        """Attack the active raid boss."""
-        assert ctx.guild is not None
-        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
-        row = await self.bot.db.fetchone("SELECT * FROM rpg_raid_state WHERE guild_id = ?", (ctx.guild.id,))
-        if row is None:
-            raise commands.BadArgument("No raid is active.")
-        if int(row["ends_at"]) <= now_ts():
-            await self.bot.db.execute("DELETE FROM rpg_raid_state WHERE guild_id = ?", (ctx.guild.id,))
-            raise commands.BadArgument("The raid expired.")
-        team = await team_creatures(self.bot.db, ctx.author.id)
-        if not team:
-            raise commands.BadArgument("You need at least one creature to raid.")
-        damage = sum(creature_power(creature) for creature in team) + random.randint(50, 180)
-        new_hp = max(0, int(row["hp"]) - damage)
-        await self.bot.db.execute("UPDATE rpg_raid_state SET hp = ? WHERE guild_id = ?", (new_hp, ctx.guild.id))
-        await self.bot.db.execute(
-            """INSERT INTO rpg_raid_damage (guild_id, user_id, damage, attacks, last_attack_at)
-               VALUES (?, ?, ?, 1, ?)
-               ON CONFLICT(guild_id, user_id)
-               DO UPDATE SET damage = damage + excluded.damage,
-                             attacks = attacks + 1,
-                             last_attack_at = excluded.last_attack_at""",
-            (ctx.guild.id, ctx.author.id, damage, now_ts()),
-        )
-        boss = next(boss for boss in BOSSES if boss.key == row["boss_key"])
-        if new_hp > 0:
-            embed = dark_embed(boss_label(boss.key, boss.name), f"You dealt **{damage}** damage.\nHP left: **{new_hp}**.", color=BLOOD_COLOR)
-            asset_url, file = embed_asset("bosses", boss.key)
-            if asset_url:
-                embed.set_thumbnail(url=asset_url)
-            await ctx.reply(embed=embed, file=file, mention_author=False)
-            return
-
-        rows = await self.bot.db.fetchall("SELECT user_id, damage FROM rpg_raid_damage WHERE guild_id = ? ORDER BY damage DESC", (ctx.guild.id,))
-        for damage_row in rows:
-            reward_gold = 750 + int(damage_row["damage"]) // 8
-            reward_gems = 10 + min(30, int(damage_row["damage"]) // 3500)
-            reward_shards = 25 + min(100, int(damage_row["damage"]) // 1000)
-            await ensure_player(self.bot.db, damage_row["user_id"], "Raid Hunter")
-            await award_currency(self.bot.db, damage_row["user_id"], gold=reward_gold, gems=reward_gems)
-            await add_item(self.bot.db, damage_row["user_id"], "material", WEAPON_SHARD_KEY, reward_shards)
-            await unlock_achievement(self.bot.db, damage_row["user_id"], "raid_slayer")
-        await self.bot.db.execute("DELETE FROM rpg_raid_state WHERE guild_id = ?", (ctx.guild.id,))
-        top = "\n".join(f"<@{row['user_id']}> - {row['damage']} damage" for row in rows[:5])
-        embed = dark_embed(
-            f"{boss.name} Has Fallen",
-            description=f"Rewards paid to all participants.\n\n**Top Damage**\n{top}\n\nWeapon Shards awarded by damage contribution.",
-            color=discord.Color.gold(),
-        )
-        asset_url, file = embed_asset("bosses", boss.key)
-        if asset_url:
-            embed.set_thumbnail(url=asset_url)
-        await ctx.reply(embed=embed, file=file, mention_author=False)
-
-    @commands.hybrid_group(name="boss", invoke_without_command=True)
-    async def boss(self, ctx: commands.Context) -> None:
-        """Show active server boss raid."""
-        await self.raid.callback(self, ctx)
-
-    @boss.command(name="awaken")
-    async def boss_awaken(self, ctx: commands.Context) -> None:
-        """Start a server-wide boss raid."""
-        await self.raid_awaken.callback(self, ctx)
-
-    @boss.command(name="attack")
-    @commands.cooldown(1, 300, commands.BucketType.user)
-    async def boss_attack(self, ctx: commands.Context) -> None:
-        """Attack the active raid boss."""
-        await self.raid_attack.callback(self, ctx)
-
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(RPGBattle(bot))

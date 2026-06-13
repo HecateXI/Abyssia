@@ -1,0 +1,1066 @@
+{
+  "version": 1,
+  "master_size": 512,
+  "emoji_size": 128,
+  "preview_size": 64,
+  "entries": [
+    {
+      "key": "sword",
+      "display_name": "Sword",
+      "category": "weapons",
+      "emoji_name": "weapon_sword",
+      "master_path": "assets/icons/weapons/sword.png",
+      "emoji_path": "assets/emojis/weapons/sword.png",
+      "preview_path": "assets/emojis/weapons/64/sword.png",
+      "data_asset_path": "data/assets/weapons/sword.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "519431fe3fa52e2945d3c7a8e36135910d82aae1c7ffd0b9399a35217ca8e3aa",
+      "emoji_sha256": "eb08f58d18f5b0aeabbde160c57ece064a1610dbf21663418c269c27ab7dfc12",
+      "data_asset_sha256": "eb08f58d18f5b0aeabbde160c57ece064a1610dbf21663418c269c27ab7dfc12",
+      "preview_sha256": "9dac4b487fbbea59832a8fc1c7446d9c4db8e580736eca1318d263c56390d55c"
+    },
+    {
+      "key": "bow",
+      "display_name": "Bow",
+      "category": "weapons",
+      "emoji_name": "weapon_bow",
+      "master_path": "assets/icons/weapons/bow.png",
+      "emoji_path": "assets/emojis/weapons/bow.png",
+      "preview_path": "assets/emojis/weapons/64/bow.png",
+      "data_asset_path": "data/assets/weapons/bow.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "22c03304898a93d798b3b9305e211be4f12596f825fe36ea10df292e8dde2562",
+      "emoji_sha256": "da00bff4f7f71a8ed6ec5447b3259ce5d0595edf3a91e73b38b993d8c660f526",
+      "data_asset_sha256": "da00bff4f7f71a8ed6ec5447b3259ce5d0595edf3a91e73b38b993d8c660f526",
+      "preview_sha256": "45f31113af13deb023fd4bbe651a4daf2f030c47bbc8abd2bb2a1ee90a6b5dde"
+    },
+    {
+      "key": "axe",
+      "display_name": "Axe",
+      "category": "weapons",
+      "emoji_name": "weapon_axe",
+      "master_path": "assets/icons/weapons/axe.png",
+      "emoji_path": "assets/emojis/weapons/axe.png",
+      "preview_path": "assets/emojis/weapons/64/axe.png",
+      "data_asset_path": "data/assets/weapons/axe.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "73980315589b8da367903bc3240d6659fe1c7122ee6a1aa2f0dc365ee1f9fc60",
+      "emoji_sha256": "b4fa6239c8a562da07a03cde206d2f430bfebe8bc6df99941cb384838f3bf8b6",
+      "data_asset_sha256": "b4fa6239c8a562da07a03cde206d2f430bfebe8bc6df99941cb384838f3bf8b6",
+      "preview_sha256": "2069749f08c12dd85efbc87ee8ec7269e0bdb15a28eae65d5eb1428978149c4b"
+    },
+    {
+      "key": "dagger",
+      "display_name": "Dagger",
+      "category": "weapons",
+      "emoji_name": "weapon_dagger",
+      "master_path": "assets/icons/weapons/dagger.png",
+      "emoji_path": "assets/emojis/weapons/dagger.png",
+      "preview_path": "assets/emojis/weapons/64/dagger.png",
+      "data_asset_path": "data/assets/weapons/dagger.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "5648160eed1ea5231fb8a72830d6f6f1e9736662e104cb8ee5ebe4d3c4e6594f",
+      "emoji_sha256": "4fbc9485be51181a0e49c02393ae696814890e09ae126475efa32b7effbf0803",
+      "data_asset_sha256": "4fbc9485be51181a0e49c02393ae696814890e09ae126475efa32b7effbf0803",
+      "preview_sha256": "acb3842a0c6c8510f7d243ef1eea04238b7fa579121e0447970b562556829b8d"
+    },
+    {
+      "key": "crossbow",
+      "display_name": "Crossbow",
+      "category": "weapons",
+      "emoji_name": "weapon_crossbow",
+      "master_path": "assets/icons/weapons/crossbow.png",
+      "emoji_path": "assets/emojis/weapons/crossbow.png",
+      "preview_path": "assets/emojis/weapons/64/crossbow.png",
+      "data_asset_path": "data/assets/weapons/crossbow.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "7724ef6881a04c67a6f450628c740a1ac46023d7a6bef90301c9f33cbbf75f38",
+      "emoji_sha256": "4032cf1ad401dcea541fd1c4ee216e646de51e7981e6d8c52db7e102bec6998d",
+      "data_asset_sha256": "4032cf1ad401dcea541fd1c4ee216e646de51e7981e6d8c52db7e102bec6998d",
+      "preview_sha256": "f7cf5b141125e0708b1e2b8b5109b085dddf6da0ef674a0f87ac53190d5d07f2"
+    },
+    {
+      "key": "staff",
+      "display_name": "Staff",
+      "category": "weapons",
+      "emoji_name": "weapon_staff",
+      "master_path": "assets/icons/weapons/staff.png",
+      "emoji_path": "assets/emojis/weapons/staff.png",
+      "preview_path": "assets/emojis/weapons/64/staff.png",
+      "data_asset_path": "data/assets/weapons/staff.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "02dc3228f66a578338ef1204fb756d01215bc14d3c6dd1dfea7bfc192dd612d9",
+      "emoji_sha256": "6c0d1385d7e43386ba988af95f0f7d8a316354a9e9a6db032bd1822c33cb3bc3",
+      "data_asset_sha256": "6c0d1385d7e43386ba988af95f0f7d8a316354a9e9a6db032bd1822c33cb3bc3",
+      "preview_sha256": "3c4682a307132f27816a031a3abe8bbcaae2433595d14e62c67c8287446b059f"
+    },
+    {
+      "key": "staff_of_purity",
+      "display_name": "Staff of Purity",
+      "category": "weapons",
+      "emoji_name": "weapon_staff_of_purity",
+      "master_path": "assets/icons/weapons/staff_of_purity.png",
+      "emoji_path": "assets/emojis/weapons/staff_of_purity.png",
+      "preview_path": "assets/emojis/weapons/64/staff_of_purity.png",
+      "data_asset_path": "data/assets/weapons/staff_of_purity.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "262d72ddb6d5898225407454e53d45238840853cd555b0a7b49eab5f9144abca",
+      "emoji_sha256": "23425943cb96c3f163cfe2ca4fd8f8d303a8578c4adda0bf0a5361bf1ca7c44a",
+      "data_asset_sha256": "23425943cb96c3f163cfe2ca4fd8f8d303a8578c4adda0bf0a5361bf1ca7c44a",
+      "preview_sha256": "4fee5d5234c2be379360c06366c48e218fcb3dc75109e27b58974721d77868d6"
+    },
+    {
+      "key": "shield",
+      "display_name": "Shield",
+      "category": "weapons",
+      "emoji_name": "weapon_shield",
+      "master_path": "assets/icons/weapons/shield.png",
+      "emoji_path": "assets/emojis/weapons/shield.png",
+      "preview_path": "assets/emojis/weapons/64/shield.png",
+      "data_asset_path": "data/assets/weapons/shield.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "5898748e22cb94b190e0bc9dd488848569092f20e66bcc89312b648b515926b3",
+      "emoji_sha256": "44ff53efec560a31104e00a9fd09a397372d4758a398bf1b010236a871f100e7",
+      "data_asset_sha256": "44ff53efec560a31104e00a9fd09a397372d4758a398bf1b010236a871f100e7",
+      "preview_sha256": "33ac83e3cfd898fe6752120e52efb84618161dc8826a311fbbf04b08b2a07671"
+    },
+    {
+      "key": "hammer",
+      "display_name": "Hammer",
+      "category": "weapons",
+      "emoji_name": "weapon_hammer",
+      "master_path": "assets/icons/weapons/hammer.png",
+      "emoji_path": "assets/emojis/weapons/hammer.png",
+      "preview_path": "assets/emojis/weapons/64/hammer.png",
+      "data_asset_path": "data/assets/weapons/hammer.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "32894aa099e562641dacb419cdae4027527b991d9dade9d72cd5aae4ead1c455",
+      "emoji_sha256": "eab12d6a291bd75b5814be045f2a5f75810abf4bd4fa4ced7e144996e3067444",
+      "data_asset_sha256": "eab12d6a291bd75b5814be045f2a5f75810abf4bd4fa4ced7e144996e3067444",
+      "preview_sha256": "b72580f902a9c5cc37ebe192570dd078ace82799bd297013dda7e9a4b5f17ff5"
+    },
+    {
+      "key": "orb",
+      "display_name": "Orb",
+      "category": "weapons",
+      "emoji_name": "weapon_orb",
+      "master_path": "assets/icons/weapons/orb.png",
+      "emoji_path": "assets/emojis/weapons/orb.png",
+      "preview_path": "assets/emojis/weapons/64/orb.png",
+      "data_asset_path": "data/assets/weapons/orb.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "86ba2e44f3e97ef9fddcae7bcbeef2ccb465e67689a9d373c953eba7b44aca9c",
+      "emoji_sha256": "ebbb37712df16151496eafe33ec648c98d8c30532980a45634762b4be1ef4234",
+      "data_asset_sha256": "ebbb37712df16151496eafe33ec648c98d8c30532980a45634762b4be1ef4234",
+      "preview_sha256": "9f2b7c75282b48010d4179555249d61b5f615b35c324e5d091c1d946065c55cb"
+    },
+    {
+      "key": "rune",
+      "display_name": "Rune",
+      "category": "weapons",
+      "emoji_name": "weapon_rune",
+      "master_path": "assets/icons/weapons/rune.png",
+      "emoji_path": "assets/emojis/weapons/rune.png",
+      "preview_path": "assets/emojis/weapons/64/rune.png",
+      "data_asset_path": "data/assets/weapons/rune.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "92755f50dc8d863d3bc0ce27244d22d934b56aa8f124e92cddd5b07205f7e3b7",
+      "emoji_sha256": "c994d1d1c4893366647f13423d35b965a518e604b0d5b87497f3d48185fb61c4",
+      "data_asset_sha256": "c994d1d1c4893366647f13423d35b965a518e604b0d5b87497f3d48185fb61c4",
+      "preview_sha256": "21f7ef4e1747ad3b2ede26ba4b32d9640afda763e4fd9bfae485c13415aa4b60"
+    },
+    {
+      "key": "soulreaper",
+      "display_name": "Soulreaper",
+      "category": "weapons",
+      "emoji_name": "weapon_soulreaper",
+      "master_path": "assets/icons/weapons/soulreaper.png",
+      "emoji_path": "assets/emojis/weapons/soulreaper.png",
+      "preview_path": "assets/emojis/weapons/64/soulreaper.png",
+      "data_asset_path": "data/assets/weapons/soulreaper.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "9d40463c2206c461d7e00d6c0129c737707b0bcb5e637d2cfc5cb917fd163a2d",
+      "emoji_sha256": "0307eca270399b4d8384a5f4f91929744548c4c3c574c1b90c09d61f4d7cb966",
+      "data_asset_sha256": "0307eca270399b4d8384a5f4f91929744548c4c3c574c1b90c09d61f4d7cb966",
+      "preview_sha256": "7e3dc9b0c95cb4c6c641289a464def52ac8eb5382696d25a70115509d432f756"
+    },
+    {
+      "key": "briar_relic",
+      "display_name": "Briar Relic",
+      "category": "weapons",
+      "emoji_name": "weapon_briar_relic",
+      "master_path": "assets/icons/weapons/briar_relic.png",
+      "emoji_path": "assets/emojis/weapons/briar_relic.png",
+      "preview_path": "assets/emojis/weapons/64/briar_relic.png",
+      "data_asset_path": "data/assets/weapons/briar_relic.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "9f846f77d0816b09532d9c10f28a291a055bd808a6b5369199ccd6de35a1d18a",
+      "emoji_sha256": "1c5b5459a1669b0b97bdbdb59d91980c21f3bdda32dfd4c6454cb29011e76f4d",
+      "data_asset_sha256": "1c5b5459a1669b0b97bdbdb59d91980c21f3bdda32dfd4c6454cb29011e76f4d",
+      "preview_sha256": "519d047d4734ae623364a25b30f9504fb26085394c11acf6a668825383fba6e9"
+    },
+    {
+      "key": "rot_chalice",
+      "display_name": "Chalice of Rot",
+      "category": "weapons",
+      "emoji_name": "weapon_rot_chalice",
+      "master_path": "assets/icons/weapons/rot_chalice.png",
+      "emoji_path": "assets/emojis/weapons/rot_chalice.png",
+      "preview_path": "assets/emojis/weapons/64/rot_chalice.png",
+      "data_asset_path": "data/assets/weapons/rot_chalice.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "5b92d7bc8f243cf5a3813c5f09bc37e134e6336ea04e1bcb5e286bbedb5fe236",
+      "emoji_sha256": "a99c31ef6f8bc2718ce427fe53cf79e92124d02a6ae7ffd78edc287d3cc8636a",
+      "data_asset_sha256": "a99c31ef6f8bc2718ce427fe53cf79e92124d02a6ae7ffd78edc287d3cc8636a",
+      "preview_sha256": "55f07c6646e7b505c459a88acc82ff67f6a8795e61ae28d7168a1e6776237c5c"
+    },
+    {
+      "key": "banner",
+      "display_name": "Banner",
+      "category": "weapons",
+      "emoji_name": "weapon_banner",
+      "master_path": "assets/icons/weapons/banner.png",
+      "emoji_path": "assets/emojis/weapons/banner.png",
+      "preview_path": "assets/emojis/weapons/64/banner.png",
+      "data_asset_path": "data/assets/weapons/banner.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "2bf04e0fd06a5c59332093d228a5b3ba74586c5893e64c4789f5f32a0f24a825",
+      "emoji_sha256": "8b90f51234bf6e06fae34fc565643b822a27f9fb485a4b7325b4b47c9578de37",
+      "data_asset_sha256": "8b90f51234bf6e06fae34fc565643b822a27f9fb485a4b7325b4b47c9578de37",
+      "preview_sha256": "8df1116a64633c0b37ee085bfd94cc7f3e65f9e873656a597de83cbdbf777a43"
+    },
+    {
+      "key": "eye",
+      "display_name": "Eye",
+      "category": "weapons",
+      "emoji_name": "weapon_eye",
+      "master_path": "assets/icons/weapons/eye.png",
+      "emoji_path": "assets/emojis/weapons/eye.png",
+      "preview_path": "assets/emojis/weapons/64/eye.png",
+      "data_asset_path": "data/assets/weapons/eye.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "ee8718af6b0852f07953e741f987746a56522d7b9aaf6f99f8909393b4713dac",
+      "emoji_sha256": "c666b7fba03078ff4d139eb46b9e2c39097d2fb69724985e5c7f6d0af92323ae",
+      "data_asset_sha256": "c666b7fba03078ff4d139eb46b9e2c39097d2fb69724985e5c7f6d0af92323ae",
+      "preview_sha256": "751b8c184411c92372850a4785f58f6096059a3f9f98424bec8f1069aafaa965"
+    },
+    {
+      "key": "judgement_blade",
+      "display_name": "Judgement Blade",
+      "category": "weapons",
+      "emoji_name": "weapon_judgement_blade",
+      "master_path": "assets/icons/weapons/judgement_blade.png",
+      "emoji_path": "assets/emojis/weapons/judgement_blade.png",
+      "preview_path": "assets/emojis/weapons/64/judgement_blade.png",
+      "data_asset_path": "data/assets/weapons/judgement_blade.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "38cd5090e9e3482e5203b5492defcab63924c95d42da5f72507411dd3ed0d7d5",
+      "emoji_sha256": "cb0121bf57f9d8be5a545efce2c121d423f36a7af0e78f0153a0602a0daeff86",
+      "data_asset_sha256": "cb0121bf57f9d8be5a545efce2c121d423f36a7af0e78f0153a0602a0daeff86",
+      "preview_sha256": "4b58f35e84b68b37bdf02ca728e3ffb3aedc32ed779aa39ab68e9ec4c2c29562"
+    },
+    {
+      "key": "lantern",
+      "display_name": "Lantern",
+      "category": "weapons",
+      "emoji_name": "weapon_lantern",
+      "master_path": "assets/icons/weapons/lantern.png",
+      "emoji_path": "assets/emojis/weapons/lantern.png",
+      "preview_path": "assets/emojis/weapons/64/lantern.png",
+      "data_asset_path": "data/assets/weapons/lantern.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "59db78c4ec8f3b4f0dfddb58f185af6e6dc792a01e669527fa5caf8eba19aab2",
+      "emoji_sha256": "2f80e3fad8273b5d778566e9e2a4a7096ab5606235656691b9b2d762077b198b",
+      "data_asset_sha256": "2f80e3fad8273b5d778566e9e2a4a7096ab5606235656691b9b2d762077b198b",
+      "preview_sha256": "ce9ec64e35402f99fc4ba8b97d6586229e9bc9dd0fac9de1ba934e44d250ea58"
+    },
+    {
+      "key": "mirror_relic",
+      "display_name": "Mirror Relic",
+      "category": "weapons",
+      "emoji_name": "weapon_mirror_relic",
+      "master_path": "assets/icons/weapons/mirror_relic.png",
+      "emoji_path": "assets/emojis/weapons/mirror_relic.png",
+      "preview_path": "assets/emojis/weapons/64/mirror_relic.png",
+      "data_asset_path": "data/assets/weapons/mirror_relic.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "41b9cbe61b0e33838ebace5f26af77fc77e92c0230c18181443542f684d40d97",
+      "emoji_sha256": "f36e0dd660856cef4763696be624374902f00a9924b931d00fcb4e6cee2babae",
+      "data_asset_sha256": "f36e0dd660856cef4763696be624374902f00a9924b931d00fcb4e6cee2babae",
+      "preview_sha256": "06bbd17a1e4506a5a40090dfa2335a53516b8b86bea40899cfa669b25f71d6be"
+    },
+    {
+      "key": "final_bell_scythe",
+      "display_name": "Final Bell Scythe",
+      "category": "weapons",
+      "emoji_name": "weapon_final_bell_scythe",
+      "master_path": "assets/icons/weapons/final_bell_scythe.png",
+      "emoji_path": "assets/emojis/weapons/final_bell_scythe.png",
+      "preview_path": "assets/emojis/weapons/64/final_bell_scythe.png",
+      "data_asset_path": "data/assets/weapons/final_bell_scythe.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "ea0be8a0a3dd122012cdf2eaec7aba87cd6a0fb7f47eb5e2b0eeeacf63993470",
+      "emoji_sha256": "b41014a8fa6068ec5dca6f64bd85ba10c013f83acc387cabb55a4364145bb2a8",
+      "data_asset_sha256": "b41014a8fa6068ec5dca6f64bd85ba10c013f83acc387cabb55a4364145bb2a8",
+      "preview_sha256": "81640889fcbd10e030292cfe58efef1f4f7209fe4431970fa20b98ec7af36a39"
+    },
+    {
+      "key": "strength",
+      "display_name": "Strength",
+      "category": "passives",
+      "emoji_name": "passive_strength",
+      "master_path": "assets/icons/passives/strength.png",
+      "emoji_path": "assets/emojis/passives/strength.png",
+      "preview_path": "assets/emojis/passives/64/strength.png",
+      "data_asset_path": "data/assets/passives/strength.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "c0db2374ab1e02043594700a10cf8a7f6d86da937648e1ced8cdf0b8238c19ea",
+      "emoji_sha256": "c702b80c102c569d69378c463df09edf9579c2ccd2e1ff4f9c6c68d689860314",
+      "data_asset_sha256": "c702b80c102c569d69378c463df09edf9579c2ccd2e1ff4f9c6c68d689860314",
+      "preview_sha256": "8432004c95ee92f56e365a02fdeb8889ea6f0d55eb32da6779dc4e44f5871276"
+    },
+    {
+      "key": "magic",
+      "display_name": "Magic",
+      "category": "passives",
+      "emoji_name": "passive_magic",
+      "master_path": "assets/icons/passives/magic.png",
+      "emoji_path": "assets/emojis/passives/magic.png",
+      "preview_path": "assets/emojis/passives/64/magic.png",
+      "data_asset_path": "data/assets/passives/magic.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "2aba7ac922f6058d635629f64c5adcc159a8ce0d9d671a04631310d43e037502",
+      "emoji_sha256": "5eaee572d3e0a727f5661bafaaa0243839f2d483a7cb98dfa35735a14ec5fbc7",
+      "data_asset_sha256": "5eaee572d3e0a727f5661bafaaa0243839f2d483a7cb98dfa35735a14ec5fbc7",
+      "preview_sha256": "3b9cf9d1dedd761c52dea27f344ebdf8700e32f77fe5bf44a72531b7c878b532"
+    },
+    {
+      "key": "hp",
+      "display_name": "Bloodwell",
+      "category": "passives",
+      "emoji_name": "passive_hp",
+      "master_path": "assets/icons/passives/hp.png",
+      "emoji_path": "assets/emojis/passives/hp.png",
+      "preview_path": "assets/emojis/passives/64/hp.png",
+      "data_asset_path": "data/assets/passives/hp.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "63852b3d590462f9f6e347670a5a6a75255dac197a18680dfa8a812a48ac2780",
+      "emoji_sha256": "441747912e844ff107e2ea0b59d592cb8a439ced28a7c4b0e8961ea9d279748c",
+      "data_asset_sha256": "441747912e844ff107e2ea0b59d592cb8a439ced28a7c4b0e8961ea9d279748c",
+      "preview_sha256": "473ab848a5687cb92c66ae041fed1496a07c69eaf58de51104da90c8685e2218"
+    },
+    {
+      "key": "wp",
+      "display_name": "Mana Vein",
+      "category": "passives",
+      "emoji_name": "passive_wp",
+      "master_path": "assets/icons/passives/wp.png",
+      "emoji_path": "assets/emojis/passives/wp.png",
+      "preview_path": "assets/emojis/passives/64/wp.png",
+      "data_asset_path": "data/assets/passives/wp.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "4c8f7fa025f9b9c30738307527b516f212f1d8f849244cc2207b7a77963c4f98",
+      "emoji_sha256": "21b1aad82f41e5368a00990d51e9429c2ca202f6426a2ae9c98a772fb8f72525",
+      "data_asset_sha256": "21b1aad82f41e5368a00990d51e9429c2ca202f6426a2ae9c98a772fb8f72525",
+      "preview_sha256": "08fd8e4c8f028416131f99db6cefcc249eaa9f46a394dc47db45de0043a1c1b6"
+    },
+    {
+      "key": "pr",
+      "display_name": "Ironhide",
+      "category": "passives",
+      "emoji_name": "passive_pr",
+      "master_path": "assets/icons/passives/pr.png",
+      "emoji_path": "assets/emojis/passives/pr.png",
+      "preview_path": "assets/emojis/passives/64/pr.png",
+      "data_asset_path": "data/assets/passives/pr.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "aa096d5fb376a15307c2ede52cb3e7fb3165214f7404efd4911cdc0853dac28a",
+      "emoji_sha256": "84ef22bc550ae891c13b6253931cf10bc08aeda8437b9be0f6f757b494ef3931",
+      "data_asset_sha256": "84ef22bc550ae891c13b6253931cf10bc08aeda8437b9be0f6f757b494ef3931",
+      "preview_sha256": "197bffcc9257ac9633794608cd5a438cdf8bcf6863beea088bd2bda55d44cd26"
+    },
+    {
+      "key": "mr",
+      "display_name": "Witchward",
+      "category": "passives",
+      "emoji_name": "passive_mr",
+      "master_path": "assets/icons/passives/mr.png",
+      "emoji_path": "assets/emojis/passives/mr.png",
+      "preview_path": "assets/emojis/passives/64/mr.png",
+      "data_asset_path": "data/assets/passives/mr.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "d73f58bad1378dbea77d82330bd7367fb3c0a00e96818534ad7d7cb2f731fbb1",
+      "emoji_sha256": "0abead1be07486c25324a8d78a5296457e2fa3c622d20270422e8ca38a3c1ca7",
+      "data_asset_sha256": "0abead1be07486c25324a8d78a5296457e2fa3c622d20270422e8ca38a3c1ca7",
+      "preview_sha256": "df45d67bbce581395dac712b798cde1e0297b0e691516a07b712120a4da4204f"
+    },
+    {
+      "key": "thorns",
+      "display_name": "Thorns",
+      "category": "passives",
+      "emoji_name": "passive_thorns",
+      "master_path": "assets/icons/passives/thorns.png",
+      "emoji_path": "assets/emojis/passives/thorns.png",
+      "preview_path": "assets/emojis/passives/64/thorns.png",
+      "data_asset_path": "data/assets/passives/thorns.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "8caf1895a91de229d4b1b5acfd447eb6b3e404c5609be5e95b43a21dd743a688",
+      "emoji_sha256": "cf4e41609c12c713458f0fc588c36f329ac82e52e4c37fa624c639f200bc69a0",
+      "data_asset_sha256": "cf4e41609c12c713458f0fc588c36f329ac82e52e4c37fa624c639f200bc69a0",
+      "preview_sha256": "8a0e69a326541fbc075e66456f2959b5f060bbae5ed86a043ecea50af5e258c9"
+    },
+    {
+      "key": "safeguard",
+      "display_name": "Safeguard",
+      "category": "passives",
+      "emoji_name": "passive_safeguard",
+      "master_path": "assets/icons/passives/safeguard.png",
+      "emoji_path": "assets/emojis/passives/safeguard.png",
+      "preview_path": "assets/emojis/passives/64/safeguard.png",
+      "data_asset_path": "data/assets/passives/safeguard.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "02eaf5d3c8b0231c1cbe547be08d50034b64100c3fbc99f4e3ad655bd7da42f9",
+      "emoji_sha256": "b157f8500af8735e3c4b23b11da0a7622173826a02c3ead3b8923cc726694517",
+      "data_asset_sha256": "b157f8500af8735e3c4b23b11da0a7622173826a02c3ead3b8923cc726694517",
+      "preview_sha256": "b0a1e4b0e3acf02b9680163d1850f3bc7d45fe153ac9efc8188264cc3e1ca1f9"
+    },
+    {
+      "key": "regeneration",
+      "display_name": "Regeneration",
+      "category": "passives",
+      "emoji_name": "passive_regeneration",
+      "master_path": "assets/icons/passives/regeneration.png",
+      "emoji_path": "assets/emojis/passives/regeneration.png",
+      "preview_path": "assets/emojis/passives/64/regeneration.png",
+      "data_asset_path": "data/assets/passives/regeneration.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "4f5630fc8aabd2e4186439a1158857eeccaef5a59ad0638c6dd0523f02f21946",
+      "emoji_sha256": "2115689261bd301593635d3c502a769015f4c53c21697d4f9c7513b86e842045",
+      "data_asset_sha256": "2115689261bd301593635d3c502a769015f4c53c21697d4f9c7513b86e842045",
+      "preview_sha256": "ec9fbd82c75c966c7f2a2966a087df34b062a30dd150b5766b62d353c919abc0"
+    },
+    {
+      "key": "adaptation",
+      "display_name": "Adaptation",
+      "category": "passives",
+      "emoji_name": "passive_adaptation",
+      "master_path": "assets/icons/passives/adaptation.png",
+      "emoji_path": "assets/emojis/passives/adaptation.png",
+      "preview_path": "assets/emojis/passives/64/adaptation.png",
+      "data_asset_path": "data/assets/passives/adaptation.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "85586147d6fad3f646a72c8b8e980606cf1cbb23c51542ee3037c40b53553155",
+      "emoji_sha256": "7a68f7270dd3062fac903263d168fd903fc2b4f48ce6c9e0661b383400de1f62",
+      "data_asset_sha256": "7a68f7270dd3062fac903263d168fd903fc2b4f48ce6c9e0661b383400de1f62",
+      "preview_sha256": "2383618eb0985e6c51e5564cb09eba8f133897d243f03c44d3b2d5e5afdc11b6"
+    },
+    {
+      "key": "sacrifice",
+      "display_name": "Sacrifice",
+      "category": "passives",
+      "emoji_name": "passive_sacrifice",
+      "master_path": "assets/icons/passives/sacrifice.png",
+      "emoji_path": "assets/emojis/passives/sacrifice.png",
+      "preview_path": "assets/emojis/passives/64/sacrifice.png",
+      "data_asset_path": "data/assets/passives/sacrifice.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "fc5ab3f5286b5d06935e4d5bac995b28bc6fe817523209c0c247f84998a0ad9d",
+      "emoji_sha256": "6004d12c9cfdd76bd49d4f614b16801cc4d1a98579bc2f01a06f1acbe11bf7e9",
+      "data_asset_sha256": "6004d12c9cfdd76bd49d4f614b16801cc4d1a98579bc2f01a06f1acbe11bf7e9",
+      "preview_sha256": "81c0e832c4ac5aebd8a30cfd53240ca345e44362bff18727cc5c360fbcb8f17e"
+    },
+    {
+      "key": "bleed",
+      "display_name": "Rending",
+      "category": "passives",
+      "emoji_name": "passive_bleed",
+      "master_path": "assets/icons/passives/bleed.png",
+      "emoji_path": "assets/emojis/passives/bleed.png",
+      "preview_path": "assets/emojis/passives/64/bleed.png",
+      "data_asset_path": "data/assets/passives/bleed.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "85f0c350d55c5c51d52b5c6e51c1fd908bb160c8e21d2e922a989bb640e46de9",
+      "emoji_sha256": "ecbd3adc6855fc94a15df883c3e1cb363aa843168daaad162e41d7234cb8a5f8",
+      "data_asset_sha256": "ecbd3adc6855fc94a15df883c3e1cb363aa843168daaad162e41d7234cb8a5f8",
+      "preview_sha256": "3a9010a157f8d017240529aa998c3a71d64f5b43bbc3f58bf043529f64fc8312"
+    },
+    {
+      "key": "burn",
+      "display_name": "Infernal",
+      "category": "passives",
+      "emoji_name": "passive_burn",
+      "master_path": "assets/icons/passives/burn.png",
+      "emoji_path": "assets/emojis/passives/burn.png",
+      "preview_path": "assets/emojis/passives/64/burn.png",
+      "data_asset_path": "data/assets/passives/burn.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "133de128c3dcaa59b9a3c9073679d5816589db0bad6e8def5a8315f934cc6847",
+      "emoji_sha256": "65e9f9c298c3312eb1530ed2cbae63dbbf8ec7e0f9d2eeb788aad2f36934f965",
+      "data_asset_sha256": "65e9f9c298c3312eb1530ed2cbae63dbbf8ec7e0f9d2eeb788aad2f36934f965",
+      "preview_sha256": "1e721f7757b32b69cb2d267800f71afc0c0aca96edfe3949574775ee68b4a6b4"
+    },
+    {
+      "key": "poison",
+      "display_name": "Virulent",
+      "category": "passives",
+      "emoji_name": "passive_poison",
+      "master_path": "assets/icons/passives/poison.png",
+      "emoji_path": "assets/emojis/passives/poison.png",
+      "preview_path": "assets/emojis/passives/64/poison.png",
+      "data_asset_path": "data/assets/passives/poison.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "c8646afa7c138ba99f5b5e816d879713c203af757084d81bb3fea5ba1ce94ea9",
+      "emoji_sha256": "26f8eb4dd1e15820bb22a298f18387ae2e0f0563e157cab358ed728459caca7a",
+      "data_asset_sha256": "26f8eb4dd1e15820bb22a298f18387ae2e0f0563e157cab358ed728459caca7a",
+      "preview_sha256": "f278bac08395925cde83ee7903b572f63959e9cfc2b7ee783a1e1b1b736e7d75"
+    },
+    {
+      "key": "stun",
+      "display_name": "Stunning",
+      "category": "passives",
+      "emoji_name": "passive_stun",
+      "master_path": "assets/icons/passives/stun.png",
+      "emoji_path": "assets/emojis/passives/stun.png",
+      "preview_path": "assets/emojis/passives/64/stun.png",
+      "data_asset_path": "data/assets/passives/stun.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "6b9bd75a07066722a6074389d805dd2cff77a5bb43485d9b14b49253a762894e",
+      "emoji_sha256": "76fc5b8eaf2ad07c4fa6d0fac05a1c58a77fd7655493f4c4ae9fb815c423e169",
+      "data_asset_sha256": "76fc5b8eaf2ad07c4fa6d0fac05a1c58a77fd7655493f4c4ae9fb815c423e169",
+      "preview_sha256": "745e67362f4152fb79731740221401d8f693f087c45f102705bb5708ac0d536f"
+    },
+    {
+      "key": "shield",
+      "display_name": "Aegis",
+      "category": "passives",
+      "emoji_name": "passive_shield",
+      "master_path": "assets/icons/passives/shield.png",
+      "emoji_path": "assets/emojis/passives/shield.png",
+      "preview_path": "assets/emojis/passives/64/shield.png",
+      "data_asset_path": "data/assets/passives/shield.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "ded112b539dcc59062f4240191474132328292bd2f82f993c4e37ebd58e81f69",
+      "emoji_sha256": "86f6ee3c399e7a57a1fa96b966152e91433cf9a26a7492e5cb7f9f58420ebf23",
+      "data_asset_sha256": "86f6ee3c399e7a57a1fa96b966152e91433cf9a26a7492e5cb7f9f58420ebf23",
+      "preview_sha256": "1aaf09c2ef9984fd0f816a9fc048a65aecf7ddb09cb0ae145671390603e6f9f1"
+    },
+    {
+      "key": "heal",
+      "display_name": "Lifestream",
+      "category": "passives",
+      "emoji_name": "passive_heal",
+      "master_path": "assets/icons/passives/heal.png",
+      "emoji_path": "assets/emojis/passives/heal.png",
+      "preview_path": "assets/emojis/passives/64/heal.png",
+      "data_asset_path": "data/assets/passives/heal.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "7a98663472443ef30ce52fd1ce1d26cc43180b7a94bf449903dda2f83419bd1d",
+      "emoji_sha256": "5d5769e7f31391fb31505efd7c3843f2967e47da1d80e78e0a443c1469e8d9bf",
+      "data_asset_sha256": "5d5769e7f31391fb31505efd7c3843f2967e47da1d80e78e0a443c1469e8d9bf",
+      "preview_sha256": "ea495a9b98f191efc9590a7a6e0938ad45fdee87e7b728a7102fa77128a5af92"
+    },
+    {
+      "key": "crit",
+      "display_name": "Precision",
+      "category": "passives",
+      "emoji_name": "passive_crit",
+      "master_path": "assets/icons/passives/crit.png",
+      "emoji_path": "assets/emojis/passives/crit.png",
+      "preview_path": "assets/emojis/passives/64/crit.png",
+      "data_asset_path": "data/assets/passives/crit.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "51f5055397a73bf5c844afa2a0af939cf3a90fbc475b72f0851b00c0ca8e9c53",
+      "emoji_sha256": "a57407bfa5538fe04ee615a9aae81ec57bd03fbc2a62b7d142df62b2820330c7",
+      "data_asset_sha256": "a57407bfa5538fe04ee615a9aae81ec57bd03fbc2a62b7d142df62b2820330c7",
+      "preview_sha256": "478c1e70d8dd508dc50ff994bb9d888c02d4c0deb24586df5a3f5672e4618212"
+    },
+    {
+      "key": "life_steal",
+      "display_name": "Lifesteal",
+      "category": "passives",
+      "emoji_name": "passive_life_steal",
+      "master_path": "assets/icons/passives/life_steal.png",
+      "emoji_path": "assets/emojis/passives/life_steal.png",
+      "preview_path": "assets/emojis/passives/64/life_steal.png",
+      "data_asset_path": "data/assets/passives/life_steal.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "1dd0d6fb32c978aa120106a49dc2609d8b72b430207823cf76b7f9500f3a664d",
+      "emoji_sha256": "141b3731f1030d9fb8386914c70389fa8a2c1642d1b76280c5f4fbff4546c617",
+      "data_asset_sha256": "141b3731f1030d9fb8386914c70389fa8a2c1642d1b76280c5f4fbff4546c617",
+      "preview_sha256": "3d350a4f1f84df8175302f19bb2afa96697d991b8b56d7917e340ff5b306169b"
+    },
+    {
+      "key": "mana_tap",
+      "display_name": "Mana Tap",
+      "category": "passives",
+      "emoji_name": "passive_mana_tap",
+      "master_path": "assets/icons/passives/mana_tap.png",
+      "emoji_path": "assets/emojis/passives/mana_tap.png",
+      "preview_path": "assets/emojis/passives/64/mana_tap.png",
+      "data_asset_path": "data/assets/passives/mana_tap.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "a3ec35e5a52f18c34a847bf30a125c2564ebb0210cd98d7178ed0f023f3da866",
+      "emoji_sha256": "d066b4b018662e04df17b2f6d86435c5fb96e96601f4ce9502c36c270a1bc83e",
+      "data_asset_sha256": "d066b4b018662e04df17b2f6d86435c5fb96e96601f4ce9502c36c270a1bc83e",
+      "preview_sha256": "462c1dc46cd6ccdcba4ddb4e933a05c0af3eca380b73ca706754fb7b6fa04915"
+    },
+    {
+      "key": "soul_gain",
+      "display_name": "Soul Gain",
+      "category": "passives",
+      "emoji_name": "passive_soul_gain",
+      "master_path": "assets/icons/passives/soul_gain.png",
+      "emoji_path": "assets/emojis/passives/soul_gain.png",
+      "preview_path": "assets/emojis/passives/64/soul_gain.png",
+      "data_asset_path": "data/assets/passives/soul_gain.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "a60e5d1ccb33db1d198e1320d717d12e49843e12b5e63bc5b18068cb74a5e155",
+      "emoji_sha256": "4d837558e98c38f27c0e42a94abdaeef98805c135c8a6cab965765f6979de789",
+      "data_asset_sha256": "4d837558e98c38f27c0e42a94abdaeef98805c135c8a6cab965765f6979de789",
+      "preview_sha256": "78f39ae6a91791f3aec5cda60c2c246ab4112915951aa3ef18908c98146f076c"
+    },
+    {
+      "key": "gem_finder",
+      "display_name": "Gem Finder",
+      "category": "passives",
+      "emoji_name": "passive_gem_finder",
+      "master_path": "assets/icons/passives/gem_finder.png",
+      "emoji_path": "assets/emojis/passives/gem_finder.png",
+      "preview_path": "assets/emojis/passives/64/gem_finder.png",
+      "data_asset_path": "data/assets/passives/gem_finder.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "6936388756ec9a4b72f1cd2a63b556640b6e347446abe3e18a02dd7dda78ca57",
+      "emoji_sha256": "c271446cf193e1d338775e8f1fd5e396951b7309bd63e262627665438e2b55f0",
+      "data_asset_sha256": "c271446cf193e1d338775e8f1fd5e396951b7309bd63e262627665438e2b55f0",
+      "preview_sha256": "02fe4b891f31a4c2b227296ca2d7c38e29a77200b2ab64f812f7f78224d1285b"
+    },
+    {
+      "key": "xp_boost",
+      "display_name": "XP Boost",
+      "category": "passives",
+      "emoji_name": "passive_xp_boost",
+      "master_path": "assets/icons/passives/xp_boost.png",
+      "emoji_path": "assets/emojis/passives/xp_boost.png",
+      "preview_path": "assets/emojis/passives/64/xp_boost.png",
+      "data_asset_path": "data/assets/passives/xp_boost.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "8bb609ca35c57bfc7cdb641744cde2f2b1c6b23ab6a77d1b7fef3719e7af2972",
+      "emoji_sha256": "f69d3d2cbcdf59b962c91c8cc1d91959ab6c8961610e08131101db7a3bf9265b",
+      "data_asset_sha256": "f69d3d2cbcdf59b962c91c8cc1d91959ab6c8961610e08131101db7a3bf9265b",
+      "preview_sha256": "0d5f2e69c3bc00f7a58d8c5edee22f54727912b009db415e76b392c168f337cf"
+    },
+    {
+      "key": "rare_finder",
+      "display_name": "Rare Finder",
+      "category": "passives",
+      "emoji_name": "passive_rare_finder",
+      "master_path": "assets/icons/passives/rare_finder.png",
+      "emoji_path": "assets/emojis/passives/rare_finder.png",
+      "preview_path": "assets/emojis/passives/64/rare_finder.png",
+      "data_asset_path": "data/assets/passives/rare_finder.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "4ce5be8d7addddc3452ff6bb1b8b5ab4703f110e91d544cf955c4d1432c035e2",
+      "emoji_sha256": "3ab21879b2879591f4204cb92a4a684e456b69044edec5bdf57599b4b9b6a826",
+      "data_asset_sha256": "3ab21879b2879591f4204cb92a4a684e456b69044edec5bdf57599b4b9b6a826",
+      "preview_sha256": "670eac6f74da70ec4b9b84fdf5701ddaecf6a672c8796343104b48149479d5eb"
+    },
+    {
+      "key": "energize",
+      "display_name": "Energize",
+      "category": "passives",
+      "emoji_name": "passive_energize",
+      "master_path": "assets/icons/passives/energize.png",
+      "emoji_path": "assets/emojis/passives/energize.png",
+      "preview_path": "assets/emojis/passives/64/energize.png",
+      "data_asset_path": "data/assets/passives/energize.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "cb716e84b92de30593f37e3f3053a71f4b35d1bae8850081eaf82a85149e7dfb",
+      "emoji_sha256": "4021b30936454fa86e024c36139845399d433ab76ebc1bda67f7059b1af0a294",
+      "data_asset_sha256": "4021b30936454fa86e024c36139845399d433ab76ebc1bda67f7059b1af0a294",
+      "preview_sha256": "a73e0538a7f6ba3eb9f7f33284721383984d391a4a54269d0742827955530e68"
+    },
+    {
+      "key": "fear",
+      "display_name": "Dread",
+      "category": "passives",
+      "emoji_name": "passive_fear",
+      "master_path": "assets/icons/passives/fear.png",
+      "emoji_path": "assets/emojis/passives/fear.png",
+      "preview_path": "assets/emojis/passives/64/fear.png",
+      "data_asset_path": "data/assets/passives/fear.png",
+      "status": "processed",
+      "master_size": [
+        512,
+        512
+      ],
+      "emoji_size": [
+        128,
+        128
+      ],
+      "master_sha256": "91108c554835dd1220c2d6b210cde3d0a5faeec823404845776a22017b736f1b",
+      "emoji_sha256": "d2da44c14124a9353f27acb2534879bca17e9fe46735a1ffc9887f4c1c82096b",
+      "data_asset_sha256": "d2da44c14124a9353f27acb2534879bca17e9fe46735a1ffc9887f4c1c82096b",
+      "preview_sha256": "b12f36ee64a9b6edd83a289deb82dc88d4e2789f1bd9757db94c3f69244034bd"
+    }
+  ]
+}

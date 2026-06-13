@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import json
 from io import BytesIO
-from pathlib import Path
 from typing import Any, Iterable
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
 
+from core import card_ui as cui
 from core.content_config import ASSET_DIR, get_asset_file_path, get_creature_asset_path, safe_key
-from core.rpg_data import CHARMS, RARITY_BY_NAME, RARITY_INDEX, SIGILS, ZONES, arena_rank, normalize_key
+from core.rpg_data import CHARMS, RARITY_INDEX, SIGILS, ZONES, arena_rank, normalize_key
 
 
 # ── Palette ──────────────────────────────────────────────────────
@@ -463,7 +463,6 @@ def render_battle_card(left_name, right_name, left_team, right_team, *, left_hp=
             draw.text((tx + _tw(draw, rl, F10) + 18, y + 44), f"Lv.{lv}  |  {_get(cr, 'ability', '')}", font=F14, fill=_TEXT_MUTED)
             draw.text((tx, y + 76), f"STR {_get(cr, 'str_stat', 0)}", font=F15, fill=_GOLD)
             draw.text((tx + 100, y + 76), f"DEF {_get(cr, 'pr_stat', 0)}", font=F15, fill=_BLUE)
-            draw.text((tx + 200, y + 76), f"SPD {_get(cr, 'spd', _get(cr, 'speed', 0))}", font=F15, fill=_GREEN)
             _bar(draw, tx, y + 106, pw - 220, 20, max(0, hp), mhp, _RED)
             y += rh + 16
         return y
@@ -830,7 +829,7 @@ def render_collection_card(
     _bar(draw, cx, my + 66, mw - 48, 14, caught_count, total_templates, _CYAN)
 
     entries_list = list(entries)
-    COLS, ROWS = 7, 3
+    COLS = 7
     cell_w = (mw - 40) // COLS
     cell_h = 196
 
@@ -1179,7 +1178,7 @@ def _format_rate(rate_pct: float) -> str:
 
 
 def _render_creature_card_legacy(
-    creature_name: str, rarity: str, attack: int, defense: int, hp: int, speed: int,
+    creature_name: str, rarity: str, attack: int, defense: int, hp: int,
     ability: str, level: int = 1, xp: int = 0, caught: bool = False,
     player_name: str = "", catch_rate: float = 0.0, mana: int = 200, weight: float | int | None = None,
 ) -> BytesIO:
@@ -1225,17 +1224,18 @@ def _render_creature_card_legacy(
         draw.text((rx + 256, ry - 2), f"{xp}/100", font=F10, fill=_TEXT_MUTED)
     ry += 30
 
-    # Stat grid (2x3)
+    # Stat grid (2x2)
     stats = [
-        ("HP", hp, _RED), ("STR", attack, _GOLD), ("DEF", defense, _BLUE),
-        ("SPD", speed, _CYAN), ("CRIT", 5, _ORANGE), ("MANA", mana, _PURPLE),
+        ("HP", hp, _RED), ("STR", attack, _GOLD),
+        ("DEF", defense, _BLUE), ("MANA", mana, _PURPLE),
     ]
     sw = 120
     sh = 48
     sg = 6
 
+    cols = 2
     for idx, (label, value, color) in enumerate(stats):
-        col, row = idx % 3, idx // 3
+        col, row = idx % cols, idx // cols
         sx = rx + col * (sw + sg)
         sy = ry + row * (sh + sg)
         _shadow(img, (sx, sy, sx + sw, sy + sh), r=6, blur=4, dy=2, opacity=25)
@@ -1269,7 +1269,7 @@ def _render_creature_card_legacy(
 # ══════════════════════════════════════════════════════════════════
 def render_creature_card(
     creature_name: str, rarity: str, hp: int, str_stat: int, pr_stat: int,
-    wp_stat: int, mag_stat: int, mr_stat: int, speed: int,
+    wp_stat: int, mag_stat: int, mr_stat: int,
     role: str, ability: str, level: int = 1, xp: int = 0, caught: bool = False,
     player_name: str = "", catch_rate: float = 0.0, mana: int = 200, weight: float | int | None = None,
 ) -> BytesIO:
@@ -1330,7 +1330,6 @@ def render_creature_card(
     stat_items = [
         ("HP", hp, _RED), ("STR", str_stat, _GOLD), ("DEF", pr_stat, _BLUE),
         ("MANA", wp_stat, _PURPLE), ("MAG", mag_stat, _ORANGE), ("RES", mr_stat, _CYAN),
-        ("SPD", speed, _GREEN),
     ]
     sw = 110
     sh = 50
@@ -1622,6 +1621,21 @@ def _card_int(value: Any, default: int = 0) -> int:
         return default
 
 
+def _compact_card_num(value: Any) -> str:
+    number = _card_int(value)
+    sign = "-" if number < 0 else ""
+    number = abs(number)
+    if number >= 1_000_000_000:
+        text = f"{number / 1_000_000_000:.1f}B"
+    elif number >= 1_000_000:
+        text = f"{number / 1_000_000:.1f}M"
+    elif number >= 10_000:
+        text = f"{number / 1_000:.1f}K"
+    else:
+        return f"{sign}{number:,}"
+    return sign + text.replace(".0", "")
+
+
 def _card_json(value: Any, default: Any) -> Any:
     if isinstance(value, (dict, list)):
         return value
@@ -1732,7 +1746,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, tota
 
         name_x = x + 158
         stat_x = x + row_w - 270
-        name = str(_get(weapon, "name", "") or f"{_weapon_type_label(weapon)}")
+        name = _weapon_type_label(weapon)
         weapon_id = _get(weapon, "id", "?")
         draw.text((name_x, y + 22), _fit(draw, name, stat_x - name_x - 40, F24), font=F24, fill=_TEXT_BRIGHT)
         id_text = f"#{weapon_id}"
@@ -1744,7 +1758,7 @@ def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, tota
         quality = _weapon_quality_label(quality_pct)
         mana_cost = _card_int(_get(weapon, "mana_cost", 3), 3)
         wear = str(_get(weapon, "wear", "Unknown") or "Unknown")
-        meta = f"{rarity} {_weapon_type_label(weapon)} | Quality {quality_pct}% ({quality}) | Mana {mana_cost} | Wear {wear}"
+        meta = f"{_weapon_type_label(weapon)} | Quality {quality_pct}% ({quality}) | Mana {mana_cost} | Wear {wear}"
         draw.text((name_x + id_w + 12, y + 61), _fit(draw, meta, stat_x - name_x - id_w - 28, F14), font=F14, fill=_TEXT_MUTED)
 
         passive_line = _passive_summary(weapon)
@@ -1838,12 +1852,12 @@ def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, 
 
         tx = hero[0] + 216
         draw.text((tx, hero[1] + 42), "ACQUIRED WEAPON", font=F13, fill=_TEXT_MUTED)
-        draw.text((tx, hero[1] + 72), _fit(draw, str(_get(featured, "name", "Weapon")), 470, F28), font=F28, fill=_TEXT_BRIGHT)
+        draw.text((tx, hero[1] + 72), _fit(draw, _weapon_type_label(featured), 470, F28), font=F28, fill=_TEXT_BRIGHT)
         quality_pct = _card_int(_get(featured, "quality_pct", 50), 50)
         quality = _weapon_quality_label(quality_pct)
         mana_cost = _card_int(_get(featured, "mana_cost", 3), 3)
         wear = str(_get(featured, "wear", "Unknown") or "Unknown")
-        meta = f"{rarity} {_weapon_type_label(featured)} | Quality {quality_pct}% ({quality}) | Mana {mana_cost} | Wear {wear}"
+        meta = f"{_weapon_type_label(featured)} | Quality {quality_pct}% ({quality}) | Mana {mana_cost} | Wear {wear}"
         draw.text((tx, hero[1] + 114), _fit(draw, meta, 580, F15), font=F15, fill=rc)
         draw.text((tx, hero[1] + 146), _fit(draw, _passive_summary(featured), 570, F16), font=F16, fill=_GOLD)
         draw.text((tx, hero[1] + 176), _fit(draw, _affix_summary(featured, limit=3), 570, F13), font=F13, fill=_TEXT_MUTED)
@@ -1918,3 +1932,921 @@ def render_shop_card(display_name: str, deals: list, *, page: int = 1, total_pag
     footer = "Get shards by dismantling weak weapons with b salvage <weapon id> | Reroll with b wrr <id> stat/passive"
     draw.text((52, H - 56), _fit(draw, footer, W - 104, F14), font=F14, fill=_TEXT_MUTED)
     return _save(img)
+
+
+# Premium Abyssia card system overrides. These final definitions intentionally
+# replace the older renderers above while keeping their public signatures stable.
+
+
+def _premium_draw_title(draw: ImageDraw.ImageDraw, text: str, box: tuple[int, int, int, int], accent: tuple[int, int, int]) -> None:
+    cui.draw_text_fit(draw, text, box, cui.get_font(34, bold=True), cui.TEXT_BRIGHT, min_size=22, align="left", bold=True)
+    draw.line((box[0], box[3] - 2, min(box[2], box[0] + 260), box[3] - 2), fill=cui.rgba(accent, 170), width=2)
+
+
+def _premium_asset(kind: str, key: str, size: int | tuple[int, int]) -> Image.Image:
+    if isinstance(size, int):
+        size = (size, size)
+    return cui.load_asset_icon(kind, key, size, pixel=kind in {"creatures", "weapons", "passives"})
+
+
+def _premium_weapon_name(row: Any) -> str:
+    return _weapon_type_label(row)
+
+
+def _premium_weapon_rarity(row: Any) -> str:
+    return _weapon_rarity(row)
+
+
+def _premium_passive_items(row: Any) -> list[dict[str, Any]]:
+    passive = _card_json(_get(row, "passive", None), {})
+    items: list[dict[str, Any]] = []
+    if isinstance(passive, dict) and passive.get("key"):
+        items.append(passive)
+        extra = passive.get("extra", [])
+        if isinstance(extra, list):
+            items.extend(item for item in extra if isinstance(item, dict) and item.get("key"))
+    return items
+
+
+def _premium_passive_summary(row: Any, *, limit: int = 2) -> str:
+    items = _premium_passive_items(row)
+    if not items:
+        return "Passive: None"
+    labels: list[str] = []
+    for item in items[:limit]:
+        name = str(item.get("name") or item.get("key") or "Passive").replace("_", " ").title()
+        roll = _card_int(item.get("roll", 0))
+        value = _card_int(item.get("chance", item.get("value", 0)))
+        suffix = f"{value}%" if value else (f"roll {roll}" if roll else "")
+        labels.append(f"{name} {suffix}".strip())
+    if len(items) > limit:
+        labels.append(f"+{len(items) - limit} more")
+    return "Passive: " + " | ".join(labels)
+
+
+def _premium_affix_labels(row: Any, *, limit: int = 3) -> list[str]:
+    affixes = _card_json(_get(row, "affixes", "[]"), [])
+    if not isinstance(affixes, list):
+        return []
+    labels: list[str] = []
+    for affix in affixes:
+        if not isinstance(affix, dict):
+            continue
+        label = str(affix.get("fmt") or affix.get("name") or affix.get("key") or "").strip()
+        if label:
+            labels.append(label)
+    return labels[:limit]
+
+
+def _premium_weapon_stats(row: Any) -> list[tuple[str, str, tuple[int, int, int]]]:
+    stats = [
+        ("STR", _card_int(_get(row, "attack_bonus", 0)), cui.GOLD),
+        ("DEF", _card_int(_get(row, "defense_bonus", 0)), cui.BLUE),
+    ]
+    return [(label, f"+{value}", color) for label, value, color in stats if value != 0]
+
+
+_WEAPON_VAULT_BG = ASSET_DIR / "ui" / "weapon_vault_bg_abyssia_pixel.png"
+_ZOO_ARCHIVE_BG = ASSET_DIR / "ui" / "zoo_archive_bg_abyssia_pixel.png"
+
+
+def _generated_bg(path, size: tuple[int, int], accent: tuple[int, int, int]) -> Image.Image:
+    try:
+        if path.exists():
+            return cui.cover_resize(Image.open(path).convert("RGB"), size).convert("RGBA")
+    except OSError:
+        pass
+    return cui.new_card(size[0], size[1], accent)
+
+
+def _fill_cut_box(
+    img: Image.Image,
+    box: tuple[int, int, int, int],
+    fill: tuple[int, int, int, int],
+    *,
+    cut: int = 10,
+) -> None:
+    layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layer)
+    ld.polygon(cui.cut_box_points(box, cut), fill=fill)
+    img.alpha_composite(layer)
+
+
+def _draw_cut_outline(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    color: tuple[int, int, int, int],
+    *,
+    cut: int = 10,
+    width: int = 1,
+) -> None:
+    for offset in range(max(1, width)):
+        inner = (box[0] + offset, box[1] + offset, box[2] - offset, box[3] - offset)
+        pts = cui.cut_box_points(inner, max(0, cut - offset))
+        draw.line(pts + [pts[0]], fill=color, width=1)
+
+
+def _clean_pixel_panel(
+    img: Image.Image,
+    box: tuple[int, int, int, int],
+    fill: tuple[int, int, int, int],
+    border: tuple[int, int, int],
+    *,
+    cut: int = 10,
+    width: int = 1,
+    shadow: bool = True,
+) -> None:
+    if shadow:
+        _fill_cut_box(img, (box[0] + 4, box[1] + 5, box[2] + 4, box[3] + 5), (0, 0, 0, 96), cut=cut)
+    _fill_cut_box(img, box, fill, cut=cut)
+    draw = ImageDraw.Draw(img)
+    _draw_cut_outline(draw, box, (*border, 195), cut=cut, width=width)
+
+
+def _premium_reward_items(result: dict[str, Any]) -> list[tuple[str, str, str, str, tuple[int, int, int]]]:
+    rewards: list[tuple[str, str, str, str, tuple[int, int, int]]] = []
+    gold = _card_int(result.get("gold", result.get("souls", 0)))
+    gems = _card_int(result.get("gems", 0))
+    swords = _card_int(result.get("swords", 0))
+    if gold:
+        rewards.append(("Souls", f"{gold:,}", "currency", "souls", cui.GOLD))
+    if gems:
+        rewards.append(("Gems", f"{gems:,}", "currency", "gems", cui.CYAN))
+    if swords:
+        rewards.append(("Hunt Sword", f"{swords:,}", "consumable", "hunt_sword", cui.GREEN))
+    materials = result.get("materials", {})
+    if isinstance(materials, dict):
+        for key, amount in list(materials.items())[:3]:
+            qty = _card_int(amount)
+            if qty:
+                rewards.append((str(key).replace("_", " ").title(), f"{qty:,}", "materials", str(key), cui.GREEN))
+    return rewards
+
+
+def render_hunt_card(
+    hunter_name,
+    zone_name,
+    *,
+    rolls,
+    souls,
+    gems,
+    xp=0,
+    materials: dict[str, int],
+    monsters: list[dict[str, Any]],
+    swords_spent,
+    swords_found,
+    levels=0,
+):
+    W, H = 1200, 720
+    accent = cui.RED
+    img = cui.new_card(W, H, accent)
+    draw = ImageDraw.Draw(img)
+    total = len(monsters)
+    shown = min(total, 9)
+    subtitle = f"{hunter_name} | {zone_name} | {total} monster{'s' if total != 1 else ''} found"
+    top = cui.draw_header(img, "Hunt Result", subtitle, accent=accent)
+    cols = 3
+    gap = 16
+    tile_w = (W - 96 - gap * (cols - 1)) // cols
+    tile_h = 158
+    base_x, base_y = 48, top + 8
+    for idx, mon in enumerate(monsters[:shown]):
+        col, row = idx % cols, idx // cols
+        x = base_x + col * (tile_w + gap)
+        y = base_y + row * (tile_h + gap)
+        rarity = str(_get(mon, "rarity", "Common"))
+        rc = cui.rarity_color(rarity)
+        box = (x, y, x + tile_w, y + tile_h)
+        cui.draw_panel(img, box, fill=cui.rgba(cui.lerp_color((18, 14, 26), rc, 0.08), 224), border=rc, radius=18, glow=idx == 0)
+        icon = _premium_asset("creatures", normalize_key(str(_get(mon, "name", "unknown"))), 96)
+        cui.paste_icon_3d(img, icon, (x + 72, y + 72), 98, rc)
+        name = str(_get(mon, "name", "Unknown"))
+        cui.draw_text_fit(draw, name, (x + 136, y + 22, x + tile_w - 18, y + 56), cui.get_font(26, bold=True), cui.TEXT_BRIGHT, 18, bold=True)
+        cui.draw_rarity_badge(img, (x + 136, y + 60, x + 254, y + 92), rarity)
+        status = str(_get(mon, "collection_status", "DUPLICATE")).replace(" DISCOVERY", "")
+        if status.upper() == "DUPLICATE":
+            status = "OWNED"
+        status_color = cui.GREEN if "NEW" in status.upper() else cui.TEXT_MUTED
+        cui.draw_tag(img, (x + 258, y + 60, x + tile_w - 18, y + 92), status, status_color)
+        value = _card_int(_get(mon, "value", 0))
+        draw.text((x + 136, y + 110), f"{value:,} Souls", font=cui.get_font(24, bold=True), fill=cui.GOLD)
+    reward_y = H - 100
+    reward_w = 230
+    rewards = [
+        ("Souls", f"{_card_int(souls):,}", "currency", "souls", cui.GOLD),
+        ("Gems", f"{_card_int(gems):,}", "currency", "gems", cui.CYAN),
+        ("XP", f"{_card_int(xp):,}", "ui", "profile", cui.GREEN),
+        ("Hunt Sword", f"+{_card_int(swords_found) - _card_int(swords_spent):,}", "consumable", "hunt_sword", cui.ORANGE),
+    ]
+    for idx, (label, value, kind, key, color) in enumerate(rewards):
+        x = 48 + idx * (reward_w + 18)
+        cui.draw_reward_pill(img, (x, reward_y, x + reward_w, reward_y + 68), label, value, color, _premium_asset(kind, key, 42))
+    footer = f"Showing {shown} of {total}" if shown < total else (f"Level ups: {levels}" if levels else "Abyssia hunt report")
+    cui.draw_footer(img, footer, accent)
+    return cui.save_png(img)
+
+
+def render_creature_card(
+    creature_name: str,
+    rarity: str,
+    hp: int,
+    str_stat: int,
+    pr_stat: int,
+    wp_stat: int,
+    mag_stat: int,
+    mr_stat: int,
+    role: str,
+    ability: str,
+    level: int = 1,
+    xp: int = 0,
+    caught: bool = False,
+    player_name: str = "",
+    catch_rate: float = 0.0,
+    mana: int = 200,
+    weight: float | int | None = None,
+) -> BytesIO:
+    W, H = 1200, 720
+    rc = cui.rarity_color(rarity)
+    img = cui.new_card(W, H, rc)
+    draw = ImageDraw.Draw(img)
+    draw.fontmode = "1"
+    if cui.PIXEL_CARD_BG.exists():
+        try:
+            bg = cui.cover_resize(Image.open(cui.PIXEL_CARD_BG), (W, H)).convert("RGBA")
+            img.alpha_composite(bg)
+            draw.rectangle((0, 0, W, H), fill=(0, 0, 0, 32))
+        except OSError:
+            pass
+
+    title_font = cui.get_font(40, bold=True)
+    sub_font = cui.get_font(19)
+    draw.text((43, 29), "BESTIARY", font=title_font, fill=(0, 0, 0, 190))
+    draw.text((40, 26), "BESTIARY", font=title_font, fill=cui.TEXT_BRIGHT)
+    draw.text((42, 74), creature_name, font=sub_font, fill=cui.TEXT_MUTED)
+    badge_w = max(94, cui.text_width(draw, rarity.upper(), cui.get_font(16, bold=True)) + 28)
+    cui.draw_pixel_box(draw, (W - badge_w - 42, 33, W - 42, 63), (0, 0, 0, 112), cui.rgba(rc, 135), cut=7, width=1)
+    cui.draw_text_fit(draw, rarity.upper(), (W - badge_w - 34, 33, W - 50, 63), cui.get_font(16, bold=True), rc, 11, "center", True)
+    draw.rectangle((40, 100, W - 40, 102), fill=cui.rgba(rc, 120))
+
+    left = (48, 126, 424, H - 58)
+    right = (456, 126, W - 48, H - 58)
+
+    cui.draw_generated_panel_fill(img, left, (5, 5, 10, 196), cui.rgba(rc, 170), cut=18, texture_alpha=54)
+    if not cui.paste_ai_frame(img, left, cui.PIXEL_FRAME_WINDOW, rc, strength=0.14, opacity=245):
+        cui.draw_pixel_box(draw, left, (0, 0, 0, 0), cui.rgba(rc, 150), cut=18, width=2)
+    draw = ImageDraw.Draw(img)
+    draw.fontmode = "1"
+
+    portrait_box = (left[0] + 44, left[1] + 42, left[2] - 44, left[1] + 326)
+    glow = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.rectangle((portrait_box[0] + 18, portrait_box[1] + 28, portrait_box[2] - 18, portrait_box[3] - 24), fill=cui.rgba(rc, 54))
+    glow = glow.filter(ImageFilter.GaussianBlur(22))
+    img.alpha_composite(glow)
+    art = _premium_asset("creatures", normalize_key(creature_name), 292)
+    cui.paste_pixel_art_fit(img, art, portrait_box)
+
+    cui.draw_text_fit(
+        draw,
+        creature_name,
+        (left[0] + 30, left[3] - 156, left[2] - 30, left[3] - 112),
+        cui.get_font(30, bold=True),
+        cui.TEXT_BRIGHT,
+        18,
+        "center",
+        True,
+    )
+
+    def simple_chip(box: tuple[int, int, int, int], label: str, color: tuple[int, int, int]) -> None:
+        cui.draw_pixel_box(draw, box, cui.rgba(color, 44), cui.rgba(color, 145), cut=6, width=1)
+        cui.draw_text_fit(
+            draw,
+            label.upper(),
+            (box[0] + 8, box[1], box[2] - 8, box[3]),
+            cui.get_font(15, bold=True),
+            cui.lerp_color(color, cui.TEXT_BRIGHT, 0.45),
+            10,
+            "center",
+            True,
+        )
+
+    simple_chip((left[0] + 80, left[3] - 100, left[2] - 80, left[3] - 70), rarity, rc)
+    simple_chip((left[0] + 62, left[3] - 54, left[2] - 62, left[3] - 24), f"Lv.{level} | {role}", rc)
+
+    cui.draw_generated_panel_fill(img, right, (6, 6, 12, 214), cui.rgba(rc, 145), cut=16, texture_alpha=58)
+    cui.draw_pixel_box(draw, right, (0, 0, 0, 0), cui.rgba(rc, 135), cut=16, width=2)
+
+    draw.text((right[0] + 30, right[1] + 26), "CREATURE RECORD", font=cui.get_font(27, bold=True), fill=cui.TEXT_BRIGHT)
+    draw.rectangle((right[0] + 30, right[1] + 64, right[0] + 270, right[1] + 67), fill=cui.rgba(rc, 150))
+    draw.text((right[0] + 30, right[1] + 92), "Ability", font=cui.get_font(18), fill=cui.TEXT_MUTED)
+    cui.draw_text_fit(
+        draw,
+        ability,
+        (right[0] + 30, right[1] + 116, right[2] - 30, right[1] + 154),
+        cui.get_font(28, bold=True),
+        cui.TEXT_BRIGHT,
+        18,
+        bold=True,
+    )
+
+    def simple_bar(box: tuple[int, int, int, int], value: int | float, maximum: int | float, color: tuple[int, int, int], label: str) -> None:
+        x1, y1, x2, y2 = box
+        cui.draw_pixel_box(draw, box, (4, 4, 10, 230), cui.rgba(color, 128), cut=6, width=1)
+        ratio = cui.clamp(float(value) / max(1.0, float(maximum)))
+        fill_w = int((x2 - x1 - 6) * ratio)
+        if fill_w > 0:
+            cui.draw_pixel_box(draw, (x1 + 3, y1 + 3, min(x2 - 3, x1 + 3 + fill_w), y2 - 3), cui.rgba(color, 220), None, cut=4)
+        cui.draw_text_fit(draw, label, (x1 + 10, y1, x2 - 10, y2), cui.get_font(17, bold=True), cui.TEXT_BRIGHT, 11, "center", True)
+
+    progress_label = f"XP {xp}/100" if caught else "Not yet caught"
+    simple_bar((right[0] + 30, right[1] + 174, right[2] - 30, right[1] + 204), xp if caught else 0, 100, rc if caught else cui.RED, progress_label)
+
+    stats = [
+        ("HP", hp, cui.RED),
+        ("STR", str_stat, cui.GOLD),
+        ("DEF", pr_stat, cui.BLUE),
+        ("MANA", wp_stat or mana, cui.PURPLE),
+        ("MAG", mag_stat, cui.ORANGE),
+        ("RES", mr_stat, cui.CYAN),
+    ]
+    stat_x = right[0] + 30
+    stat_y = right[1] + 238
+    stat_w = 188
+    stat_h = 54
+    for idx, (label, value, color) in enumerate(stats):
+        col = idx % 3
+        row = idx // 3
+        sx = stat_x + col * (stat_w + 16)
+        sy = stat_y + row * (stat_h + 16)
+        cui.draw_pixel_box(draw, (sx, sy, sx + stat_w, sy + stat_h), (4, 4, 10, 188), cui.rgba(color, 120), cut=7, width=1)
+        draw.text((sx + 14, sy + 8), label, font=cui.get_font(15, bold=True), fill=cui.TEXT_MUTED)
+        draw.text((sx + 14, sy + 27), str(value), font=cui.get_font(22, bold=True), fill=color)
+
+    rate_pct = max(0.0, catch_rate * 100)
+    rate_color = cui.GREEN if rate_pct >= 30 else (cui.GOLD if rate_pct >= 1 else cui.RED)
+    info_y = right[1] + 402
+    draw.text((right[0] + 30, info_y), "Catch Rate", font=cui.get_font(18), fill=cui.TEXT_MUTED)
+    draw.text((right[0] + 30, info_y + 24), _format_rate(rate_pct), font=cui.get_font(32, bold=True), fill=rate_color)
+    simple_bar((right[0] + 230, info_y + 34, right[2] - 30, info_y + 62), max(1, int(rate_pct * 100)), 10000, rate_color, "")
+
+    source = f"Weight {weight:g}" if weight is not None else "Weight unknown"
+    status = f"Caught by {player_name}" if caught and player_name else ("Caught" if caught else "Uncaught")
+    details = f"{source} | {status}"
+    cui.draw_text_fit(draw, details, (right[0] + 30, right[3] - 48, right[2] - 30, right[3] - 18), cui.get_font(20, bold=True), cui.GREEN if caught else cui.RED, 14, bold=True)
+
+    footer = "Bestiary records use fixed creature data and your caught progress."
+    footer_font = cui.get_font(17)
+    fw = cui.text_width(draw, footer, footer_font)
+    draw.text(((W - fw) // 2, H - 32), footer, font=footer_font, fill=cui.TEXT_MUTED)
+    return cui.save_png(img)
+
+
+def render_weapon_detail_card(owner_name: str, weapon: Any) -> BytesIO:
+    W, H = 1200, 720
+    rarity = _premium_weapon_rarity(weapon)
+    rc = cui.rarity_color(rarity)
+    img = cui.new_card(W, H, rc)
+    draw = ImageDraw.Draw(img)
+    weapon_name = _premium_weapon_name(weapon)
+    quality_pct = _card_int(_get(weapon, "quality_pct", 50), 50)
+    quality_tier = _weapon_quality_label(quality_pct)
+    quality_color = cui.rarity_color(quality_tier)
+    top = cui.draw_header(
+        img,
+        "Weapon Relic",
+        f"{owner_name} | ID #{_get(weapon, 'id', '?')}",
+        right_label=f"{quality_tier.upper()} {quality_pct}%",
+        accent=rc,
+    )
+    icon_panel = (52, top + 10, 420, H - 92)
+    info_panel = (452, top + 10, W - 52, H - 92)
+    cui.draw_floating_frame(img, icon_panel, rc, rc)
+    icon = _premium_asset("weapons", _weapon_icon_key(weapon), 270)
+    cui.paste_icon_3d(img, icon, ((icon_panel[0] + icon_panel[2]) // 2, icon_panel[1] + 220), 286, rc)
+    cui.draw_rarity_badge(img, (icon_panel[0] + 72, icon_panel[3] - 112, icon_panel[2] - 72, icon_panel[3] - 72), quality_tier)
+    cui.draw_tag(img, (icon_panel[0] + 100, icon_panel[3] - 58, icon_panel[2] - 100, icon_panel[3] - 20), str(_get(weapon, "wear", "Unknown")), cui.TEXT_MUTED)
+    cui.draw_panel(img, info_panel, fill=cui.PANEL, border=rc, radius=18)
+    cui.draw_text_fit(draw, weapon_name, (info_panel[0] + 28, info_panel[1] + 24, info_panel[2] - 28, info_panel[1] + 76), cui.get_font(44, bold=True), cui.TEXT_BRIGHT, 24, bold=True)
+    meta = f"MANA {_card_int(_get(weapon, 'mana_cost', 0))} | {quality_tier} Quality {quality_pct}%"
+    draw.text((info_panel[0] + 30, info_panel[1] + 86), meta, font=cui.get_font(24, bold=True), fill=quality_color)
+    stats = _premium_weapon_stats(weapon)
+    if stats:
+        cui.draw_stat_grid(img, stats, (info_panel[0] + 30, info_panel[1] + 128, info_panel[0] + 330, info_panel[1] + 210), columns=max(1, len(stats)), hide_zero=True)
+    ability = _weapon_type_label(weapon)
+    draw.text((info_panel[0] + 30, info_panel[1] + 236), "Active Ability", font=cui.get_font(20), fill=cui.TEXT_MUTED)
+    active_text = f"{ability} attack. Rolled values are represented by this weapon's quality, MANA cost, and stat rolls."
+    cui.draw_multiline_text_fit(draw, active_text, (info_panel[0] + 30, info_panel[1] + 264, info_panel[2] - 30, info_panel[1] + 338), cui.get_font(23), cui.TEXT, min_size=18, max_lines=2)
+    draw.text((info_panel[0] + 30, info_panel[1] + 366), "Passive", font=cui.get_font(20), fill=cui.TEXT_MUTED)
+    passive_line = _premium_passive_summary(weapon, limit=3)
+    passive_icon_x = info_panel[0] + 30
+    passives = _premium_passive_items(weapon)
+    if passives:
+        for idx, passive in enumerate(passives[:3]):
+            p_icon = _premium_asset("passives", str(passive.get("key", "")), 42)
+            img.alpha_composite(p_icon, (passive_icon_x + idx * 48, info_panel[1] + 398))
+        text_x = passive_icon_x + min(3, len(passives)) * 48 + 12
+    else:
+        text_x = passive_icon_x
+    cui.draw_text_fit(draw, passive_line, (text_x, info_panel[1] + 398, info_panel[2] - 30, info_panel[1] + 438), cui.get_font(24, bold=True), cui.GOLD, 18, bold=True)
+    affixes = _premium_affix_labels(weapon, limit=4)
+    draw.text((info_panel[0] + 30, info_panel[1] + 444), "Affixes", font=cui.get_font(20), fill=cui.TEXT_MUTED)
+    if affixes:
+        for idx, label in enumerate(affixes[:4]):
+            col = idx % 2
+            row = idx // 2
+            x = info_panel[0] + 30 + col * 324
+            y = info_panel[1] + 472 + row * 30
+            cui.draw_tag(img, (x, y, x + 302, y + 26), label, rc if idx == 0 else cui.TEXT_MUTED)
+    else:
+        draw.text((info_panel[0] + 30, info_panel[1] + 476), "None", font=cui.get_font(22), fill=cui.TEXT_MUTED)
+    cui.draw_footer(img, "Only nonzero stats are shown. Values come from this weapon instance.", rc)
+    return cui.save_png(img)
+
+
+def render_weapons_card(display_name: str, weapons: list, *, page: int = 1, total_pages: int = 1) -> BytesIO:
+    W, H = 1200, 900
+    img = _generated_bg(_WEAPON_VAULT_BG, (W, H), cui.GOLD)
+    img.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, 42)))
+    draw = ImageDraw.Draw(img)
+    draw.fontmode = "1"
+
+    title_font = cui.get_font(38, bold=True)
+    sub_font = cui.get_font(18)
+    draw.text((43, 29), "WEAPON VAULT", font=title_font, fill=(0, 0, 0, 190))
+    draw.text((40, 26), "WEAPON VAULT", font=title_font, fill=cui.TEXT_BRIGHT)
+    draw.text((42, 74), f"{display_name} | Page {page}/{total_pages}", font=sub_font, fill=cui.TEXT_MUTED)
+    _clean_pixel_panel(img, (1002, 34, 1148, 66), (0, 0, 0, 132), cui.GOLD, cut=8, shadow=False)
+    draw = ImageDraw.Draw(img)
+    cui.draw_text_fit(draw, "ABYSSIA", (1014, 34, 1136, 66), cui.get_font(16, bold=True), cui.GOLD, 10, "center", True)
+    draw.rectangle((0, 98, W, 104), fill=cui.rgba(cui.GOLD, 132))
+
+    page_weapons = list(weapons or [])[(max(1, page) - 1) * 4:(max(1, page) - 1) * 4 + 4]
+    if not page_weapons:
+        empty = (312, 312, 888, 592)
+        _clean_pixel_panel(img, empty, (3, 5, 10, 162), cui.GOLD, cut=18)
+        draw = ImageDraw.Draw(img)
+        cui.draw_text_fit(draw, "No weapons on this page", empty, cui.get_font(34, bold=True), cui.TEXT_MUTED, 20, "center", True)
+        footer = (34, H - 48, W - 34, H - 22)
+        _clean_pixel_panel(img, footer, (0, 0, 0, 128), cui.GOLD, cut=9, shadow=False)
+        cui.draw_text_fit(draw, f"{len(weapons or [])} weapon(s) | b weapons <id> | b salvage <id>", (footer[0] + 10, footer[1], footer[2] - 10, footer[3]), cui.get_font(16), cui.TEXT_MUTED, 11, "center")
+        return cui.save_png(img)
+
+    featured = page_weapons[0]
+
+    def badge(box: tuple[int, int, int, int], text: str, color: tuple[int, int, int]) -> None:
+        _clean_pixel_panel(img, box, cui.rgba(color, 42), color, cut=7, shadow=False)
+        bd = ImageDraw.Draw(img)
+        cui.draw_text_fit(bd, text, (box[0] + 8, box[1], box[2] - 8, box[3]), cui.get_font(14, bold=True), cui.lerp_color(color, cui.TEXT_BRIGHT, 0.45), 9, "center", True)
+
+    def stat_chip(box: tuple[int, int, int, int], label: str, value: str, color: tuple[int, int, int]) -> None:
+        _clean_pixel_panel(img, box, (0, 0, 0, 116), color, cut=6, shadow=False)
+        sd = ImageDraw.Draw(img)
+        sd.text((box[0] + 10, box[1] + 5), label, font=cui.get_font(12, bold=True), fill=cui.TEXT_MUTED)
+        sd.text((box[0] + 10, box[1] + 22), value, font=cui.get_font(18, bold=True), fill=color)
+
+    rarity = _premium_weapon_rarity(featured)
+    rc = cui.rarity_color(rarity)
+    quality_pct = _card_int(_get(featured, "quality_pct", 50), 50)
+    quality_tier = _weapon_quality_label(quality_pct)
+    quality_color = cui.rarity_color(quality_tier)
+    weapon_name = _premium_weapon_name(featured)
+
+    beam = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(beam)
+    bd.polygon(((504, 155), (696, 155), (772, 586), (428, 586)), fill=cui.rgba(rc, 28))
+    bd.ellipse((442, 512, 758, 622), fill=cui.rgba(rc, 42), outline=cui.rgba(rc, 96), width=2)
+    beam = beam.filter(ImageFilter.GaussianBlur(7))
+    img.alpha_composite(beam)
+
+    icon = _premium_asset("weapons", _weapon_icon_key(featured), 300)
+    cui.paste_icon_3d(img, icon, (600, 382), 292, rc)
+    draw = ImageDraw.Draw(img)
+    draw.ellipse((448, 525, 752, 614), outline=cui.rgba(rc, 165), width=2)
+    draw.ellipse((500, 542, 700, 598), outline=cui.rgba(cui.GOLD, 96), width=1)
+
+    info = (310, 592, 890, 748)
+    _clean_pixel_panel(img, info, (2, 4, 9, 172), rc, cut=14)
+    draw = ImageDraw.Draw(img)
+    cui.draw_text_fit(draw, weapon_name, (info[0] + 26, info[1] + 16, info[2] - 26, info[1] + 54), cui.get_font(30, bold=True), cui.TEXT_BRIGHT, 18, "center", True)
+    meta = f"#{_get(featured, 'id', '?')} | Quality {quality_pct}% | MANA {_card_int(_get(featured, 'mana_cost', 0))}"
+    cui.draw_text_fit(draw, meta, (info[0] + 28, info[1] + 58, info[2] - 28, info[1] + 84), cui.get_font(18, bold=True), quality_color, 12, "center", True)
+    passive = _premium_passive_summary(featured, limit=2)
+    cui.draw_text_fit(draw, passive, (info[0] + 26, info[1] + 92, info[2] - 26, info[1] + 122), cui.get_font(18, bold=True), cui.GOLD, 12, "center", True)
+    affixes = _premium_affix_labels(featured, limit=2)
+    affix_line = "Affixes: " + (" | ".join(affixes) if affixes else "None")
+    cui.draw_text_fit(draw, affix_line, (info[0] + 26, info[1] + 124, info[2] - 26, info[1] + 148), cui.get_font(15), cui.TEXT_MUTED, 10, "center")
+    badge((470, 152, 590, 184), quality_tier.upper(), quality_color)
+    badge((610, 152, 730, 184), rarity.upper(), rc)
+
+    stats = _premium_weapon_stats(featured)
+    stat_x = 918
+    stat_y = 662
+    for idx, (label, value, color) in enumerate(stats[:2]):
+        stat_chip((stat_x + idx * 116, stat_y, stat_x + 104 + idx * 116, stat_y + 54), label, value, color)
+
+    def draw_side_slot(weapon: Any, box: tuple[int, int, int, int]) -> None:
+        rarity = _premium_weapon_rarity(weapon)
+        rc = cui.rarity_color(rarity)
+        quality_pct = _card_int(_get(weapon, "quality_pct", 50), 50)
+        _clean_pixel_panel(img, box, cui.rgba(cui.lerp_color((2, 5, 10), rc, 0.04), 150), rc, cut=13)
+        sd = ImageDraw.Draw(img)
+        icon = _premium_asset("weapons", _weapon_icon_key(weapon), 120)
+        cui.paste_icon_3d(img, icon, ((box[0] + box[2]) // 2, box[1] + 88), 116, rc)
+        sd = ImageDraw.Draw(img)
+        name = _premium_weapon_name(weapon)
+        cui.draw_text_fit(sd, name, (box[0] + 14, box[1] + 138, box[2] - 14, box[1] + 168), cui.get_font(18, bold=True), cui.TEXT_BRIGHT, 12, "center", True)
+        meta = f"#{_get(weapon, 'id', '?')} | {quality_pct}% | MANA {_card_int(_get(weapon, 'mana_cost', 0))}"
+        cui.draw_text_fit(sd, meta, (box[0] + 14, box[1] + 170, box[2] - 14, box[1] + 194), cui.get_font(13, bold=True), rc, 9, "center", True)
+        equipped = _get(weapon, "equipped_creature_id", None)
+        status_color = cui.GREEN if equipped is not None else cui.TEXT_MUTED
+        status_text = "EQUIPPED" if equipped is not None else "VAULT"
+        badge((box[0] + 40, box[3] - 34, box[2] - 40, box[3] - 10), status_text, status_color)
+
+    slots = [
+        (54, 178, 278, 402),
+        (922, 178, 1146, 402),
+        (54, 436, 278, 660),
+    ]
+    for weapon, box in zip(page_weapons[1:], slots):
+        draw_side_slot(weapon, box)
+
+    footer = (34, H - 48, W - 34, H - 22)
+    _clean_pixel_panel(img, footer, (0, 0, 0, 134), cui.GOLD, cut=9, shadow=False)
+    draw = ImageDraw.Draw(img)
+    cui.draw_text_fit(draw, f"{len(weapons or [])} weapon(s) | b weapons <id> | b salvage <id>", (footer[0] + 10, footer[1], footer[2] - 10, footer[3]), cui.get_font(16), cui.TEXT_MUTED, 11, "center")
+    return cui.save_png(img)
+
+
+def render_crate_open_card(display_name: str, crate_name: str, result: dict, *, weapons: list = None, compact: bool = False) -> BytesIO:
+    weapon_list = list(weapons or [])
+    W, H = (1200, 900) if compact and len(weapon_list) > 4 else (1200, 720)
+    featured = max(weapon_list, key=lambda row: _card_int(_get(row, "quality_pct", 50), 50), default=None)
+    rarity = _premium_weapon_rarity(featured) if featured else "Rare"
+    rc = cui.rarity_color(rarity)
+    img = cui.new_card(W, H, rc)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, "Weapon Crate", f"{display_name} opened {crate_name}", right_label="LOOT", accent=rc)
+    hero = (52, top + 8, W - 52, top + 318)
+    cui.draw_panel(img, hero, fill=cui.rgba(cui.lerp_color((13, 10, 22), rc, 0.07), 232), border=rc, radius=22, glow=True)
+    if featured:
+        icon = _premium_asset("weapons", _weapon_icon_key(featured), 220)
+        cui.paste_icon_3d(img, icon, (hero[0] + 190, hero[1] + 164), 232, rc)
+        tx = hero[0] + 340
+        stats_x = hero[2] - 392
+        text_right = stats_x - 24
+        draw.text((tx, hero[1] + 44), "Acquired Weapon", font=cui.get_font(22), fill=cui.TEXT_MUTED)
+        cui.draw_text_fit(draw, _premium_weapon_name(featured), (tx, hero[1] + 78, text_right, hero[1] + 128), cui.get_font(44, bold=True), cui.TEXT_BRIGHT, 24, bold=True)
+        q_pct = _card_int(_get(featured, "quality_pct", 50), 50)
+        meta = f"Quality {q_pct}% | MANA {_card_int(_get(featured, 'mana_cost', 0))} | {_get(featured, 'wear', 'Unknown')}"
+        draw.text((tx, hero[1] + 140), cui.truncate_text(draw, meta, text_right - tx, cui.get_font(24, bold=True)), font=cui.get_font(24, bold=True), fill=rc)
+        draw.text((tx, hero[1] + 182), cui.truncate_text(draw, _premium_passive_summary(featured, limit=3), text_right - tx, cui.get_font(23, bold=True)), font=cui.get_font(23, bold=True), fill=cui.GOLD)
+        affixes = _premium_affix_labels(featured, limit=3)
+        affix_width = max(220, text_right - tx)
+        draw.text((tx, hero[1] + 218), cui.truncate_text(draw, "Affixes: " + (" | ".join(affixes) if affixes else "None"), affix_width, cui.get_font(20)), font=cui.get_font(20), fill=cui.TEXT_MUTED)
+        stats = _premium_weapon_stats(featured)
+        if stats:
+            cui.draw_stat_grid(img, stats, (stats_x, hero[1] + 206, hero[2] - 34, hero[1] + 286), columns=len(stats), hide_zero=True)
+    else:
+        cui.draw_text_fit(draw, "Crate opened", hero, cui.get_font(42, bold=True), cui.TEXT_BRIGHT, 24, "center", True)
+    reward_items = _premium_reward_items(result)
+    if not reward_items:
+        reward_items = [("Loot", "Collected", "crate", "cache", cui.GOLD)]
+    reward_y = hero[3] + 28
+    reward_w = (W - 104 - 18 * 3) // 4
+    for idx, (label, value, kind, key, color) in enumerate(reward_items[:4]):
+        x = 52 + idx * (reward_w + 18)
+        cui.draw_reward_pill(img, (x, reward_y, x + reward_w, reward_y + 78), label, value, color, _premium_asset(kind, key, 44))
+    list_y = reward_y + 112
+    remaining_weapons = [w for w in weapon_list if w is not featured] if featured and not compact else weapon_list
+    if remaining_weapons:
+        row_y = list_y + 34
+        available = max(0, H - 92 - row_y)
+        max_extra_rows = min(6, max(1, available // 50)) if available >= 38 else 0
+        if max_extra_rows:
+            draw.text((54, list_y), "Additional weapons", font=cui.get_font(22, bold=True), fill=cui.TEXT_MUTED)
+            for w in remaining_weapons[:max_extra_rows]:
+                rarity = _premium_weapon_rarity(w)
+                row_rc = cui.rarity_color(rarity)
+                row = (54, row_y, W - 54, row_y + 42)
+                cui.draw_panel(img, row, fill=(10, 8, 16, 204), border=row_rc, radius=12)
+                icon = _premium_asset("weapons", _weapon_icon_key(w), 32)
+                img.alpha_composite(icon, (row[0] + 12, row[1] + 5))
+                line = f"{_premium_weapon_name(w)} | Quality {_card_int(_get(w, 'quality_pct', 50))}% | {_premium_passive_summary(w, limit=1)}"
+                draw.text((row[0] + 54, row[1] + 9), cui.truncate_text(draw, line, row[2] - row[0] - 72, cui.get_font(20)), font=cui.get_font(20), fill=cui.TEXT)
+                row_y += 50
+        else:
+            cui.draw_tag(img, (54, list_y, W - 54, list_y + 36), f"+{len(remaining_weapons)} more weapon(s) added to vault", rc)
+    cui.draw_footer(img, f"{len(weapon_list)} weapon(s) acquired" if weapon_list else "No weapon drop this time", rc)
+    return cui.save_png(img)
+
+
+def render_shop_card(display_name: str, deals: list, *, page: int = 1, total_pages: int = 1) -> BytesIO:
+    W, H = 1200, 720
+    img = cui.new_card(W, H, cui.CYAN)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, "Weapon Crate Shop", f"{display_name} | Weapon Shards only", accent=cui.CYAN)
+    accents = {"cache": cui.CYAN, "relic": cui.GREEN, "treasure": cui.PURPLE}
+    names = {"cache": "Void Cache", "relic": "Eldritch Relic", "treasure": "Abyssal Treasure"}
+    card_w, card_h, gap = 340, 440, 28
+    base_x = (W - card_w * 3 - gap * 2) // 2
+    y = top + 28
+    for idx, deal in enumerate(list(deals or [])[:3]):
+        crate_key = str(deal.get("item_key") or "cache")
+        accent = accents.get(crate_key, (cui.CYAN, cui.GREEN, cui.PURPLE)[idx % 3])
+        box = (base_x + idx * (card_w + gap), y, base_x + idx * (card_w + gap) + card_w, y + card_h)
+        cui.draw_panel(img, box, fill=cui.rgba(cui.lerp_color((13, 10, 22), accent, 0.07), 230), border=accent, radius=22, glow=True)
+        icon = _premium_asset("crate", _deal_icon_key({"item_key": crate_key}), 154)
+        cui.paste_icon_3d(img, icon, ((box[0] + box[2]) // 2, box[1] + 128), 166, accent)
+        name = str(deal.get("item_name") or names.get(crate_key, crate_key.replace("_", " ").title()))
+        cui.draw_text_fit(draw, name, (box[0] + 26, box[1] + 224, box[2] - 26, box[1] + 266), cui.get_font(30, bold=True), cui.TEXT_BRIGHT, 20, "center", True)
+        desc = str(deal.get("desc") or "A sealed Abyssia weapon cache.")
+        cui.draw_multiline_text_fit(draw, desc, (box[0] + 30, box[1] + 278, box[2] - 30, box[1] + 334), cui.get_font(20), cui.TEXT_MUTED, min_size=18, max_lines=2)
+        rarities = str(deal.get("rarities") or "Rare+ weapons")
+        cui.draw_tag(img, (box[0] + 34, box[1] + 346, box[2] - 34, box[1] + 378), rarities, accent)
+        cost = _card_int(deal.get("shard_cost", 0))
+        price = f"{cost:,} Shards" if cost else "Weapon Shards"
+        cui.draw_reward_pill(img, (box[0] + 34, box[3] - 74, box[2] - 34, box[3] - 18), "Price", price, accent, _premium_asset("materials", "weapon_shard", 38))
+    cui.draw_footer(img, "Use b shardcrate <cache|relic|treasure>. Salvage weak weapons for Weapon Shards.", cui.CYAN)
+    return cui.save_png(img)
+
+
+def render_team_card(display_name: str, team: Iterable[Any], *, team_power: int, weapons: dict[int, Any] | None = None) -> BytesIO:
+    W, H = 1200, 720
+    img = cui.new_card(W, H, cui.PURPLE)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, "Battle Team", f"{display_name} | Power {team_power:,}", accent=cui.PURPLE)
+    members = list(team)[:3]
+    card_w, card_h, gap = 350, 500, 26
+    base_x = (W - card_w * 3 - gap * 2) // 2
+    y = top + 28
+    from core.battle_engine import compute_display_stats
+
+    for idx, cr in enumerate(members):
+        rarity = str(_get(cr, "rarity", "Common"))
+        rc = cui.rarity_color(rarity)
+        box = (base_x + idx * (card_w + gap), y, base_x + idx * (card_w + gap) + card_w, y + card_h)
+        cui.draw_panel(img, box, fill=cui.rgba(cui.lerp_color((14, 11, 24), rc, 0.07), 226), border=rc, radius=20, glow=idx == 0)
+        cui.draw_tag(img, (box[0] + 22, box[1] + 18, box[0] + 116, box[1] + 48), f"Slot {idx + 1}", rc)
+        cui.draw_rarity_badge(img, (box[2] - 144, box[1] + 18, box[2] - 22, box[1] + 48), rarity)
+        art = _premium_asset("creatures", normalize_key(str(_get(cr, "name", "?"))), 180)
+        cui.paste_icon_3d(img, art, ((box[0] + box[2]) // 2, box[1] + 160), 190, rc)
+        cui.draw_text_fit(draw, str(_get(cr, "name", "?")), (box[0] + 22, box[1] + 252, box[2] - 22, box[1] + 292), cui.get_font(28, bold=True), cui.TEXT_BRIGHT, 20, "center", True)
+        draw.text((box[0] + 130, box[1] + 296), f"Lv.{_get(cr, 'level', 1)}", font=cui.get_font(22, bold=True), fill=cui.GOLD)
+        stats = compute_display_stats(cr)
+        stat_items = [
+            ("HP", stats.get("HP", 0), cui.RED),
+            ("STR", stats.get("STR", 0), cui.GOLD),
+            ("DEF", stats.get("DEF", 0), cui.BLUE),
+            ("MANA", stats.get("MANA", 0), cui.PURPLE),
+            ("MAG", stats.get("MAG", 0), cui.ORANGE),
+            ("RES", stats.get("RES", 0), cui.CYAN),
+        ]
+        cui.draw_stat_grid(img, stat_items, (box[0] + 22, box[1] + 324, box[2] - 22, box[1] + 432), columns=3)
+        if weapons:
+            w = weapons.get(_card_int(_get(cr, "id", 0)))
+            if w:
+                row = (box[0] + 22, box[3] - 66, box[2] - 22, box[3] - 18)
+                cui.draw_panel(img, row, fill=(9, 8, 16, 220), border=cui.rarity_color(_premium_weapon_rarity(w)), radius=12)
+                icon = _premium_asset("weapons", _weapon_icon_key(w), 36)
+                img.alpha_composite(icon, (row[0] + 10, row[1] + 6))
+                text_x = row[0] + 54
+                passives = _premium_passive_items(w)
+                if passives:
+                    for p_idx, passive in enumerate(passives[:2]):
+                        p_icon = _premium_asset("passives", str(passive.get("key", "")), 26)
+                        img.alpha_composite(p_icon, (text_x + p_idx * 30, row[1] + 11))
+                    text_x += min(2, len(passives)) * 30 + 8
+                passive_text = _premium_passive_summary(w, limit=1).replace("Passive: ", "")
+                text = f"#{_get(w, 'id', '?')}  {_premium_weapon_name(w)} | {passive_text}"
+                cui.draw_text_fit(draw, text, (text_x, row[1] + 8, row[2] - 12, row[3] - 8), cui.get_font(18), cui.TEXT, 12)
+    cui.draw_footer(img, "Use b team set <slot> <name> | b weaponequip <id> <creature>", cui.PURPLE)
+    return cui.save_png(img)
+
+
+def render_collection_card(
+    display_name: str,
+    entries: Iterable[dict[str, Any]],
+    caught_count: int,
+    total_templates: int,
+    page: int,
+    total_pages: int,
+) -> BytesIO:
+    W, H = 1200, 900
+    img = _generated_bg(_ZOO_ARCHIVE_BG, (W, H), cui.CYAN)
+    dim = Image.new("RGBA", (W, H), (0, 0, 0, 56))
+    img.alpha_composite(dim)
+    draw = ImageDraw.Draw(img)
+    draw.fontmode = "1"
+
+    title_font = cui.get_font(39, bold=True)
+    sub_font = cui.get_font(18)
+    draw.text((43, 29), "SPIRIT INDEX", font=title_font, fill=(0, 0, 0, 185))
+    draw.text((40, 26), "SPIRIT INDEX", font=title_font, fill=cui.TEXT_BRIGHT)
+    draw.text((42, 74), f"{display_name} | Page {page}/{total_pages}", font=sub_font, fill=cui.TEXT_MUTED)
+    _clean_pixel_panel(img, (994, 34, 1148, 66), (0, 0, 0, 128), cui.CYAN, cut=8, shadow=False)
+    draw = ImageDraw.Draw(img)
+    cui.draw_text_fit(draw, "ABYSSIA", (1006, 34, 1136, 66), cui.get_font(16, bold=True), cui.CYAN, 10, "center", True)
+    draw.rectangle((0, 98, W, 104), fill=cui.rgba(cui.CYAN, 132))
+
+    panel = (38, 120, W - 38, H - 78)
+    _clean_pixel_panel(img, panel, (5, 8, 14, 118), cui.CYAN, cut=18, shadow=True)
+    draw = ImageDraw.Draw(img)
+    pct = caught_count / max(1, total_templates)
+
+    draw.text((panel[0] + 26, panel[1] + 20), f"{caught_count}/{total_templates}", font=cui.get_font(40, bold=True), fill=cui.TEXT_BRIGHT)
+    draw.text((panel[0] + 204, panel[1] + 34), "spirits discovered", font=cui.get_font(22), fill=cui.TEXT_MUTED)
+    bar = (panel[0] + 26, panel[1] + 78, panel[2] - 26, panel[1] + 108)
+    _clean_pixel_panel(img, bar, (3, 6, 10, 198), cui.CYAN, cut=7, shadow=False)
+    fill_w = int((bar[2] - bar[0] - 8) * cui.clamp(pct))
+    if fill_w > 0:
+        _fill_cut_box(img, (bar[0] + 4, bar[1] + 4, bar[0] + 4 + fill_w, bar[3] - 4), cui.rgba(cui.CYAN, 224), cut=5)
+    draw = ImageDraw.Draw(img)
+    cui.draw_text_fit(draw, f"{pct:.1%} complete", (bar[0] + 10, bar[1], bar[2] - 10, bar[3]), cui.get_font(19, bold=True), cui.TEXT_BRIGHT, 12, "center", True)
+
+    entries_list = list(entries)[:21]
+    cols, gap = 7, 12
+    cell_w = (panel[2] - panel[0] - 52 - gap * (cols - 1)) // cols
+    cell_h = 176
+    start_x, start_y = panel[0] + 26, panel[1] + 136
+    for idx, entry in enumerate(entries_list):
+        col, row = idx % cols, idx // cols
+        x = start_x + col * (cell_w + gap)
+        y = start_y + row * (cell_h + 12)
+        caught = bool(entry.get("caught"))
+        rarity = str(entry.get("rarity", "Common"))
+        rc = cui.rarity_color(rarity)
+        box = (x, y, x + cell_w, y + cell_h)
+        border = rc if caught else cui.BORDER
+        fill = cui.rgba(cui.lerp_color((5, 8, 13), rc, 0.06 if caught else 0.0), 156 if caught else 178)
+        _clean_pixel_panel(img, box, fill, border, cut=10, shadow=False)
+        draw = ImageDraw.Draw(img)
+        art = _premium_asset("creatures", normalize_key(str(entry.get("name", "?"))), 98)
+        if not caught:
+            art = ImageOps.grayscale(art).convert("RGBA")
+            art.putalpha(120)
+        cui.paste_icon_3d(img, art, ((box[0] + box[2]) // 2, box[1] + 70), 98, rc if caught else cui.BORDER)
+        name = str(entry.get("name", "???")) if caught else "???"
+        cui.draw_text_fit(draw, name, (box[0] + 10, box[1] + 118, box[2] - 10, box[1] + 148), cui.get_font(20, bold=True), cui.TEXT_BRIGHT if caught else cui.TEXT_MUTED, 16, "center", True)
+        if caught:
+            draw.text((box[0] + 14, box[1] + 158), f"x{entry.get('total', 1)}", font=cui.get_font(18), fill=cui.TEXT_MUTED)
+            draw.text((box[2] - 62, box[1] + 158), f"Lv.{entry.get('max_level', 1)}", font=cui.get_font(18, bold=True), fill=cui.GOLD)
+
+    footer = (34, H - 48, W - 34, H - 22)
+    _clean_pixel_panel(img, footer, (0, 0, 0, 126), cui.CYAN, cut=9, shadow=False)
+    draw = ImageDraw.Draw(img)
+    cui.draw_text_fit(draw, f"Page {page}/{total_pages}", (footer[0] + 10, footer[1], footer[2] - 10, footer[3]), cui.get_font(16), cui.TEXT_MUTED, 11, "center")
+    return cui.save_png(img)
+
+
+def render_autohunt_card(zone_name, *, hours, souls, gems, xp, materials, creatures, levels=0):
+    W, H = 1200, 720
+    img = cui.new_card(W, H, cui.ORANGE)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, "Expedition Report", f"{hours}h through {zone_name}", accent=cui.ORANGE)
+    rewards = [
+        ("Souls", f"{_card_int(souls):,}", "currency", "souls", cui.GOLD),
+        ("Gems", f"{_card_int(gems):,}", "currency", "gems", cui.CYAN),
+        ("XP", f"{_card_int(xp):,}", "ui", "profile", cui.GREEN),
+        ("Levels", str(levels), "ui", "profile", cui.ORANGE),
+    ]
+    for idx, (label, value, kind, key, color) in enumerate(rewards):
+        x = 52 + idx * 278
+        cui.draw_reward_pill(img, (x, top + 24, x + 250, top + 98), label, value, color, _premium_asset(kind, key, 42))
+    panel = (52, top + 130, W - 52, H - 82)
+    cui.draw_panel(img, panel, fill=cui.PANEL, border=cui.ORANGE, radius=18)
+    _premium_draw_title(draw, "Creatures Found", (panel[0] + 28, panel[1] + 24, panel[2] - 28, panel[1] + 64), cui.ORANGE)
+    for idx, line in enumerate(list(creatures)[:12]):
+        y = panel[1] + 84 + idx * 30
+        draw.text((panel[0] + 32, y), cui.truncate_text(draw, str(line), panel[2] - panel[0] - 64, cui.get_font(22)), font=cui.get_font(22), fill=cui.TEXT_BRIGHT)
+    cui.draw_footer(img, "Autohunt rewards are aggregated from completed expedition rolls.", cui.ORANGE)
+    return cui.save_png(img)
+
+
+def render_arena_card(display_name, player, *, rank, last_match=None):
+    W, H = 1200, 720
+    img = cui.new_card(W, H, cui.ORANGE)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, "Arena Ledger", display_name, accent=cui.ORANGE)
+    panel = (60, top + 22, W - 60, H - 84)
+    cui.draw_panel(img, panel, fill=cui.PANEL, border=cui.ORANGE, radius=20)
+    draw.text((panel[0] + 36, panel[1] + 34), str(rank), font=cui.get_font(54, bold=True), fill=cui.GOLD)
+    rating = _card_int(_get(player, "arena_rating", 1000), 1000)
+    stats = [("Rating", f"{rating:,}", cui.GOLD), ("Level", str(_get(player, "level", 1)), cui.CYAN), ("Battles", str(_get(player, "battles_won", 0)), cui.GREEN)]
+    cui.draw_stat_grid(img, stats, (panel[0] + 36, panel[1] + 126, panel[2] - 36, panel[1] + 214), columns=3)
+    draw.text((panel[0] + 36, panel[1] + 258), "Last Match", font=cui.get_font(26, bold=True), fill=cui.TEXT_MUTED)
+    text = last_match or "No recent arena result."
+    cui.draw_multiline_text_fit(draw, text, (panel[0] + 36, panel[1] + 300, panel[2] - 36, panel[3] - 52), cui.get_font(24), cui.TEXT_BRIGHT, min_size=18, max_lines=6)
+    cui.draw_footer(img, "Battle team uses your selected or strongest three creatures.", cui.ORANGE)
+    return cui.save_png(img)
+
+
+def render_buffs_card(display_name: str, buff_type: str, items: list, active: dict[str, int]) -> BytesIO:
+    is_sigil = buff_type == "sigils"
+    accent = cui.RED if is_sigil else cui.PURPLE
+    title = "Blood Sigils" if is_sigil else "Void Charms"
+    W, H = 1200, 720
+    img = cui.new_card(W, H, accent)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, title, f"{display_name} | 5 daily hunt boosters", accent=accent)
+    items = list(items)[:5]
+    card_w = (W - 104 - 16 * (len(items) - 1)) // max(1, len(items))
+    y = top + 26
+    for idx, item in enumerate(items):
+        x = 52 + idx * (card_w + 16)
+        color = cui.lerp_color(accent, cui.GOLD if is_sigil else cui.CYAN, idx / max(1, len(items) - 1))
+        box = (x, y, x + card_w, H - 92)
+        charges = _card_int(active.get(item.key, 0))
+        cui.draw_panel(img, box, fill=cui.rgba(cui.lerp_color((12, 10, 20), color, 0.06), 226), border=color, radius=18, glow=charges > 0)
+        cui.draw_tag(img, (box[0] + 18, box[1] + 16, box[2] - 18, box[1] + 48), f"{charges} active" if charges else "Inactive", cui.GREEN if charges else cui.TEXT_MUTED)
+        icon = _premium_asset("buffs", item.key, 112)
+        cui.paste_icon_3d(img, icon, ((box[0] + box[2]) // 2, box[1] + 132), 120, color)
+        cui.draw_text_fit(draw, item.name, (box[0] + 16, box[1] + 214, box[2] - 16, box[1] + 250), cui.get_font(24, bold=True), cui.TEXT_BRIGHT, 18, "center", True)
+        effect = f"+{item.extra_monsters} monsters" if is_sigil else f"+{item.extra_monsters} monsters | +{int(item.rarity_bonus * 100)}% rarity"
+        cui.draw_text_fit(draw, effect, (box[0] + 18, box[1] + 262, box[2] - 18, box[1] + 294), cui.get_font(19, bold=True), color, 16, "center", True)
+        cui.draw_multiline_text_fit(draw, item.desc, (box[0] + 20, box[1] + 316, box[2] - 20, box[1] + 386), cui.get_font(18), cui.TEXT_MUTED, min_size=16, max_lines=3)
+        price = f"{item.cost_souls:,} Souls" + (f" | {item.cost_gems:,} Gems" if item.cost_gems else "")
+        cui.draw_tag(img, (box[0] + 18, box[3] - 56, box[2] - 18, box[3] - 20), price, color)
+    cui.draw_footer(img, "Activate boosters before hunting to improve hunt results.", accent)
+    return cui.save_png(img)
+
+
+def render_profile_card(
+    display_name,
+    player,
+    *,
+    collection_count,
+    weapon_name,
+    xp_needed,
+    active_buffs: dict[str, int] | None = None,
+    profile_cosmetics: dict[str, Any] | None = None,
+    avatar_bytes: bytes | None = None,
+    win_streak: int = 0,
+    best_streak: int = 0,
+):
+    W, H = 1200, 720
+    cosmetics = profile_cosmetics or {}
+    accent = _profile_color(cosmetics.get("accent_color"), cui.PURPLE)
+    img = cui.new_card(W, H, accent)
+    draw = ImageDraw.Draw(img)
+    top = cui.draw_header(img, "Hunter Profile", str(display_name), accent=accent)
+    left = (54, top + 18, 420, H - 86)
+    right = (452, top + 18, W - 54, H - 86)
+    cui.draw_panel(img, left, fill=cui.PANEL, border=accent, radius=22, glow=True)
+    avatar = _profile_avatar(str(display_name), avatar_bytes, 188, accent)
+    cui.paste_icon_3d(img, avatar, ((left[0] + left[2]) // 2, left[1] + 150), 196, accent)
+    cui.draw_text_fit(
+        draw,
+        str(display_name),
+        (left[0] + 28, left[1] + 270, left[2] - 28, left[1] + 316),
+        cui.get_font(36, bold=True),
+        cui.TEXT_BRIGHT,
+        22,
+        "center",
+        True,
+    )
+    level = _card_int(_get(player, "level", 1), 1)
+    xp = _card_int(_get(player, "xp", 0), 0)
+    cui.draw_tag(img, (left[0] + 86, left[1] + 326, left[2] - 86, left[1] + 364), f"Level {level}", accent)
+    xp_label = f"XP {_compact_card_num(xp)}/{_compact_card_num(xp_needed)}"
+    cui.draw_progress_bar(img, (left[0] + 36, left[1] + 374, left[2] - 36, left[1] + 406), xp, max(1, xp_needed), accent, xp_label)
+    weapon_icon = _premium_asset("weapons", "sword", 48)
+    weapon_box = (left[0] + 36, left[3] - 92, left[2] - 36, left[3] - 24)
+    cui.draw_panel(img, weapon_box, fill=(11, 9, 18, 222), border=cui.GOLD, radius=16)
+    img.alpha_composite(weapon_icon, (weapon_box[0] + 16, weapon_box[1] + 10))
+    draw.text((weapon_box[0] + 76, weapon_box[1] + 12), "FEATURED WEAPON", font=cui.get_font(18), fill=cui.TEXT_MUTED)
+    cui.draw_text_fit(
+        draw,
+        weapon_name or "None",
+        (weapon_box[0] + 76, weapon_box[1] + 34, weapon_box[2] - 14, weapon_box[3] - 8),
+        cui.get_font(24, bold=True),
+        cui.GOLD,
+        16,
+        "left",
+        True,
+    )
+    cui.draw_panel(img, right, fill=cui.PANEL, border=accent, radius=22)
+    stats = [
+        ("Souls", f"{_card_int(_get(player, 'gold', _get(player, 'souls', 0))):,}", cui.GOLD),
+        ("Gems", f"{_card_int(_get(player, 'gems', 0)):,}", cui.CYAN),
+        ("Collection", f"{collection_count:,}", cui.GREEN),
+        ("Hunts", f"{_card_int(_get(player, 'hunts_done', 0)):,}", cui.ORANGE),
+        ("Wins", f"{_card_int(_get(player, 'battles_won', 0)):,}", cui.RED),
+        ("Streak", f"{win_streak} / {best_streak}", cui.PURPLE),
+    ]
+    cui.draw_stat_grid(img, stats, (right[0] + 34, right[1] + 34, right[2] - 34, right[1] + 220), columns=3)
+    about = str(cosmetics.get("about") or "Abyssia hunter")
+    draw.text((right[0] + 36, right[1] + 260), "About", font=cui.get_font(26, bold=True), fill=cui.TEXT_MUTED)
+    cui.draw_multiline_text_fit(draw, about, (right[0] + 36, right[1] + 300, right[2] - 36, right[1] + 390), cui.get_font(24), cui.TEXT_BRIGHT, min_size=18, max_lines=3)
+    draw.text((right[0] + 36, right[1] + 430), "Active Buffs", font=cui.get_font(26, bold=True), fill=cui.TEXT_MUTED)
+    buffs = active_buffs or {}
+    if buffs:
+        x = right[0] + 36
+        for key, charges in list(buffs.items())[:6]:
+            icon = _premium_asset("buffs", key, 46)
+            img.alpha_composite(icon, (x, right[1] + 472))
+            draw.text((x + 52, right[1] + 482), f"x{charges}", font=cui.get_font(20, bold=True), fill=cui.GOLD)
+            x += 118
+    else:
+        draw.text((right[0] + 36, right[1] + 478), "None active", font=cui.get_font(22), fill=cui.TEXT_MUTED)
+    cui.draw_footer(img, "Use b profilecustomize to personalize your profile.", accent)
+    return cui.save_png(img)

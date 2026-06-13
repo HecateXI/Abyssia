@@ -159,21 +159,58 @@ class BotDatabase:
                 unlocked_at INTEGER NOT NULL,
                 PRIMARY KEY (user_id, achievement_key)
             );
-            CREATE TABLE IF NOT EXISTS rpg_raid_state (
-                guild_id INTEGER PRIMARY KEY,
+            CREATE TABLE IF NOT EXISTS boss_incursions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                channel_id INTEGER,
                 boss_key TEXT NOT NULL,
+                boss_name TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active',
+                phase INTEGER NOT NULL DEFAULT 1,
                 hp INTEGER NOT NULL,
                 max_hp INTEGER NOT NULL,
+                base_hp INTEGER NOT NULL,
+                total_power INTEGER NOT NULL DEFAULT 0,
+                participant_count INTEGER NOT NULL DEFAULT 0,
                 started_at INTEGER NOT NULL,
-                ends_at INTEGER NOT NULL
+                ends_at INTEGER NOT NULL,
+                last_attack_at INTEGER NOT NULL DEFAULT 0,
+                defeated_at INTEGER,
+                fled_at INTEGER,
+                created_by INTEGER,
+                message_id INTEGER,
+                summary TEXT NOT NULL DEFAULT '',
+                mechanics_json TEXT NOT NULL DEFAULT '{}'
             );
-            CREATE TABLE IF NOT EXISTS rpg_raid_damage (
+            CREATE INDEX IF NOT EXISTS idx_boss_incursions_guild_status ON boss_incursions (guild_id, status, ends_at);
+            CREATE TABLE IF NOT EXISTS boss_participants (
+                incursion_id INTEGER NOT NULL,
                 guild_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
-                damage INTEGER NOT NULL DEFAULT 0,
+                display_name TEXT NOT NULL,
+                team_snapshot_json TEXT NOT NULL,
+                team_state_json TEXT NOT NULL,
+                team_power INTEGER NOT NULL DEFAULT 0,
+                damage_dealt INTEGER NOT NULL DEFAULT 0,
+                damage_taken INTEGER NOT NULL DEFAULT 0,
+                healing_done INTEGER NOT NULL DEFAULT 0,
+                support_score INTEGER NOT NULL DEFAULT 0,
                 attacks INTEGER NOT NULL DEFAULT 0,
                 last_attack_at INTEGER NOT NULL DEFAULT 0,
-                PRIMARY KEY (guild_id, user_id)
+                joined_at INTEGER NOT NULL,
+                left_at INTEGER NOT NULL DEFAULT 0,
+                wiped INTEGER NOT NULL DEFAULT 0,
+                reward_claimed INTEGER NOT NULL DEFAULT 0,
+                action_state_json TEXT NOT NULL DEFAULT '{}',
+                PRIMARY KEY (incursion_id, user_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_boss_participants_guild ON boss_participants (guild_id, user_id);
+            CREATE TABLE IF NOT EXISTS boss_guild_config (
+                guild_id INTEGER NOT NULL PRIMARY KEY,
+                enabled INTEGER NOT NULL DEFAULT 1,
+                channel_id INTEGER,
+                last_spawn_at INTEGER NOT NULL DEFAULT 0,
+                next_spawn_at INTEGER NOT NULL DEFAULT 0
             );
             CREATE TABLE IF NOT EXISTS rpg_market_listings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -710,6 +747,75 @@ class BotDatabase:
                     agreed_at INTEGER NOT NULL
                 )
             """)
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS boss_incursions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    channel_id INTEGER,
+                    boss_key TEXT NOT NULL,
+                    boss_name TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    phase INTEGER NOT NULL DEFAULT 1,
+                    hp INTEGER NOT NULL,
+                    max_hp INTEGER NOT NULL,
+                    base_hp INTEGER NOT NULL,
+                    total_power INTEGER NOT NULL DEFAULT 0,
+                    participant_count INTEGER NOT NULL DEFAULT 0,
+                    started_at INTEGER NOT NULL,
+                    ends_at INTEGER NOT NULL,
+                    last_attack_at INTEGER NOT NULL DEFAULT 0,
+                    defeated_at INTEGER,
+                    fled_at INTEGER,
+                    created_by INTEGER,
+                    message_id INTEGER,
+                    summary TEXT NOT NULL DEFAULT '',
+                    mechanics_json TEXT NOT NULL DEFAULT '{}'
+                )
+            """)
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_boss_incursions_guild_status ON boss_incursions (guild_id, status, ends_at)")
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS boss_participants (
+                    incursion_id INTEGER NOT NULL,
+                    guild_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    display_name TEXT NOT NULL,
+                    team_snapshot_json TEXT NOT NULL,
+                    team_state_json TEXT NOT NULL,
+                    team_power INTEGER NOT NULL DEFAULT 0,
+                    damage_dealt INTEGER NOT NULL DEFAULT 0,
+                    damage_taken INTEGER NOT NULL DEFAULT 0,
+                    healing_done INTEGER NOT NULL DEFAULT 0,
+                    support_score INTEGER NOT NULL DEFAULT 0,
+                    attacks INTEGER NOT NULL DEFAULT 0,
+                    last_attack_at INTEGER NOT NULL DEFAULT 0,
+                    joined_at INTEGER NOT NULL,
+                    left_at INTEGER NOT NULL DEFAULT 0,
+                    wiped INTEGER NOT NULL DEFAULT 0,
+                    reward_claimed INTEGER NOT NULL DEFAULT 0,
+                    action_state_json TEXT NOT NULL DEFAULT '{}',
+                    PRIMARY KEY (incursion_id, user_id)
+                )
+            """)
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_boss_participants_guild ON boss_participants (guild_id, user_id)")
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS boss_guild_config (
+                    guild_id INTEGER NOT NULL PRIMARY KEY,
+                    enabled INTEGER NOT NULL DEFAULT 1,
+                    channel_id INTEGER,
+                    last_spawn_at INTEGER NOT NULL DEFAULT 0,
+                    next_spawn_at INTEGER NOT NULL DEFAULT 0
+                )
+            """)
+            incursion_columns = {
+                row["name"] for row in self.conn.execute("PRAGMA table_info(boss_incursions)").fetchall()
+            }
+            if incursion_columns and "mechanics_json" not in incursion_columns:
+                self.conn.execute("ALTER TABLE boss_incursions ADD COLUMN mechanics_json TEXT NOT NULL DEFAULT '{}'")
+            participant_columns = {
+                row["name"] for row in self.conn.execute("PRAGMA table_info(boss_participants)").fetchall()
+            }
+            if participant_columns and "action_state_json" not in participant_columns:
+                self.conn.execute("ALTER TABLE boss_participants ADD COLUMN action_state_json TEXT NOT NULL DEFAULT '{}'")
             await self._migrate_vote_tables()
             await self._migrate_to_global()
             self.conn.commit()
