@@ -4,9 +4,12 @@ import discord
 from discord.ext import commands
 from typing import Optional
 
+from core.card_layout import AbyssiaLayoutView
+from core.card_ui import run_render
 from core.cards import render_creature_card
 from core.rpg import ensure_player
 from core.rpg_data import CREATURES, RARITY_BY_NAME, catch_rate_for_rarity, derive_7stats, determine_role, dex_mana_for_rarity
+from core.theme import creature_emoji, rarity_label, stat_emoji
 
 
 class Bestiary(commands.Cog):
@@ -49,7 +52,8 @@ class Bestiary(commands.Cog):
             (ctx.author.id, creature.name),
         )
 
-        file = render_creature_card(
+        file = await run_render(
+            render_creature_card,
             creature_name=creature.name,
             rarity=creature.rarity,
             hp=s7["hp"], str_stat=s7["str"], pr_stat=s7["pr"],
@@ -65,7 +69,35 @@ class Bestiary(commands.Cog):
             weight=rarity_data.weight if rarity_data else None,
         )
 
-        await ctx.reply(file=discord.File(file, "creature.png"), mention_author=False)
+        filename = "abyssia_dex.png"
+        accent = discord.Color(rarity_data.color) if rarity_data else discord.Color.dark_gray()
+        icon = creature_emoji(creature.name, creature.rarity)
+        hp_icon = stat_emoji("hp") or "HP"
+        str_icon = stat_emoji("str") or "STR"
+        def_icon = stat_emoji("def") or "DEF"
+        mana_icon = stat_emoji("mana") or "MANA"
+        mag_icon = stat_emoji("mag") or "MAG"
+        res_icon = stat_emoji("res") or "RES"
+        caught_label = f"Lv.`{int(caught_row['level'])}`" if caught_row else "Not caught"
+        view = AbyssiaLayoutView(
+            owner_id=ctx.author.id,
+            title=f"{icon} {creature.name}".strip(),
+            subtitle=f"{rarity_label(creature.rarity)} | {role} | {caught_label}",
+            image_filename=filename,
+            image_description=f"{creature.name} bestiary card",
+            sections=[
+                ("Ability", f"**{creature.ability}**"),
+                (
+                    "Stats",
+                    f"{hp_icon} `{s7['hp']}`  {str_icon} `{s7['str']}`  {def_icon} `{s7['pr']}`\n"
+                    f"{mana_icon} `{s7['wp']}`  {mag_icon} `{s7['mag']}`  {res_icon} `{s7['mr']}`",
+                ),
+                ("Capture", f"Catch rate `{catch_rate * 100:.2f}%` | Weight `{rarity_data.weight if rarity_data else 'unknown'}`"),
+            ],
+            shortcuts=[("Zoo", "b zoo"), ("Explore", "b explore")],
+            accent=accent,
+        )
+        await ctx.reply(file=discord.File(file, filename), view=view, mention_author=False)
 
 
 async def setup(bot: commands.Bot) -> None:

@@ -203,7 +203,7 @@ class TradeView(discord.ui.View):
         modal = CurrencyModal(self.session, interaction.user.id, "gems")
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="Removed Materials", style=discord.ButtonStyle.secondary, row=1, disabled=True)
+    @discord.ui.button(label="Shards Only", style=discord.ButtonStyle.secondary, row=1, disabled=True)
     async def add_material(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         if not self._is_participant(interaction.user.id):
             await interaction.response.send_message("This is not your trade.", ephemeral=True)
@@ -212,7 +212,7 @@ class TradeView(discord.ui.View):
         if offer.confirmed:
             await interaction.response.send_message("You already confirmed. Unconfirm to change your offer.", ephemeral=True)
             return
-        await interaction.response.send_message("Crafting materials were removed. Trade weapons, creatures, Souls, or Gems.", ephemeral=True)
+        await interaction.response.send_message("Old crafting materials were removed. Trade weapons, creatures, Souls, Gems, or Weapon Shards.", ephemeral=True)
         return
         db = interaction.client.db
         inv = await inventory_rows(db, interaction.user.id)
@@ -333,6 +333,10 @@ class TradeView(discord.ui.View):
             await db.execute("UPDATE weapons SET user_id = ?, equipped_creature_id = NULL WHERE id = ?", (b_id, wid))
         for wid in b.weapons:
             await db.execute("UPDATE weapons SET user_id = ?, equipped_creature_id = NULL WHERE id = ?", (a_id, wid))
+        from core.rpg import invalidate_player_weapons_cache
+        if a.weapons or b.weapons:
+            invalidate_player_weapons_cache(a_id)
+            invalidate_player_weapons_cache(b_id)
         for cid in a.creatures:
             await db.execute("UPDATE rpg_creatures SET user_id = ? WHERE id = ?", (b_id, cid))
         for cid in b.creatures:

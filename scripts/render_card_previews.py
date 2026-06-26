@@ -7,11 +7,14 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+from PIL import Image, ImageDraw, ImageFont
+
 ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from core.battle_card_renderer import BattleCardRenderer  # noqa: E402
+from core.battle_engine import compute_display_stats  # noqa: E402
 from core.cards import (
     render_arena_card,
     render_autohunt_card,
@@ -29,12 +32,70 @@ from core.hunt_card_renderer import HuntCardRenderer  # noqa: E402
 from core.rpg_data import CHARMS, CREATURES, RARITIES, SIGILS, derive_7stats, determine_role  # noqa: E402
 
 OUT_DIR = Path("tmp/card_previews")
+REQUESTED_PREVIEWS = (
+    "weapon_vault.png",
+    "hunt_result_6.png",
+    "hunt_result_15.png",
+    "crate_shop.png",
+    "weapon_detail.png",
+    "battle_card.png",
+    "bestiary_page.png",
+    "profile_card.png",
+)
 
 
 def write(name: str, data: BytesIO) -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     data.seek(0)
     (OUT_DIR / name).write_bytes(data.read())
+
+
+def alias(src: str, dst: str) -> None:
+    source = OUT_DIR / src
+    if source.exists():
+        (OUT_DIR / dst).write_bytes(source.read_bytes())
+
+
+def _sheet_font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
+    for name in ("segoeuib.ttf" if bold else "segoeui.ttf", "arialbd.ttf" if bold else "arial.ttf", "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"):
+        try:
+            return ImageFont.truetype(name, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
+
+
+def build_contact_sheet(names: tuple[str, ...] = REQUESTED_PREVIEWS, *, output_name: str = "all_cards_contact_sheet.png", title: str = "Abyssia Card Preview Contact Sheet") -> None:
+    images: list[tuple[str, Image.Image]] = []
+    for name in names:
+        path = OUT_DIR / name
+        if not path.exists():
+            continue
+        image = Image.open(path).convert("RGB")
+        image.thumbnail((360, 240), Image.Resampling.LANCZOS)
+        images.append((name, image))
+    if not images:
+        return
+    cols = 2
+    cell_w = 410
+    cell_h = 306
+    title_h = 64
+    rows = (len(images) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * cell_w + 28, rows * cell_h + title_h + 28), (10, 8, 16))
+    draw = ImageDraw.Draw(sheet)
+    draw.text((20, 18), title, font=_sheet_font(28, bold=True), fill=(236, 229, 218))
+    draw.rectangle((0, title_h - 4, sheet.width, title_h), fill=(238, 196, 82))
+    for idx, (name, image) in enumerate(images):
+        col = idx % cols
+        row = idx // cols
+        x = 14 + col * cell_w
+        y = title_h + 14 + row * cell_h
+        draw.rounded_rectangle((x, y, x + cell_w - 14, y + cell_h - 12), radius=8, fill=(23, 19, 32), outline=(62, 53, 78))
+        px = x + (cell_w - 14 - image.width) // 2
+        py = y + 18
+        sheet.paste(image, (px, py))
+        draw.text((x + 18, y + cell_h - 48), name, font=_sheet_font(17, bold=True), fill=(236, 229, 218))
+    sheet.save(OUT_DIR / output_name, "PNG", optimize=True)
 
 
 def by_rarity() -> dict[str, Any]:
@@ -123,8 +184,29 @@ def sample_team() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for idx, rarity in enumerate(("Epic", "Legendary", "Eldritch"), start=1):
         creature = pick_creature(rarity, idx)
-        rows.append({"id": idx, "name": creature.name, "rarity": creature.rarity, "level": 18 + idx, "ability": creature.ability})
+        rows.append(
+            {
+                "id": idx,
+                "name": creature.name,
+                "rarity": creature.rarity,
+                "level": 18 + idx,
+                "ability": creature.ability,
+                "_weapon": sample_weapon(idx),
+            }
+        )
     return rows
+
+
+def battle_meter_samples(team: list[dict[str, Any]], hp_ratios: tuple[float, ...], mana_ratios: tuple[float, ...]) -> tuple[list[int], list[int]]:
+    hp_values: list[int] = []
+    mana_values: list[int] = []
+    for idx, creature in enumerate(team):
+        stats = compute_display_stats(creature)
+        hp_ratio = hp_ratios[idx] if idx < len(hp_ratios) else 1.0
+        mana_ratio = mana_ratios[idx] if idx < len(mana_ratios) else 1.0
+        hp_values.append(max(0, int(int(stats.get("HP", 1)) * hp_ratio)))
+        mana_values.append(max(0, int(int(stats.get("MANA", 1)) * mana_ratio)))
+    return hp_values, mana_values
 
 
 def render_all() -> None:
@@ -194,6 +276,9 @@ def render_all() -> None:
     team = sample_team()
     weapons = {1: sample_weapon(1), 2: sample_weapon(2), 3: sample_weapon(3)}
     write("team_premium.png", render_team_card("Nyx", team, team_power=987_654, weapons=weapons))
+    enemy_team = list(reversed(team))
+    player_hp, player_wp = battle_meter_samples(team, (1.0, 0.72, 0.54), (0.92, 0.66, 0.48))
+    enemy_hp, enemy_wp = battle_meter_samples(enemy_team, (0.84, 0.52, 0.0), (0.78, 0.18, 0.0))
     write(
         "battle_card_sample.png",
         battle.render_battle_result(
@@ -203,11 +288,11 @@ def render_all() -> None:
                 "player_rank": "Voidbound",
                 "enemy_rank": "Black Sun",
                 "player_team": team,
-                "enemy_team": list(reversed(team)),
-                "player_hp": [1200, 900, 700],
-                "enemy_hp": [1000, 650, 0],
-                "player_wp": [500, 360, 280],
-                "enemy_wp": [420, 100, 0],
+                "enemy_team": enemy_team,
+                "player_hp": player_hp,
+                "enemy_hp": enemy_hp,
+                "player_wp": player_wp,
+                "enemy_wp": enemy_wp,
                 "zone_key": "void_realm",
                 "won": True,
                 "turn": 7,
@@ -219,7 +304,7 @@ def render_all() -> None:
 
     entries = []
     rarity_names = [r.name for r in RARITIES]
-    for idx, rarity in enumerate(rarity_names[:21]):
+    for idx, rarity in enumerate((rarity_names * 2)[:10]):
         creature = pick_creature(rarity, idx)
         entries.append(
             {
@@ -230,7 +315,18 @@ def render_all() -> None:
                 "max_level": 10 + idx,
             }
         )
-    write("collection_all_rarity_test.png", render_collection_card("Nyx", entries, caught_count=14, total_templates=21, page=1, total_pages=1))
+    write(
+        "collection_all_rarity_test.png",
+        render_collection_card(
+            "Nyx",
+            entries[:5],
+            caught_count=7,
+            total_templates=10,
+            page=1,
+            total_pages=2,
+            next_entries=entries[5:10],
+        ),
+    )
     write(
         "profile_premium.png",
         render_profile_card(
@@ -274,6 +370,17 @@ def render_all() -> None:
     long_name = sample_hunt_data(3)
     long_name["monsters"][0]["name"] = "The Unspeakably Long Crownless Verdigris Devourer of the Black Sun Gate"
     write("long_name_truncation_test.png", hunt.render_hunt_grid_card(long_name))
+
+    alias("weapon_vault_premium.png", "weapon_vault.png")
+    alias("hunt_grid_6.png", "hunt_result_6.png")
+    alias("hunt_grid_15.png", "hunt_result_15.png")
+    alias("weapon_crate_shop.png", "crate_shop.png")
+    alias("weapon_detail_premium.png", "weapon_detail.png")
+    alias("battle_card_sample.png", "battle_card.png")
+    alias("bestiary_premium.png", "bestiary_page.png")
+    alias("profile_premium.png", "profile_card.png")
+    build_contact_sheet()
+    build_contact_sheet(output_name="all_cards_contact_sheet_v2.png", title="Abyssia Card Preview Contact Sheet V2")
 
 
 if __name__ == "__main__":

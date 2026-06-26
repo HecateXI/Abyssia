@@ -9,6 +9,10 @@ def simulate_battle_timeline(left_team, right_team, *, max_turns: int = 30, log_
 
 def select_battle_preview_frames(frames: list[dict[str, object]], *, max_frames: int = 5) -> list[dict[str, object]]:
     """Pick a short, evenly spaced preview while preserving the final battle state."""
+    if not frames:
+        return []
+    if max_frames <= 1:
+        return [frames[0]]
     if len(frames) <= max_frames:
         return frames
     last = len(frames) - 1

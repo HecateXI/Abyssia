@@ -19,10 +19,10 @@ from core.rpg import (
 )
 from core.rpg_data import BOSSES, RARITY_BY_NAME, WEAPON_SHARD_KEY, normalize_key
 
-ATTACK_COOLDOWN_SECONDS = 30
+ATTACK_COOLDOWN_SECONDS = 18
 DEFAULT_DURATION_SECONDS = 45 * 60
-SPAWN_MIN_SECONDS = 3 * 60 * 60
-SPAWN_MAX_SECONDS = 6 * 60 * 60
+SPAWN_MIN_SECONDS = 45 * 60
+SPAWN_MAX_SECONDS = 95 * 60
 
 ACTION_ALIASES = {
     "attack": "strike",
@@ -40,11 +40,11 @@ ACTION_ALIASES = {
 }
 
 ACTION_COOLDOWNS = {
-    "strike": 30,
-    "focus": 24,
-    "guard": 26,
-    "cleanse": 34,
-    "channel": 42,
+    "strike": 18,
+    "focus": 14,
+    "guard": 16,
+    "cleanse": 22,
+    "channel": 26,
 }
 
 ACTION_LABELS = {
@@ -147,7 +147,7 @@ BOSS_CONFIGS: dict[str, IncursionBoss] = {
         base_hp=3_250_000,
         hp_scale=80.0,
         hp_cap=60_000_000,
-        damage_scale=6.75,
+        damage_scale=1.10,
         duration_seconds=45 * 60,
         color=0xC8CCD7,
         weight=34,
@@ -161,7 +161,7 @@ BOSS_CONFIGS: dict[str, IncursionBoss] = {
         base_hp=4_250_000,
         hp_scale=90.0,
         hp_cap=75_000_000,
-        damage_scale=7.50,
+        damage_scale=1.15,
         duration_seconds=50 * 60,
         color=0x4CC46B,
         weight=28,
@@ -175,7 +175,7 @@ BOSS_CONFIGS: dict[str, IncursionBoss] = {
         base_hp=5_500_000,
         hp_scale=105.0,
         hp_cap=100_000_000,
-        damage_scale=8.25,
+        damage_scale=1.20,
         duration_seconds=55 * 60,
         color=0x4F9EFF,
         weight=22,
@@ -189,7 +189,7 @@ BOSS_CONFIGS: dict[str, IncursionBoss] = {
         base_hp=7_250_000,
         hp_scale=120.0,
         hp_cap=140_000_000,
-        damage_scale=9.25,
+        damage_scale=1.25,
         duration_seconds=60 * 60,
         color=0xD7A84B,
         weight=16,
@@ -527,8 +527,10 @@ def calculate_team_power(team: list[dict[str, Any]]) -> int:
         if isinstance(weapon, dict):
             quality_pct = int(weapon.get("quality_pct", 50) or 50)
             creature_score += quality_pct * 18
-            creature_score += int(weapon.get("attack_bonus", 0) or 0) * 12
-            creature_score += int(weapon.get("defense_bonus", 0) or 0) * 12
+            from core.rpg import weapon_stats as _iscore_ws
+            _iscore_stats = _iscore_ws(weapon)
+            for _isk, _isv in _iscore_stats.items():
+                creature_score += int(_isv) * 12
             if weapon.get("passive"):
                 creature_score += 900
         total += creature_score * rarity_bonus
@@ -564,9 +566,9 @@ def _boss_attack_stats(
         return 1, 1, 1
 
     avg_hp = sum(creature.max_hp for creature in living) / len(living)
-    avg_reduction = sum((creature.pr + creature.mr) / 2 for creature in living) / len(living)
+    avg_reduction = sum(creature.pr for creature in living) / len(living)
     phase_factor = {1: 0.22, 2: 0.30, 3: 0.40}.get(phase, 0.24)
-    enrage = 1.65 if seconds_left <= 5 * 60 else 1.0
+    enrage = 1.35 if seconds_left <= 5 * 60 else 1.0
     target_hit = avg_hp * phase_factor * boss.damage_scale * enrage
     raw_strength = target_hit / max(0.2, 1.0 - min(0.78, avg_reduction))
     str_stat = max(1, round((raw_strength - 100) / max(1, boss.level)))
@@ -1186,7 +1188,6 @@ async def claim_rewards(
     gems = round((4 + boss.level / 4 + min(40, score / 7500) + (4 if rank == 1 else 0)) * victory_mult)
     xp = round((180 + boss.level * 28 + score / 110) * victory_mult)
     shards = round((35 + score / 430 + rank_bonus / 5) * victory_mult)
-    material_amount = max(1 if status == "defeated" else 0, round((3 + score / 9000 + max(0, 4 - rank)) * victory_mult))
     crate_key: str | None = None
     if status == "defeated":
         crate_key = "treasure" if rank == 1 else ("relic" if rank <= 3 else "cache")
@@ -1199,8 +1200,6 @@ async def claim_rewards(
     del refreshed
     if shards:
         await add_item(db, user_id, "material", WEAPON_SHARD_KEY, max(0, shards))
-    if material_amount:
-        await add_item(db, user_id, "material", boss.material_key, max(0, material_amount))
     if crate_key:
         await add_item(db, user_id, "crate", crate_key, 1)
     if status == "defeated":
@@ -1221,8 +1220,8 @@ async def claim_rewards(
         gems=max(0, gems),
         xp=max(0, xp),
         shards=max(0, shards),
-        material_key=boss.material_key,
-        material_amount=max(0, material_amount),
+        material_key="",
+        material_amount=0,
         crate_key=crate_key,
         gained_levels=gained_levels,
     )

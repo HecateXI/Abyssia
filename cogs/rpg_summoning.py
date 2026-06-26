@@ -54,7 +54,7 @@ class RPGSummoning(commands.Cog):
         embed.description = "The circle cracks open. Something answers.\n\n" + "\n".join(creature_line(item, show_stats=False) for item in results)
         asset_url, file = embed_asset("creatures", normalize_key(str(best["name"])))
         if asset_url:
-            embed.set_thumbnail(url=asset_url)
+            embed.set_image(url=asset_url)
         await ctx.reply(embed=embed, file=file, mention_author=False)
 
 

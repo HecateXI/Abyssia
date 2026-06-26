@@ -88,8 +88,8 @@ CATEGORY_STYLES: dict[str, dict[str, object]] = {
     "Battle & Raids": {
         "emoji": "🔥",
         "asset": ("ui", "battle"),
-        "summary": "Teams, arena battles, revenge fights, bosses, and raids.",
-        "featured": ["team", "team set", "battle", "arena", "leaderboard", "raid", "boss"],
+        "summary": "Teams, battles, revenge fights, bosses, and raids.",
+        "featured": ["team", "team set", "battle", "leaderboard", "raid", "boss"],
     },
     "Summoning": {
         "emoji": "✨",
@@ -125,7 +125,7 @@ CATEGORY_STYLES: dict[str, dict[str, object]] = {
         "emoji": "💎",
         "asset": ("currency", "gems"),
         "summary": "Manage custom booster role rewards.",
-        "featured": ["booster", "booster create", "booster color", "booster sync"],
+        "featured": ["booster", "booster create", "booster color", "booster icon", "booster sync", "giveboosterrole"],
     },
     "Utility": {
         "emoji": "📡",
@@ -435,13 +435,13 @@ class DynamicHelpView(discord.ui.View):
         self._sync_controls()
         await interaction.response.edit_message(embed=self._command_embed(command), view=self)
 
-    @discord.ui.button(label="Prev", style=discord.ButtonStyle.secondary, disabled=True)
+    @discord.ui.button(label="Prev", style=discord.ButtonStyle.secondary, emoji="◀️", disabled=True)
     async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self.page = max(0, self.page - 1)
         self._sync_controls()
         await interaction.response.edit_message(embed=self._category_embed(), view=self)
 
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, disabled=True)
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, emoji="▶️", disabled=True)
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self.page = min(self._page_count() - 1, self.page + 1)
         self._sync_controls()

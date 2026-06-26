@@ -1,35 +1,56 @@
 from __future__ import annotations
 
+import asyncio
+import functools
+import json
+import logging
 import math
 import random
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont, ImageOps
 
-from core.content_config import ASSET_DIR, get_asset_file_path, get_creature_asset_path, safe_key
+from core.content_config import ASSET_DIR, ROOT_DIR, get_asset_file_path, get_creature_asset_path, safe_key
 
 Color = tuple[int, int, int]
 ColorA = tuple[int, int, int, int]
 
-BG_TOP: Color = (16, 10, 30)
-BG_BOTTOM: Color = (5, 4, 12)
-PANEL: ColorA = (23, 18, 34, 228)
-PANEL_DARK: ColorA = (10, 8, 18, 232)
-PANEL_SOFT: ColorA = (34, 27, 48, 210)
-BORDER: Color = (64, 54, 82)
-TEXT: Color = (236, 229, 218)
-TEXT_BRIGHT: Color = (255, 252, 244)
-TEXT_MUTED: Color = (158, 145, 136)
-GOLD: Color = (238, 196, 82)
-CYAN: Color = (58, 218, 232)
-BLUE: Color = (74, 154, 236)
-PURPLE: Color = (158, 91, 236)
-RED: Color = (221, 61, 78)
-GREEN: Color = (80, 212, 126)
-ORANGE: Color = (244, 139, 48)
+BG_TOP: Color = (14, 9, 22)
+BG_BOTTOM: Color = (4, 3, 8)
+PANEL: ColorA = (25, 20, 30, 232)
+PANEL_DARK: ColorA = (9, 7, 12, 236)
+PANEL_SOFT: ColorA = (39, 30, 44, 214)
+BORDER: Color = (82, 68, 64)
+TEXT: Color = (238, 230, 216)
+TEXT_BRIGHT: Color = (255, 248, 232)
+TEXT_MUTED: Color = (172, 154, 136)
+GOLD: Color = (225, 176, 72)
+CYAN: Color = (78, 178, 190)
+BLUE: Color = (86, 128, 184)
+PURPLE: Color = (142, 82, 198)
+RED: Color = (188, 52, 62)
+GREEN: Color = (76, 178, 112)
+ORANGE: Color = (210, 112, 44)
+
+# Shared thread pool for CPU-heavy image rendering so the Discord event loop stays responsive.
+_RENDER_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="abyssia-render")
+
+
+async def run_render(fn, *args, **kwargs):
+    """Run a synchronous image/card render function in a thread pool."""
+    start = asyncio.get_running_loop().time()
+    result = await asyncio.get_running_loop().run_in_executor(
+        _RENDER_EXECUTOR, functools.partial(fn, *args, **kwargs)
+    )
+    elapsed = asyncio.get_running_loop().time() - start
+    if elapsed > 0.5:
+        logging.getLogger("abyssia.render").info("Slow render %s: %.3fs", fn.__name__, elapsed)
+    return result
+
 
 RARITY_COLORS: dict[str, Color] = {
     "Common": (139, 148, 158),
@@ -64,6 +85,9 @@ STAT_COLORS: dict[str, Color] = {
 _FONT_CACHE: dict[tuple[int, bool], ImageFont.ImageFont] = {}
 _BG_CACHE: Image.Image | None = None
 _UI_ASSET_CACHE: dict[Path, Image.Image | None] = {}
+_CARD_ASSET_CACHE: dict[str, Image.Image | None] = {}
+_CARD_ASSET_INDEX: dict[str, dict[str, Any]] | None = None
+CARD_ASSET_MANIFEST = ROOT_DIR / "data" / "card_asset_manifest.json"
 PIXEL_CARD_BG = ASSET_DIR / "ui" / "card_bg_abyssia_pixel.png"
 PIXEL_FRAME_WINDOW = ASSET_DIR / "ui" / "frame_window_abyssia_pixel.png"
 PIXEL_FRAME_CARD = ASSET_DIR / "ui" / "frame_card_abyssia_pixel.png"
@@ -184,6 +208,82 @@ def load_ui_asset(path: Path) -> Image.Image | None:
             _UI_ASSET_CACHE[path] = None
     cached = _UI_ASSET_CACHE.get(path)
     return cached.copy() if cached is not None else None
+
+
+def _load_card_asset_index() -> dict[str, dict[str, Any]]:
+    global _CARD_ASSET_INDEX
+    if _CARD_ASSET_INDEX is not None:
+        return _CARD_ASSET_INDEX
+    index: dict[str, dict[str, Any]] = {}
+    if CARD_ASSET_MANIFEST.exists():
+        try:
+            payload = json.loads(CARD_ASSET_MANIFEST.read_text(encoding="utf-8"))
+            categories = payload.get("categories", {}) if isinstance(payload, dict) else {}
+            if isinstance(categories, dict):
+                for category, records in categories.items():
+                    if not isinstance(records, dict):
+                        continue
+                    for key, record in records.items():
+                        if not isinstance(record, dict):
+                            continue
+                        normalized = dict(record)
+                        normalized["category"] = category
+                        index[str(key)] = normalized
+                        index[f"{category}/{key}"] = normalized
+        except json.JSONDecodeError:
+            index = {}
+    _CARD_ASSET_INDEX = index
+    return index
+
+
+def get_asset(key: str, size: tuple[int, int] | None = None) -> Image.Image | None:
+    """Load a card UI asset by manifest key, returning a copy suitable for drawing."""
+    lookup = str(key)
+    record = _load_card_asset_index().get(lookup)
+    if not record:
+        return None
+    cache_key = f"{lookup}|{size or ''}"
+    if cache_key not in _CARD_ASSET_CACHE:
+        path = ROOT_DIR / str(record.get("path", ""))
+        try:
+            asset = Image.open(path).convert("RGBA") if path.exists() else None
+            if asset is not None and size is not None:
+                transparent = bool(record.get("transparent", False))
+                asset = _resize_icon(asset, size, pixel=False) if transparent else cover_resize(asset, size).convert("RGBA")
+            _CARD_ASSET_CACHE[cache_key] = asset
+        except OSError:
+            _CARD_ASSET_CACHE[cache_key] = None
+    cached = _CARD_ASSET_CACHE.get(cache_key)
+    return cached.copy() if cached is not None else None
+
+
+def draw_background(image: Image.Image, key: str, accent: Color | None = None) -> bool:
+    asset = get_asset(key, image.size)
+    if asset is None:
+        if accent is not None:
+            draw_depth_background(image, image.width, image.height, accent)
+        return False
+    image.alpha_composite(asset.convert("RGBA"))
+    return True
+
+
+def draw_panel_from_asset(
+    image: Image.Image,
+    key: str,
+    box: tuple[int, int, int, int],
+    accent: Color | ColorA | None = None,
+    *,
+    opacity: int = 255,
+) -> bool:
+    asset = get_asset(key)
+    if asset is None:
+        return False
+    panel = nine_slice_resize(asset, (box[2] - box[0], box[3] - box[1]), _asset_borders(Path(str(key)), asset))
+    panel = tint_ui_asset(panel, accent, 0.22)
+    if opacity < 255:
+        panel.putalpha(panel.getchannel("A").point(lambda p: int(p * clamp(opacity / 255))))
+    image.alpha_composite(panel, (box[0], box[1]))
+    return True
 
 
 def _asset_borders(path: Path, asset: Image.Image) -> tuple[int, int, int, int]:
@@ -341,11 +441,13 @@ def get_font(size: int, bold: bool = False) -> ImageFont.ImageFont:
     if key in _FONT_CACHE:
         return _FONT_CACHE[key]
     names = [
-        "consolab.ttf" if bold else "CascadiaMono.ttf",
-        "CascadiaCode.ttf",
-        "OCRAEXT.TTF",
+        str(ROOT_DIR / "assets" / "fonts" / "alagard.ttf"),
+        "CascadiaMono.ttf",
         "consolab.ttf" if bold else "consola.ttf",
-        "segoeuib.ttf" if bold else "segoeui.ttf",
+        "AGENCYB.TTF" if bold else "AGENCYR.TTF",
+        "bahnschrift.ttf",
+        "courbd.ttf" if bold else "cour.ttf",
+        "consolab.ttf" if bold else "consola.ttf",
         "arialbd.ttf" if bold else "arial.ttf",
         "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
         "NotoSans-Bold.ttf" if bold else "NotoSans.ttf",
@@ -428,6 +530,7 @@ def draw_text_fit(
     bold: bool | None = None,
 ) -> ImageFont.ImageFont:
     draw.fontmode = "1"
+    text = str(text).upper()
     x1, y1, x2, y2 = box
     chosen = font
     inferred_bold = bool(bold) if bold is not None else False
@@ -466,6 +569,7 @@ def draw_multiline_text_fit(
     max_lines: int | None = None,
 ) -> ImageFont.ImageFont:
     draw.fontmode = "1"
+    text = str(text).upper()
     x1, y1, x2, y2 = box
     chosen = font
     max_lines = max_lines or max(1, (y2 - y1) // max(1, font.size + line_spacing))
@@ -483,9 +587,43 @@ def draw_multiline_text_fit(
     return chosen
 
 
-def save_png(image: Image.Image) -> BytesIO:
+CARD_OUTPUT_MAX_SIZE = (1280, 900)
+CARD_OUTPUT_COLORS = 256
+
+
+def _prepare_card_output(
+    image: Image.Image,
+    *,
+    max_size: tuple[int, int] | None = None,
+    colors: int | None = None,
+) -> Image.Image:
+    max_size = max_size or CARD_OUTPUT_MAX_SIZE
+    colors = colors or CARD_OUTPUT_COLORS
+    prepared = image.convert("RGBA")
+    if prepared.width > max_size[0] or prepared.height > max_size[1]:
+        prepared.thumbnail(max_size, Image.Resampling.LANCZOS)
+    opaque = Image.new("RGBA", prepared.size, (*BG_BOTTOM, 255))
+    opaque.alpha_composite(prepared)
+    try:
+        return opaque.quantize(colors=colors, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
+    except (OSError, ValueError):
+        return opaque.convert("RGB")
+
+
+def save_png(
+    image: Image.Image,
+    *,
+    max_size: tuple[int, int] | None = None,
+    colors: int | None = None,
+    compress_level: int = 3,
+) -> BytesIO:
     output = BytesIO()
-    image.save(output, "PNG", optimize=True)
+    _prepare_card_output(image, max_size=max_size, colors=colors).save(
+        output,
+        "PNG",
+        optimize=False,
+        compress_level=compress_level,
+    )
     output.seek(0)
     return output
 
@@ -501,6 +639,24 @@ def draw_depth_shadow(
     y = blur * 2 + max(0, offset[1])
     shadow.paste((0, 0, 0, opacity), (x, y), alpha)
     return shadow.filter(ImageFilter.GaussianBlur(blur))
+
+
+def draw_shadow(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    *,
+    radius: int = 18,
+    blur: int = 18,
+    offset: tuple[int, int] = (0, 10),
+    opacity: int = 120,
+) -> None:
+    layer = Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), (0, 0, 0, 0))
+    mask = Image.new("L", layer.size, 0)
+    draw = ImageDraw.Draw(mask)
+    draw.rounded_rectangle((0, 0, layer.width - 1, layer.height - 1), radius=radius, fill=255)
+    layer.putalpha(mask)
+    shadow = draw_depth_shadow(layer, offset=offset, blur=blur, opacity=opacity)
+    image.alpha_composite(shadow, (box[0] - blur * 2, box[1] - blur * 2))
 
 
 def draw_glow(
@@ -527,8 +683,6 @@ def draw_rim_light(image: Image.Image, mask: Image.Image, color: Color, blur: in
 
 
 def ImageChops_subtract(a: Image.Image, b: Image.Image) -> Image.Image:
-    from PIL import ImageChops
-
     return ImageChops.subtract(a, b)
 
 
@@ -569,6 +723,10 @@ def draw_depth_background(image: Image.Image, width: int, height: int, accent: C
     image_rgba = image.convert("RGBA")
     draw = ImageDraw.Draw(image_rgba)
     global _BG_CACHE
+    if _BG_CACHE is None:
+        manifest_bg = get_asset("abyssia_dark_base")
+        if manifest_bg is not None:
+            _BG_CACHE = manifest_bg.convert("RGB")
     if _BG_CACHE is None and PIXEL_CARD_BG.exists():
         try:
             _BG_CACHE = Image.open(PIXEL_CARD_BG).convert("RGB")
@@ -628,8 +786,9 @@ def draw_beveled_panel(
 ) -> None:
     x1, y1, x2, y2 = box
     cut = max(7, min(radius, 18, (x2 - x1) // 8, (y2 - y1) // 6))
-    draw_pixel_box(draw, box, fill, border, cut=cut, width=3)
     border_rgb = color_alpha(border)[:3]
+    draw_pixel_box(draw, box, fill, rgba((0, 0, 0), 230), cut=cut, width=3)
+    draw_pixel_box(draw, (x1 + 2, y1 + 2, x2 - 2, y2 - 2), (0, 0, 0, 0), border, cut=max(4, cut - 2), width=2)
     texture = lerp_color(border_rgb, TEXT_BRIGHT, 0.16)
     for y in range(y1 + 14, y2 - 12, 18):
         draw.line((x1 + cut + 8, y, x2 - cut - 8, y), fill=rgba(texture, 12), width=1)
@@ -648,6 +807,112 @@ def draw_beveled_panel(
         draw.rectangle((px, py, px + 4, py + 4), fill=rgba(border, 130))
 
 
+def draw_pixel_plaque(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    fill: ColorA = PANEL,
+    border: Color | ColorA = BORDER,
+    *,
+    radius: int = 18,
+    shadow: bool = True,
+    glow: bool | Color = False,
+) -> None:
+    x1, y1, x2, y2 = box
+    width, height = x2 - x1, y2 - y1
+    if width <= 0 or height <= 0:
+        return
+    cut = max(6, min(radius, 18, width // 8, height // 5))
+    border_rgba = color_alpha(border)
+    border_rgb = border_rgba[:3]
+    if glow:
+        glow_color = border_rgb if glow is True else glow
+        draw_pixel_glow(image, box, glow_color, opacity=44, cut=cut, steps=3, step=4)
+    if shadow:
+        shadow_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        sd = ImageDraw.Draw(shadow_layer)
+        draw_pixel_box(
+            sd,
+            (x1 + 7, y1 + 9, x2 + 7, y2 + 9),
+            (0, 0, 0, 112),
+            None,
+            cut=cut,
+        )
+        image.alpha_composite(shadow_layer)
+
+    draw = ImageDraw.Draw(image)
+    fill_rgba = color_alpha(fill)
+    panel_fill = lerp_color(fill_rgba[:3], BG_BOTTOM, 0.28)
+    draw_pixel_box(draw, box, (*panel_fill, fill_rgba[3]), rgba((0, 0, 0), 238), cut=cut, width=3)
+    draw_pixel_box(
+        draw,
+        (x1 + 3, y1 + 3, x2 - 3, y2 - 3),
+        (0, 0, 0, 0),
+        rgba(border_rgb, min(235, max(150, border_rgba[3]))),
+        cut=max(3, cut - 3),
+        width=2,
+    )
+    draw_pixel_box(
+        draw,
+        (x1 + 8, y1 + 8, x2 - 8, y2 - 8),
+        (0, 0, 0, 0),
+        rgba(lerp_color(border_rgb, TEXT_BRIGHT, 0.24), 68),
+        cut=max(2, cut - 8),
+        width=1,
+    )
+
+    top_color = rgba(lerp_color(border_rgb, TEXT_BRIGHT, 0.18), 78)
+    bot_color = rgba((0, 0, 0), 120)
+    draw.line((x1 + cut + 8, y1 + 7, x2 - cut - 8, y1 + 7), fill=top_color, width=2)
+    draw.line((x1 + cut + 10, y2 - 8, x2 - cut - 10, y2 - 8), fill=bot_color, width=2)
+    draw.line((x1 + 7, y1 + cut + 8, x1 + 7, y2 - cut - 8), fill=top_color, width=2)
+    draw.line((x2 - 8, y1 + cut + 8, x2 - 8, y2 - cut - 8), fill=bot_color, width=2)
+
+    rng = random.Random(width * 1009 + height * 131 + sum(border_rgb))
+    speckle = lerp_color(border_rgb, TEXT_BRIGHT, 0.12)
+    for _ in range(max(2, width * height // 42000)):
+        px = rng.randint(x1 + cut + 8, max(x1 + cut + 8, x2 - cut - 12))
+        py = rng.randint(y1 + 10, max(y1 + 10, y2 - 12))
+        draw.rectangle((px, py, px + 1, py + 1), fill=rgba(speckle, rng.randint(18, 34)))
+    for py in range(y1 + 14, y2 - 12, 12):
+        draw.line((x1 + cut + 10, py, x2 - cut - 10, py), fill=rgba(border_rgb, 8), width=1)
+
+    rivet = rgba(lerp_color(border_rgb, TEXT_BRIGHT, 0.2), 150)
+    for px, py in (
+        (x1 + cut - 1, y1 + 6),
+        (x2 - cut - 5, y1 + 6),
+        (x1 + cut - 1, y2 - 10),
+        (x2 - cut - 5, y2 - 10),
+    ):
+        draw.rectangle((px, py, px + 4, py + 4), fill=rivet)
+        draw.point((px + 1, py + 1), fill=rgba(TEXT_BRIGHT, 95))
+
+
+def draw_pixel_platform(
+    image: Image.Image,
+    center: tuple[int, int],
+    width: int,
+    height: int,
+    accent: Color | None = None,
+    *,
+    alpha: int = 130,
+) -> None:
+    cx, cy = center
+    accent = accent or GOLD
+    draw = ImageDraw.Draw(image)
+    half_h = max(6, height // 2)
+    for row in range(-half_h, half_h + 1, 3):
+        t = abs(row) / max(1, half_h)
+        row_w = int(width * (1 - t * t * 0.72))
+        if row_w <= 0:
+            continue
+        y = cy + row
+        shade = max(20, alpha - int(t * 64))
+        draw.rectangle((cx - row_w // 2, y, cx + row_w // 2, y + 2), fill=(0, 0, 0, shade))
+    rim_w = int(width * 0.76)
+    draw.line((cx - rim_w // 2, cy - half_h + 3, cx + rim_w // 2, cy - half_h + 3), fill=rgba(accent, 52), width=2)
+    draw.line((cx - int(width * 0.42), cy + half_h - 2, cx + int(width * 0.42), cy + half_h - 2), fill=rgba((0, 0, 0), 150), width=2)
+
+
 def draw_panel(
     image: Image.Image,
     box: tuple[int, int, int, int],
@@ -656,29 +921,7 @@ def draw_panel(
     radius: int = 18,
     glow: bool | Color = False,
 ) -> None:
-    if glow:
-        glow_color = border[:3] if glow is True else glow
-        draw_pixel_glow(image, box, glow_color, opacity=62, cut=max(8, min(radius, 16)))
-    shadow = Image.new("RGBA", image.size, (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shadow)
-    draw_pixel_box(
-        sd,
-        (box[0] + 8, box[1] + 10, box[2] + 8, box[3] + 10),
-        (0, 0, 0, 92),
-        None,
-        cut=max(8, min(radius, 16)),
-    )
-    image.alpha_composite(shadow)
-    width, height = box[2] - box[0], box[3] - box[1]
-    frame = PIXEL_FRAME_WINDOW if width >= 410 or height >= 230 else PIXEL_FRAME_CARD
-    cut = max(8, min(radius, 18, width // 8, height // 6))
-    if draw_ai_box(image, box, fill, border, frame, cut=cut, texture_alpha=30, tint_strength=0.34):
-        return
-    layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    ld = ImageDraw.Draw(layer)
-    local = (0, 0, layer.width - 1, layer.height - 1)
-    draw_beveled_panel(ld, local, fill=fill, border=border, radius=radius)
-    image.alpha_composite(layer, (box[0], box[1]))
+    draw_pixel_plaque(image, box, fill=fill, border=border, radius=radius, glow=glow)
 
 
 def draw_header(
@@ -782,6 +1025,13 @@ def draw_rarity_badge(image: Image.Image, box: tuple[int, int, int, int], rarity
         "center",
         True,
     )
+
+
+def draw_rarity_frame(image: Image.Image, box: tuple[int, int, int, int], rarity: str) -> None:
+    key = safe_key(rarity).replace("_lord", "_lord")
+    color = rarity_color(rarity)
+    if not draw_panel_from_asset(image, f"rarity_frames/{key}", box, color):
+        draw_icon_frame(image, box, color, color)
 
 
 def draw_tag(image: Image.Image, box: tuple[int, int, int, int], label: str, color: Color) -> None:
@@ -921,8 +1171,13 @@ def _resize_icon(icon: Image.Image, size: tuple[int, int], pixel: bool = False) 
     return canvas
 
 
+@functools.lru_cache(maxsize=512)
 def load_asset_icon(kind: str, key: str, size: tuple[int, int], pixel: bool | None = None) -> Image.Image:
-    path = get_creature_asset_path(safe_key(key)) if kind == "creatures" else get_asset_file_path(kind, key)
+    if kind == "stats_battle":
+        path = ASSET_DIR / "stats_battle" / f"{safe_key(key)}.png"
+        path = path if path.exists() else None
+    else:
+        path = get_creature_asset_path(safe_key(key)) if kind == "creatures" else get_asset_file_path(kind, key)
     if path is None:
         direct = ASSET_DIR / kind / f"{safe_key(key)}.png"
         path = direct if direct.exists() else None
@@ -971,24 +1226,79 @@ def paste_pixel_art_fit(image: Image.Image, icon: Image.Image, box: tuple[int, i
     paste_icon_fit(image, icon, box, pixel=True)
 
 
-def paste_icon_3d(image: Image.Image, icon: Image.Image, center: tuple[int, int], size: int, glow_color: Color) -> None:
+def paste_icon_3d(
+    image: Image.Image,
+    icon: Image.Image,
+    center: tuple[int, int],
+    size: int,
+    glow_color: Color,
+    *,
+    glow_alpha: int = 76,
+    rim_light: bool = True,
+) -> None:
     icon = _resize_icon(icon, (size, size), pixel=True)
     x = center[0] - size // 2
     y = center[1] - size // 2 - 8
+    shadow_blur = max(2, int(size * 0.023))
+    glow_blur = max(4, int(size * 0.055))
     shadow = Image.new("RGBA", (size, size // 3), (0, 0, 0, 0))
     sd = ImageDraw.Draw(shadow)
     sd.ellipse((12, 4, size - 12, size // 3 - 2), fill=(0, 0, 0, 95))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(10))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(shadow_blur))
     image.alpha_composite(shadow, (x, center[1] + size // 3))
+    if glow_alpha > 0:
+        glow = Image.new("RGBA", (size + 90, size + 90), (0, 0, 0, 0))
+        gd = ImageDraw.Draw(glow)
+        gd.ellipse((20, 20, size + 70, size + 70), fill=rgba(glow_color, glow_alpha))
+        glow = glow.filter(ImageFilter.GaussianBlur(glow_blur))
+        image.alpha_composite(glow, (center[0] - glow.width // 2, center[1] - glow.height // 2 - 8))
+    if rim_light:
+        mask = icon.split()[-1]
+        rim = draw_rim_light(icon, mask, lerp_color(glow_color, TEXT_BRIGHT, 0.25), blur=max(2, glow_blur // 5))
+        image.alpha_composite(rim, (x, y))
+    image.alpha_composite(icon, (x, y))
+
+
+def paste_portrait_3d(image: Image.Image, portrait: Image.Image, center: tuple[int, int], size: int, glow_color: Color) -> None:
+    paste_icon_3d(image, portrait, center, size, glow_color)
+
+
+def paste_icon_3d_clipped(
+    image: Image.Image,
+    icon: Image.Image,
+    center: tuple[int, int],
+    size: int,
+    glow_color: Color,
+    clip_box: tuple[int, int, int, int],
+    clip_radius: int = 8,
+) -> None:
+    icon = _resize_icon(icon, (size, size), pixel=True)
+    x = center[0] - size // 2
+    y = center[1] - size // 2 - 8
+    shadow_blur = max(2, int(size * 0.023))
+    glow_blur = max(4, int(size * 0.055))
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    shadow = Image.new("RGBA", (size, size // 3), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shadow)
+    sd.ellipse((12, 4, size - 12, size // 3 - 2), fill=(0, 0, 0, 95))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(shadow_blur))
+    layer.alpha_composite(shadow, (x, center[1] + size // 3))
     glow = Image.new("RGBA", (size + 90, size + 90), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
     gd.ellipse((20, 20, size + 70, size + 70), fill=rgba(glow_color, 76))
-    glow = glow.filter(ImageFilter.GaussianBlur(24))
-    image.alpha_composite(glow, (center[0] - glow.width // 2, center[1] - glow.height // 2 - 8))
+    glow = glow.filter(ImageFilter.GaussianBlur(glow_blur))
+    layer.alpha_composite(glow, (center[0] - glow.width // 2, center[1] - glow.height // 2 - 8))
     mask = icon.split()[-1]
-    rim = draw_rim_light(icon, mask, lerp_color(glow_color, TEXT_BRIGHT, 0.25), blur=5)
-    image.alpha_composite(rim, (x, y))
-    image.alpha_composite(icon, (x, y))
+    rim = draw_rim_light(icon, mask, lerp_color(glow_color, TEXT_BRIGHT, 0.25), blur=max(2, glow_blur // 5))
+    layer.alpha_composite(rim, (x, y))
+    layer.alpha_composite(icon, (x, y))
+    clip_mask = Image.new("L", image.size, 0)
+    cmd = ImageDraw.Draw(clip_mask)
+    cmd.rounded_rectangle(clip_box, radius=clip_radius, fill=255)
+    layer_alpha = layer.split()[-1]
+    clipped_alpha = ImageChops.multiply(layer_alpha, clip_mask)
+    layer.putalpha(clipped_alpha)
+    image.alpha_composite(layer)
 
 
 def draw_reward_pill(

@@ -1,7 +1,32 @@
 import asyncio
 import sqlite3
+import time
 from pathlib import Path
 from typing import Any
+
+
+class _TTLCache:
+    """Simple in-memory TTL cache for immutable-ish lookup data."""
+
+    def __init__(self, ttl: float) -> None:
+        self.ttl = ttl
+        self._data: dict[Any, tuple[Any, float]] = {}
+
+    def get(self, key: Any) -> Any | None:
+        entry = self._data.get(key)
+        if entry is None:
+            return None
+        value, ts = entry
+        if time.monotonic() - ts > self.ttl:
+            del self._data[key]
+            return None
+        return value
+
+    def set(self, key: Any, value: Any) -> None:
+        self._data[key] = (value, time.monotonic())
+
+    def invalidate(self, key: Any) -> None:
+        self._data.pop(key, None)
 
 
 class BotDatabase:
@@ -9,6 +34,7 @@ class BotDatabase:
         self.path = Path(path)
         self._conn: sqlite3.Connection | None = None
         self._lock = asyncio.Lock()
+        self._guild_settings_cache = _TTLCache(300)
 
     async def connect(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -29,6 +55,8 @@ class BotDatabase:
                 role_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 color INTEGER NOT NULL DEFAULT 0,
+                color2 INTEGER DEFAULT NULL,
+                icon TEXT DEFAULT NULL,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (guild_id, member_id)
             );
@@ -46,6 +74,7 @@ class BotDatabase:
                 command_name TEXT NOT NULL,
                 created_at INTEGER NOT NULL
             );
+            CREATE INDEX IF NOT EXISTS idx_command_invocations_created ON command_invocations (created_at);
             CREATE TABLE IF NOT EXISTS mod_cases (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 guild_id INTEGER NOT NULL,
@@ -106,6 +135,19 @@ class BotDatabase:
                 caught_at INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_rpg_creatures_owner ON rpg_creatures (user_id);
+            CREATE INDEX IF NOT EXISTS idx_rpg_creatures_user_name_rarity ON rpg_creatures (user_id, name, rarity);
+            CREATE TABLE IF NOT EXISTS rpg_creature_collection (
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                rarity TEXT NOT NULL,
+                total_caught INTEGER NOT NULL DEFAULT 0,
+                total_value INTEGER NOT NULL DEFAULT 0,
+                max_level INTEGER NOT NULL DEFAULT 1,
+                first_caught_at INTEGER NOT NULL DEFAULT 0,
+                last_caught_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, name, rarity)
+            );
+            CREATE INDEX IF NOT EXISTS idx_rpg_creature_collection_user ON rpg_creature_collection (user_id);
             CREATE TABLE IF NOT EXISTS rpg_inventory (
                 user_id INTEGER NOT NULL,
                 item_type TEXT NOT NULL,
@@ -135,6 +177,8 @@ class BotDatabase:
                 summary TEXT NOT NULL,
                 created_at INTEGER NOT NULL
             );
+            CREATE INDEX IF NOT EXISTS idx_rpg_battle_logs_winner ON rpg_battle_logs (winner_id, created_at);
+            CREATE INDEX IF NOT EXISTS idx_rpg_battle_logs_loser ON rpg_battle_logs (loser_id, created_at);
             CREATE TABLE IF NOT EXISTS rpg_quests (
                 user_id INTEGER NOT NULL,
                 quest_key TEXT NOT NULL,
@@ -143,6 +187,19 @@ class BotDatabase:
                 claimed INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, quest_key, period_key)
             );
+            CREATE TABLE IF NOT EXISTS rpg_quest_assignments (
+                user_id INTEGER NOT NULL,
+                period_type TEXT NOT NULL,
+                period_key TEXT NOT NULL,
+                quest_key TEXT NOT NULL,
+                slot INTEGER NOT NULL DEFAULT 0,
+                rerolls_used INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, period_type, period_key, quest_key)
+            );
+            CREATE INDEX IF NOT EXISTS idx_rpg_quest_assignments_period
+                ON rpg_quest_assignments (user_id, period_type, period_key, slot);
             CREATE TABLE IF NOT EXISTS rpg_daily_checklists (
                 user_id INTEGER NOT NULL,
                 period_key TEXT NOT NULL,
@@ -431,6 +488,24 @@ class BotDatabase:
                 ALTER TABLE rpg_quests_new RENAME TO rpg_quests;
             """)
 
+        self.conn.execute("""
+            CREATE TABLE IF NOT EXISTS rpg_quest_assignments (
+                user_id INTEGER NOT NULL,
+                period_type TEXT NOT NULL,
+                period_key TEXT NOT NULL,
+                quest_key TEXT NOT NULL,
+                slot INTEGER NOT NULL DEFAULT 0,
+                rerolls_used INTEGER NOT NULL DEFAULT 0,
+                created_at INTEGER NOT NULL DEFAULT 0,
+                updated_at INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (user_id, period_type, period_key, quest_key)
+            )
+        """)
+        self.conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_rpg_quest_assignments_period
+            ON rpg_quest_assignments (user_id, period_type, period_key, slot)
+        """)
+
         ach_cols = {row["name"] for row in self.conn.execute("PRAGMA table_info(rpg_achievements)")}
         if "guild_id" in ach_cols:
             self.conn.executescript("""
@@ -541,6 +616,8 @@ class BotDatabase:
             self.conn.execute("DROP TABLE weapons")
             self.conn.execute("ALTER TABLE weapons_new RENAME TO weapons")
             self.conn.execute("CREATE INDEX IF NOT EXISTS idx_weapons_owner ON weapons (user_id)")
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_weapons_equipped ON weapons (equipped_creature_id)")
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_weapons_user_equipped ON weapons (user_id, equipped_creature_id)")
 
     @property
     def conn(self) -> sqlite3.Connection:
@@ -572,6 +649,41 @@ class BotDatabase:
             for column, ddl in additions.items():
                 if column not in creature_columns:
                     self.conn.execute(f"ALTER TABLE rpg_creatures ADD COLUMN {column} {ddl}")
+            self.conn.execute("""
+                CREATE TABLE IF NOT EXISTS rpg_creature_collection (
+                    user_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    rarity TEXT NOT NULL,
+                    total_caught INTEGER NOT NULL DEFAULT 0,
+                    total_value INTEGER NOT NULL DEFAULT 0,
+                    max_level INTEGER NOT NULL DEFAULT 1,
+                    first_caught_at INTEGER NOT NULL DEFAULT 0,
+                    last_caught_at INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY (user_id, name, rarity)
+                )
+            """)
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_rpg_creature_collection_user ON rpg_creature_collection (user_id)")
+            collection_columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(rpg_creature_collection)").fetchall()}
+            if "total_value" not in collection_columns:
+                self.conn.execute("ALTER TABLE rpg_creature_collection ADD COLUMN total_value INTEGER NOT NULL DEFAULT 0")
+            self.conn.execute("""
+                INSERT INTO rpg_creature_collection
+                    (user_id, name, rarity, total_caught, total_value, max_level, first_caught_at, last_caught_at)
+                SELECT user_id, name, rarity, COUNT(*) AS total_caught, SUM(value) AS total_value, MAX(level) AS max_level,
+                       MIN(caught_at) AS first_caught_at, MAX(caught_at) AS last_caught_at
+                FROM rpg_creatures
+                GROUP BY user_id, name, rarity
+                ON CONFLICT(user_id, name, rarity) DO UPDATE SET
+                    total_caught = MAX(total_caught, excluded.total_caught),
+                    total_value = MAX(total_value, excluded.total_value),
+                    max_level = MAX(max_level, excluded.max_level),
+                    first_caught_at = CASE
+                        WHEN first_caught_at = 0 THEN excluded.first_caught_at
+                        WHEN excluded.first_caught_at = 0 THEN first_caught_at
+                        ELSE MIN(first_caught_at, excluded.first_caught_at)
+                    END,
+                    last_caught_at = MAX(last_caught_at, excluded.last_caught_at)
+            """)
             shop_columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(rpg_shop_rotation)").fetchall()}
             if not shop_columns:
                 self.conn.execute("""
@@ -608,6 +720,8 @@ class BotDatabase:
                 )
             """)
             self.conn.execute("CREATE INDEX IF NOT EXISTS idx_weapons_owner ON weapons (user_id)")
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_weapons_equipped ON weapons (equipped_creature_id)")
+            self.conn.execute("CREATE INDEX IF NOT EXISTS idx_weapons_user_equipped ON weapons (user_id, equipped_creature_id)")
             weapon_columns = {row["name"] for row in self.conn.execute("PRAGMA table_info(weapons)").fetchall()}
             weapon_additions = {
                 "weapon_type": "TEXT NOT NULL DEFAULT 'sword'",
@@ -816,6 +930,13 @@ class BotDatabase:
             }
             if participant_columns and "action_state_json" not in participant_columns:
                 self.conn.execute("ALTER TABLE boss_participants ADD COLUMN action_state_json TEXT NOT NULL DEFAULT '{}'")
+            booster_columns = {
+                row["name"] for row in self.conn.execute("PRAGMA table_info(booster_roles)").fetchall()
+            }
+            if booster_columns and "color2" not in booster_columns:
+                self.conn.execute("ALTER TABLE booster_roles ADD COLUMN color2 INTEGER DEFAULT NULL")
+            if booster_columns and "icon" not in booster_columns:
+                self.conn.execute("ALTER TABLE booster_roles ADD COLUMN icon TEXT DEFAULT NULL")
             await self._migrate_vote_tables()
             await self._migrate_to_global()
             self.conn.commit()
@@ -853,10 +974,17 @@ class BotDatabase:
             return list(self.conn.execute(sql, params).fetchall())
 
     async def get_setting(self, guild_id: int, key: str) -> str | None:
+        cache_key = (guild_id, key)
+        cached = self._guild_settings_cache.get(cache_key)
+        if cached is not None:
+            return cached
         row = await self.fetchone("SELECT value FROM guild_settings WHERE guild_id = ? AND key = ?", (guild_id, key))
-        return None if row is None else row["value"]
+        value = None if row is None else row["value"]
+        self._guild_settings_cache.set(cache_key, value)
+        return value
 
     async def set_setting(self, guild_id: int, key: str, value: str | None) -> None:
+        self._guild_settings_cache.invalidate((guild_id, key))
         if value is None:
             await self.execute("DELETE FROM guild_settings WHERE guild_id = ? AND key = ?", (guild_id, key))
             return

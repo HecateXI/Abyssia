@@ -14,11 +14,11 @@ DATA_PATH = ROOT_DIR / "data" / "icon_prompts.json"
 DOC_PATH = ROOT_DIR / "docs" / "icon_generation_prompts.md"
 
 PROMPT_TEMPLATE = (
-    "Premium 3D pixel-art dark fantasy RPG icon for {display_name}: {concept}. "
-    "Centered object, transparent background, 512x512, crisp readable silhouette, "
-    "high contrast, gothic Abyssia style, subtle rim light, detailed but readable "
-    "at Discord emoji size, polished game UI asset, no text, no letters, no "
-    "watermark, no character, no full scene."
+    "Crisp pixel-art dark fantasy RPG icon for {display_name}: {concept}. "
+    "Centered object, transparent background, 512x512, bold readable silhouette, "
+    "high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, "
+    "moderate detail only, readable at Discord emoji size, no text, no letters, "
+    "no watermark, no character, no full scene."
 )
 
 NEGATIVE_PROMPT = (
@@ -64,26 +64,26 @@ class IconSpec:
 
 
 WEAPONS: tuple[IconSpec, ...] = (
-    IconSpec("sword", "Sword", "weapons", "black steel sword, bone hilt, grave mist, cyan edge glow", "black steel, bone ivory, grave cyan, cold mist"),
-    IconSpec("bow", "Bow", "weapons", "twisted bone-and-shadow bow, spectral arrow, blue void glow", "bone ivory, void blue, black shadow, pale spectral light"),
-    IconSpec("axe", "Axe", "weapons", "brutal crimson axe, chipped blade, blood-rust glow", "crimson, rust brown, dark iron, blackened red"),
-    IconSpec("dagger", "Dagger", "weapons", "curved fang dagger, poison green edge, black handle", "toxic green, black leather, bone white, dark steel"),
-    IconSpec("crossbow", "Crossbow", "weapons", "gothic crossbow with coffin-bolt, iron and bone", "dark iron, old bone, coffin wood, cold blue accents"),
-    IconSpec("staff", "Staff", "weapons", "witch staff with violet flame and carved runes", "violet flame, black wood, rune cyan, ashen gray"),
-    IconSpec("staff_of_purity", "Staff of Purity", "weapons", "pale staff, black halo, white-blue cleansing flame", "pale ivory, black halo, white blue flame, silver"),
-    IconSpec("shield", "Shield", "weapons", "ancient cracked shield with crown sigil and blue ward glow", "aged steel, royal blue ward, crown gold, black cracks"),
-    IconSpec("hammer", "Hammer", "weapons", "funeral hammer with bell motif and glowing cracks", "dark iron, funeral brass, ember cracks, muted bone"),
-    IconSpec("orb", "Orb", "weapons", "floating black orb with blue void core and orbiting shards", "black glass, void blue, cyan glow, silver shard highlights"),
-    IconSpec("rune", "Rune", "weapons", "stone rune slab with impossible glowing glyph", "ancient stone, eldritch teal, violet shadows, bone dust"),
-    IconSpec("soulreaper", "Soulreaper", "weapons", "crescent scythe with soul mist", "cold steel, spectral cyan, black handle, pale soul mist"),
-    IconSpec("briar_relic", "Briar Relic", "weapons", "thorn-wrapped relic heart, green-black thorns", "deep green, black thorns, red heart glow, antique bronze"),
-    IconSpec("rot_chalice", "Chalice of Rot", "weapons", "cursed chalice dripping green rot and black ichor", "toxic green, black ichor, tarnished gold, sickly yellow"),
-    IconSpec("banner", "Banner", "weapons", "torn war banner with black sun emblem", "black cloth, faded crimson, dull gold, ash gray"),
-    IconSpec("eye", "Eye", "weapons", "eldritch eye in a half-open stone doorway", "void teal, wet black, cold stone, pale eye glow"),
-    IconSpec("judgement_blade", "Judgement Blade", "weapons", "judgment blade with broken crown and scale motif", "silver steel, broken gold crown, black enamel, blue white gleam"),
-    IconSpec("lantern", "Lantern", "weapons", "black lantern with starving blue flame", "black iron, hungry blue flame, desaturated brass, smoky cyan"),
-    IconSpec("mirror_relic", "Mirror Relic", "weapons", "cracked mirror with an eye in reflection", "black glass, silver cracks, pale eye, violet reflection"),
-    IconSpec("final_bell_scythe", "Final Bell Scythe", "weapons", "scythe with hanging funeral bell and pale death glow", "pale steel, funeral brass, deathly cyan, black wood"),
+    IconSpec("sword", "Gravecut", "weapons", "black steel grave-sword with bone hilt and cyan edge glow", "black steel, bone ivory, grave cyan, cold mist"),
+    IconSpec("bow", "Dreadbow", "weapons", "twisted bone-and-shadow bow with a spectral arrow", "bone ivory, void blue, black shadow, pale spectral light"),
+    IconSpec("axe", "Goreaxe", "weapons", "brutal crimson execution axe, chipped head, blood-rust glow", "crimson, rust brown, dark iron, blackened red"),
+    IconSpec("dagger", "Veinshiv", "weapons", "curved fang shiv with poison green edge and black handle", "toxic green, black leather, bone white, dark steel"),
+    IconSpec("crossbow", "Corpsebolt", "weapons", "gothic bone crossbow loaded with a coffin-bolt", "dark iron, old bone, coffin wood, cold blue accents"),
+    IconSpec("staff", "Witchflame", "weapons", "witch staff crowned with violet flame and simple carved runes", "violet flame, black wood, rune cyan, ashen gray"),
+    IconSpec("staff_of_purity", "Pale Benediction", "weapons", "pale staff with black halo and white-blue cleansing flame", "pale ivory, black halo, white blue flame, silver"),
+    IconSpec("shield", "Lastwall", "weapons", "ancient cracked shield with crown sigil and blue ward glow", "aged steel, royal blue ward, crown gold, black cracks"),
+    IconSpec("hammer", "Bellmaul", "weapons", "funeral maul with bell motif and a few glowing cracks", "dark iron, funeral brass, ember cracks, muted bone"),
+    IconSpec("orb", "Voidheart", "weapons", "floating black orb with blue void core and orbiting shards", "black glass, void blue, cyan glow, silver shard highlights"),
+    IconSpec("rune", "Hexrune", "weapons", "stone rune slab with one impossible glowing glyph", "ancient stone, eldritch teal, violet shadows, bone dust"),
+    IconSpec("soulreaper", "Mournreaper", "weapons", "crescent scythe with pale soul mist", "cold steel, spectral cyan, black handle, pale soul mist"),
+    IconSpec("briar_relic", "Thornheart", "weapons", "thorn-wrapped relic heart with green-black briars", "deep green, black thorns, red heart glow, antique bronze"),
+    IconSpec("rot_chalice", "Rotgrail", "weapons", "cursed chalice dripping green rot and black ichor", "toxic green, black ichor, tarnished gold, sickly yellow"),
+    IconSpec("banner", "Dawnbane", "weapons", "torn war banner with black sun emblem", "black cloth, faded crimson, dull gold, ash gray"),
+    IconSpec("eye", "Gloomgaze", "weapons", "eldritch eye in a half-open stone doorway", "void teal, wet black, cold stone, pale eye glow"),
+    IconSpec("judgement_blade", "Sinblade", "weapons", "judgment blade with broken crown and scale motif", "silver steel, broken gold crown, black enamel, blue white gleam"),
+    IconSpec("lantern", "Starvelight", "weapons", "black lantern with starving blue flame", "black iron, hungry blue flame, desaturated brass, smoky cyan"),
+    IconSpec("mirror_relic", "Curseglass", "weapons", "cracked mirror with an eye in reflection", "black glass, silver cracks, pale eye, violet reflection"),
+    IconSpec("final_bell_scythe", "Doomknell", "weapons", "scythe with hanging funeral bell and pale death glow", "pale steel, funeral brass, deathly cyan, black wood"),
 )
 
 PASSIVES: tuple[IconSpec, ...] = (
@@ -157,23 +157,23 @@ def write_docs() -> None:
     lines: list[str] = [
         "# Abyssia Icon Generation Prompts",
         "",
-        "This repository does not currently include a live image-model integration for these premium icon prompts. Do not mark the icon art complete until 512x512 transparent PNGs exist at the listed `output_path` values.",
+        "This repository stores the weapon/passive prompt set and local processing pipeline. Do not mark the icon art complete until 512x512 transparent PNGs exist at the listed `output_path` values.",
         "",
         "## Workflow",
         "",
         "1. Run `python scripts/generate_icon_prompts.py` after editing prompt records.",
-        "2. Send each `prompt` and `negative_prompt` from `data/icon_prompts.json` to the selected image model.",
-        "3. Save each 512x512 transparent PNG exactly to its `output_path`.",
-        "4. Run `python scripts/process_icons.py` to normalize masters and create Discord-ready 128x128 PNGs.",
+        "2. Generate one source image per record with the selected image model. For built-in image generation, ask for a flat chroma-key background (`#00ff00` by default, `#ff00ff` for green subjects).",
+        "3. Process each built-in source with `python scripts/process_ai_icon_source.py --category <weapons|passives> --key <key> --source <generated.png>`. This copies the raw source under `tmp/imagegen/icons_ai/raw/` and writes the final transparent master to `output_path`.",
+        "4. Run `python scripts/process_icons.py --mode pixel` to normalize masters and create Discord-ready 128x128 PNGs plus 64px previews.",
         "5. Run `python scripts/build_icon_contact_sheet.py` and review the sheets under `tmp/icon_contact_sheets/`.",
-        "6. Run `python scripts/validate_icons.py --strict-assets` once all masters are present.",
+        "6. Run `python scripts/validate_icons.py --strict-assets --strict-transparency` once all masters are present.",
         "7. Set `DISCORD_TOKEN` and `EMOJI_GUILD_ID`, then run `python scripts/sync_emojis.py` to upload and update `data/emoji_map.json`.",
         "",
         "## Art Direction Rules",
         "",
         "- Dark fantasy RPG, gothic, cursed relics, abyssal/void magic.",
-        "- Premium 3D pixel-art game UI asset, crisp silhouette, readable at Discord emoji size.",
-        "- Transparent background, centered object, generous padding, consistent rim light and outline/glow.",
+        "- Crisp pixel-art game UI asset, bold silhouette, moderate detail, readable at Discord emoji size.",
+        "- Final transparent background, centered object, generous padding, consistent rim light and outline/glow.",
         "- No text, letters, numbers, watermarks, generic emoji art, or flat circles with initials.",
         "",
     ]

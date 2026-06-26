@@ -16,7 +16,7 @@ EMOJI_IMAGE_SIZE = 128
 EMOJI_CONTENT_SIZE = 112
 MAX_EMOJI_IMAGE_BYTES = 256 * 1024
 
-CURRENCY_KEYS = ("gold", "gems", "souls", "corrupted_essence", "void_crystals")
+CURRENCY_KEYS = ("gold", "gems", "souls")
 UI_KEYS = (
     "hunt",
     "autohunt",
@@ -34,7 +34,24 @@ UI_KEYS = (
 
 APP_EMOJI_CACHE: dict[str, str] = {}
 APP_EMOJI_REFRESHED_AT = 0.0
-_APP_EMOJI_REFRESH_LOCK: asyncio.Lock | None = None
+_APP_EMOJI_REFRESH_LOCK = asyncio.Lock()
+MANAGED_EMOJI_KINDS = (
+    "creatures",
+    "rarity",
+    "materials",
+    "currency",
+    "ui",
+    "consumable",
+    "equipment",
+    "buffs",
+    "weapons",
+    "passives",
+    "status",
+    "stats",
+    "crate",
+    "zones",
+    "bosses",
+)
 
 
 def emoji_asset_name(kind: str, key: str) -> str:
@@ -60,6 +77,21 @@ def emoji_asset_name(kind: str, key: str) -> str:
     return f"{prefix}_{safe[:max_key_length]}"
 
 
+def managed_emoji_prefixes() -> tuple[str, ...]:
+    prefixes: list[str] = []
+    for kind in MANAGED_EMOJI_KINDS:
+        name = emoji_asset_name(kind, "x")
+        prefix = name.rsplit("_", 1)[0]
+        prefixes.append(f"{prefix}_")
+    return tuple(dict.fromkeys(prefixes))
+
+
+def _emoji_id_from_string(value: str) -> str:
+    if not value.startswith("<") or ":" not in value:
+        return ""
+    return value.rsplit(":", 1)[-1].rstrip(">")
+
+
 def prepared_emoji_png(path: str | Path, *, pixel: bool = False) -> bytes:
     with Image.open(path) as source:
         image = source.convert("RGBA")
@@ -67,7 +99,12 @@ def prepared_emoji_png(path: str | Path, *, pixel: bool = False) -> bytes:
     if bbox:
         image = image.crop(bbox)
     resample = Image.Resampling.NEAREST if pixel else Image.Resampling.LANCZOS
-    image.thumbnail((EMOJI_CONTENT_SIZE, EMOJI_CONTENT_SIZE), resample)
+    w, h = image.size
+    scale = min(EMOJI_IMAGE_SIZE / w, EMOJI_IMAGE_SIZE / h)
+    if scale != 1.0:
+        new_w = max(1, round(w * scale))
+        new_h = max(1, round(h * scale))
+        image = image.resize((new_w, new_h), resample)
     canvas = Image.new("RGBA", (EMOJI_IMAGE_SIZE, EMOJI_IMAGE_SIZE), (0, 0, 0, 0))
     x = (EMOJI_IMAGE_SIZE - image.width) // 2
     y = (EMOJI_IMAGE_SIZE - image.height) // 2
@@ -131,14 +168,11 @@ async def refresh_application_emojis(bot: discord.Client | None) -> dict[str, st
 
 
 async def ensure_application_emojis(bot: discord.Client | None, *, max_age: float = 120.0) -> dict[str, str]:
-    global _APP_EMOJI_REFRESH_LOCK
     if bot is None:
         return APP_EMOJI_CACHE
     age = time.monotonic() - APP_EMOJI_REFRESHED_AT
     if APP_EMOJI_CACHE and age <= max_age:
         return APP_EMOJI_CACHE
-    if _APP_EMOJI_REFRESH_LOCK is None:
-        _APP_EMOJI_REFRESH_LOCK = asyncio.Lock()
     async with _APP_EMOJI_REFRESH_LOCK:
         age = time.monotonic() - APP_EMOJI_REFRESHED_AT
         if APP_EMOJI_CACHE and age <= max_age:
@@ -146,17 +180,25 @@ async def ensure_application_emojis(bot: discord.Client | None, *, max_age: floa
         return await refresh_application_emojis(bot)
 
 
-async def upload_application_asset_emojis(bot: discord.Client, *, replace_existing: bool = False) -> dict[str, object]:
+async def upload_application_asset_emojis(
+    bot: discord.Client,
+    *,
+    replace_existing: bool = False,
+    delete_missing: bool = False,
+) -> dict[str, object]:
     app_id = await application_id_for(bot)
     await refresh_application_emojis(bot)
     existing_by_name = dict(APP_EMOJI_CACHE)
     uploaded = 0
     existing = 0
     replaced = 0
+    deleted = 0
     failed: list[str] = []
+    targets = asset_emoji_targets()
+    target_names = {emoji_asset_name(kind, key) for kind, keys in targets for key in keys}
 
-    for kind, keys in asset_emoji_targets():
-        pixel = kind == "creatures"
+    for kind, keys in targets:
+        pixel = kind in {"creatures", "weapons", "passives"}
         for key in keys:
             emoji_name = emoji_asset_name(kind, key)
             current = existing_by_name.get(emoji_name)
@@ -171,7 +213,7 @@ async def upload_application_asset_emojis(bot: discord.Client, *, replace_existi
 
             try:
                 if current and replace_existing:
-                    emoji_id = current.rsplit(":", 1)[-1].rstrip(">")
+                    emoji_id = _emoji_id_from_string(current)
                     await bot.http.request(
                         Route("DELETE", "/applications/{application_id}/emojis/{emoji_id}", application_id=app_id, emoji_id=emoji_id)
                     )
@@ -184,8 +226,25 @@ async def upload_application_asset_emojis(bot: discord.Client, *, replace_existi
             except Exception as exc:
                 failed.append(f"{emoji_name} ({exc})")
 
+    if delete_missing:
+        managed_prefixes = managed_emoji_prefixes()
+        for emoji_name, current in sorted(existing_by_name.items()):
+            if emoji_name in target_names or not emoji_name.startswith(managed_prefixes):
+                continue
+            emoji_id = _emoji_id_from_string(current)
+            if not emoji_id:
+                failed.append(f"{emoji_name} (could not parse emoji id)")
+                continue
+            try:
+                await bot.http.request(
+                    Route("DELETE", "/applications/{application_id}/emojis/{emoji_id}", application_id=app_id, emoji_id=emoji_id)
+                )
+                deleted += 1
+            except Exception as exc:
+                failed.append(f"{emoji_name} ({exc})")
+
     await refresh_application_emojis(bot)
-    return {"uploaded": uploaded, "existing": existing, "replaced": replaced, "failed": failed}
+    return {"uploaded": uploaded, "existing": existing, "replaced": replaced, "deleted": deleted, "failed": failed}
 
 
 def custom_asset_emoji(bot: discord.Client | None, kind: str, key: str) -> str:
@@ -199,14 +258,14 @@ def custom_asset_emoji(bot: discord.Client | None, kind: str, key: str) -> str:
 
 
 def asset_file_path(kind: str, key: str):
+    if kind in {"weapons", "passives", "stats", "creatures"}:
+        emoji_path = ROOT_DIR / "assets" / "emojis" / kind / f"{safe_key(key)}.png"
+        if emoji_path.exists() and emoji_path.is_file():
+            return emoji_path
     if kind in {"weapons", "passives"}:
         icon_path = ROOT_DIR / "assets" / "icons" / kind / f"{safe_key(key)}.png"
         if icon_path.exists() and icon_path.is_file():
             return icon_path
-    if kind in {"weapons", "passives", "stats"}:
-        emoji_path = ROOT_DIR / "assets" / "emojis" / kind / f"{safe_key(key)}.png"
-        if emoji_path.exists() and emoji_path.is_file():
-            return emoji_path
     path = get_asset_file_path(kind, key)
     if path is not None:
         return path

@@ -5,7 +5,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from core.rpg_data import CREATURES, INFUSED_PREFIXES, RARITY_BY_NAME, WEAPON_TYPES, derive_7stats, normalize_key
+from core.rpg_data import CREATURES, RARITY_BY_NAME, WEAPON_TYPES, derive_7stats, normalize_key
 
 
 def _row_get(row: Any, key: str, default: Any = None) -> Any:
@@ -54,12 +54,7 @@ def _parse_json(raw: Any, fallback: Any) -> Any:
 
 
 def _template_name(name: str) -> str:
-    clean = str(name or "").strip()
-    for prefix in INFUSED_PREFIXES:
-        prefix_text = f"{prefix} "
-        if clean.startswith(prefix_text):
-            return clean[len(prefix_text):]
-    return clean
+    return str(name or "").strip()
 
 
 _TEMPLATES = {normalize_key(creature.name): creature for creature in CREATURES}
@@ -1733,14 +1728,18 @@ class BattleEngine:
             tether_power = int(target.statuses["tether"].get("power", 25))
             total_combined = total[0] + total[1]
             absorbed = max(1, int(total_combined * tether_power / 100.0))
-            total[0] = max(1, total[0] - absorbed)
+            remaining = max(1, total_combined - absorbed)
+            total[0] = min(total[0], remaining)
+            total[1] = remaining - total[0]
 
         for passive in (target.weapon.passives if target.weapon else []):
             if passive.key == "safeguard":
                 total_combined = total[0] + total[1]
                 if total_combined > target.max_hp * 0.20:
                     safeguard_reduction = min(0.40, passive.value / 100.0)
-                    total[0] = max(1, int(total[0] * (1.0 - safeguard_reduction)))
+                    reduced = max(1, int(total_combined * (1.0 - safeguard_reduction)))
+                    total[0] = min(total[0], reduced)
+                    total[1] = reduced - total[0]
 
         final_damage = total[0] + total[1]
         target.current_hp = max(0, target.current_hp - final_damage)

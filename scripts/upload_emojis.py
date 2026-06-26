@@ -1,4 +1,5 @@
 """Upload Abyssia asset emojis to Discord application emoji bank."""
+import argparse
 import asyncio
 import os
 import sys
@@ -20,6 +21,11 @@ from core.discord_assets import upload_application_asset_emojis
 import discord
 
 async def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--keep-existing", action="store_true", help="Skip emojis that already exist instead of replacing them.")
+    parser.add_argument("--delete-unused", action="store_true", help="Delete managed Abyssia app emojis that no longer have local assets.")
+    args = parser.parse_args()
+
     token = os.environ.get("DISCORD_TOKEN")
     if not token:
         print("ERROR: No DISCORD_TOKEN found in .env")
@@ -31,11 +37,16 @@ async def main():
     @bot.event
     async def on_ready():
         print(f"Logged in as {bot.user}")
-        result = await upload_application_asset_emojis(bot, replace_existing=True)
+        result = await upload_application_asset_emojis(
+            bot,
+            replace_existing=not args.keep_existing,
+            delete_missing=args.delete_unused,
+        )
         print(f"\nUpload results:")
         print(f"  Uploaded: {result.get('uploaded', 0)}")
         print(f"  Existing: {result.get('existing', 0)}")
         print(f"  Replaced: {result.get('replaced', 0)}")
+        print(f"  Deleted: {result.get('deleted', 0)}")
         failed = result.get('failed', [])
         if failed:
             print(f"  Failed: {len(failed)}")

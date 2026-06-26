@@ -1,4 +1,4 @@
-"""Sync processed Abyssia weapon/passive PNGs to a Discord guild emoji bank."""
+"""Sync Abyssia creature, weapon, and passive PNGs to a Discord guild emoji bank."""
 from __future__ import annotations
 
 import argparse
@@ -6,6 +6,7 @@ import base64
 import json
 import os
 import re
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -13,14 +14,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from PIL import Image
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
-EMOJI_ROOT = ROOT_DIR / "assets" / "emojis"
+sys.path.insert(0, str(ROOT_DIR))
+
+from core.discord_assets import asset_emoji_targets, asset_file_path, emoji_asset_name, prepared_emoji_png
+
 EMOJI_MAP_PATH = ROOT_DIR / "data" / "emoji_map.json"
 DISCORD_API = "https://discord.com/api/v10"
 MAX_EMOJI_BYTES = 256 * 1024
 DISCORD_NAME_RE = re.compile(r"^[A-Za-z0-9_]{2,32}$")
+SYNC_KINDS = ("creatures", "weapons", "passives")
+MANAGED_GUILD_PREFIXES = tuple(emoji_asset_name(kind, "x").rsplit("_", 1)[0] + "_" for kind in SYNC_KINDS)
 
 
 @dataclass(frozen=True)
@@ -85,16 +89,10 @@ def _request(method: str, url: str, token: str, payload: dict[str, Any] | None =
         raise RuntimeError(f"Discord API error {exc.code}: {message}") from exc
 
 
-def _emoji_data_url(path: Path) -> str:
-    with Image.open(path) as image:
-        if image.format != "PNG":
-            raise ValueError(f"{path} is not a PNG")
-        if image.size != (128, 128):
-            raise ValueError(f"{path} is {image.size}, expected 128x128. Run scripts/process_icons.py.")
-        image.load()
-    raw = path.read_bytes()
+def _emoji_data_url(target: EmojiTarget) -> str:
+    raw = prepared_emoji_png(target.path, pixel=target.category == "creatures")
     if len(raw) > MAX_EMOJI_BYTES:
-        raise ValueError(f"{path} is {len(raw)} bytes, over Discord's 256 KB emoji limit")
+        raise ValueError(f"{target.path} is {len(raw)} bytes, over Discord's 256 KB emoji limit")
     encoded = base64.b64encode(raw).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
@@ -126,14 +124,19 @@ def _save_emoji_map(mapping: dict[str, str]) -> None:
 
 def _scan_targets() -> list[EmojiTarget]:
     targets: list[EmojiTarget] = []
-    for category, prefix in (("weapons", "weapon"), ("passives", "passive")):
-        directory = EMOJI_ROOT / category
-        if not directory.exists():
+    seen_names: set[str] = set()
+    for category, keys in asset_emoji_targets():
+        if category not in SYNC_KINDS:
             continue
-        for path in sorted(directory.glob("*.png")):
-            key = path.stem
-            name = f"{prefix}_{key}"
-            targets.append(EmojiTarget(category, key, name, path))
+        for key in keys:
+            path = asset_file_path(category, key)
+            if path is None:
+                continue
+            name = emoji_asset_name(category, key)
+            if name in seen_names:
+                continue
+            seen_names.add(name)
+            targets.append(EmojiTarget(category, key, name, Path(path)))
     return targets
 
 
@@ -161,8 +164,8 @@ def _warn_capacity(existing_count: int, target_count: int, missing_count: int) -
 def sync(*, token: str, guild_id: str, delete_missing: bool, dry_run: bool) -> int:
     targets = _scan_targets()
     if not targets:
-        print("No processed emoji PNGs found under assets/emojis/weapons or assets/emojis/passives.")
-        print("Run python scripts/process_icons.py after adding 512x512 master icons.")
+        print("No creature, weapon, or passive emoji PNGs found in configured Abyssia assets.")
+        print("Run the relevant icon generation/process scripts after adding master icons.")
         return 0
 
     invalid = [target.name for target in targets if not DISCORD_NAME_RE.match(target.name)]
@@ -189,7 +192,7 @@ def sync(*, token: str, guild_id: str, delete_missing: bool, dry_run: bool) -> i
 
     for target in missing:
         try:
-            image = _emoji_data_url(target.path)
+            image = _emoji_data_url(target)
             if dry_run:
                 print(f"DRY RUN upload: {target.name}")
                 continue
@@ -211,7 +214,7 @@ def sync(*, token: str, guild_id: str, delete_missing: bool, dry_run: bool) -> i
 
     deleted = 0
     if delete_missing:
-        extra = [item for name, item in existing.items() if name.startswith(("weapon_", "passive_")) and name not in target_names]
+        extra = [item for name, item in existing.items() if name.startswith(MANAGED_GUILD_PREFIXES) and name not in target_names]
         for item in extra:
             name = str(item.get("name"))
             emoji_id = str(item.get("id"))
@@ -245,7 +248,7 @@ def sync(*, token: str, guild_id: str, delete_missing: bool, dry_run: bool) -> i
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--delete-missing", action="store_true", help="Delete weapon_/passive_ guild emojis missing from local processed files.")
+    parser.add_argument("--delete-missing", action="store_true", help="Delete managed creature/weapon/passive guild emojis missing from local assets.")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 

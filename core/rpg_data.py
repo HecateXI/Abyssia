@@ -320,17 +320,17 @@ def _rebalance_creature_templates(templates: tuple[CreatureTemplate, ...], *, ma
 
 
 ZONES: dict[str, Zone] = {
-    "forgotten_woods": Zone("forgotten_woods", "Forgotten Woods", 1, "Rare", (30, 70), 0.08, ("bone_fragments", "corrupted_essence"), "Dead trees whisper old hunting songs."),
-    "grave_marsh": Zone("grave_marsh", "Grave Marsh", 3, "Epic", (55, 105), 0.11, ("bone_fragments", "corrupted_essence", "demon_horns"), "Black water hides things that learned to breathe mud."),
-    "bloodmoon_forest": Zone("bloodmoon_forest", "Bloodmoon Forest", 6, "Legendary", (85, 160), 0.15, ("corrupted_essence", "demon_horns"), "The moon hangs low enough to bleed on the canopy."),
-    "ashen_wastes": Zone("ashen_wastes", "Ashen Wastes", 10, "Mythic", (130, 230), 0.19, ("demon_horns", "void_crystals"), "Every footstep stirs the dust of vanished kingdoms."),
-    "infernal_catacombs": Zone("infernal_catacombs", "Infernal Catacombs", 15, "Ancient", (190, 330), 0.23, ("demon_horns", "void_crystals", "ancient_relics"), "The dead below still bargain with flame."),
-    "abyssal_depths": Zone("abyssal_depths", "Abyssal Depths", 22, "Eldritch", (275, 470), 0.28, ("void_crystals", "ancient_relics", "abyssal_ichor"), "Pressure, darkness, and hunger become one thing here."),
-    "void_realm": Zone("void_realm", "Void Realm", 30, "Abyssal", (390, 680), 0.35, ("void_crystals", "ancient_relics", "abyssal_ichor"), "No horizon. No mercy. Only the hunt."),
-    "cursed_sanctum": Zone("cursed_sanctum", "Cursed Sanctum", 38, "Prismatic", (520, 880), 0.39, ("ancient_relics", "abyssal_ichor"), "Candles burn downward and every prayer has claws."),
-    "starless_menagerie": Zone("starless_menagerie", "Starless Menagerie", 46, "Ethereal", (680, 1120), 0.43, ("void_crystals", "ancient_relics", "abyssal_ichor"), "Cages hang open, but nothing inside has learned mercy."),
-    "throne_of_teeth": Zone("throne_of_teeth", "Throne of Teeth", 58, "Void Lord", (890, 1450), 0.48, ("demon_horns", "ancient_relics", "abyssal_ichor"), "A royal hall made from bite marks, bone, and old crowns."),
-    "black_sun_gate": Zone("black_sun_gate", "Black Sun Gate", 72, "Hidden", (1200, 1900), 0.55, ("void_crystals", "ancient_relics", "abyssal_ichor"), "The final gate opens only for hunters the dark recognizes."),
+    "forgotten_woods": Zone("forgotten_woods", "Forgotten Woods", 1, "Rare", (30, 70), 0.08, (), "Dead trees whisper old hunting songs."),
+    "grave_marsh": Zone("grave_marsh", "Grave Marsh", 3, "Epic", (55, 105), 0.11, (), "Black water hides things that learned to breathe mud."),
+    "bloodmoon_forest": Zone("bloodmoon_forest", "Bloodmoon Forest", 6, "Legendary", (85, 160), 0.15, (), "The moon hangs low enough to bleed on the canopy."),
+    "ashen_wastes": Zone("ashen_wastes", "Ashen Wastes", 10, "Mythic", (130, 230), 0.19, (), "Every footstep stirs the dust of vanished kingdoms."),
+    "infernal_catacombs": Zone("infernal_catacombs", "Infernal Catacombs", 15, "Ancient", (190, 330), 0.23, (), "The dead below still bargain with flame."),
+    "abyssal_depths": Zone("abyssal_depths", "Abyssal Depths", 22, "Eldritch", (275, 470), 0.28, (), "Pressure, darkness, and hunger become one thing here."),
+    "void_realm": Zone("void_realm", "Void Realm", 30, "Abyssal", (390, 680), 0.35, (), "No horizon. No mercy. Only the hunt."),
+    "cursed_sanctum": Zone("cursed_sanctum", "Cursed Sanctum", 38, "Prismatic", (520, 880), 0.39, (), "Candles burn downward and every prayer has claws."),
+    "starless_menagerie": Zone("starless_menagerie", "Starless Menagerie", 46, "Ethereal", (680, 1120), 0.43, (), "Cages hang open, but nothing inside has learned mercy."),
+    "throne_of_teeth": Zone("throne_of_teeth", "Throne of Teeth", 58, "Void Lord", (890, 1450), 0.48, (), "A royal hall made from bite marks, bone, and old crowns."),
+    "black_sun_gate": Zone("black_sun_gate", "Black Sun Gate", 72, "Hidden", (1200, 1900), 0.55, (), "The final gate opens only for hunters the dark recognizes."),
 }
 
 MATERIALS: dict[str, str] = {
@@ -349,140 +349,140 @@ WEAPON_WEAR_BONUS: dict[str, int] = {
 
 WEAPON_TYPES: dict[str, dict[str, object]] = {
     "sword": {
-        "name": "Sword", "desc": "A blade made for ending things that should have stayed buried.",
+        "name": "Gravecut", "desc": "A black-steel blade made for ending things that should have stayed buried.",
         "atk_range": (8, 14), "def_range": (3, 7), "scale_stat": "STR",
         "passive_pool": ["strength", "bleed", "crit", "life_steal"],
         "crate_weight": 12,
         "active": "gravecut",
     },
     "bow": {
-        "name": "Bow", "desc": "Every arrow remembers the name of the corpse it is owed.",
+        "name": "Dreadbow", "desc": "Every arrow remembers the name of the corpse it is owed.",
         "atk_range": (7, 13), "def_range": (1, 4), "scale_stat": "STR",
         "passive_pool": ["strength", "crit", "stun", "rare_finder"],
         "crate_weight": 10,
         "active": "black_arrow",
     },
     "axe": {
-        "name": "Axe", "desc": "A rusted executioner's axe that grows heavier after every kill.",
+        "name": "Goreaxe", "desc": "A rusted executioner's axe that grows heavier after every kill.",
         "atk_range": (12, 20), "def_range": (1, 4), "scale_stat": "STR",
         "passive_pool": ["strength", "bleed", "sacrifice", "thorns"],
         "crate_weight": 10,
         "active": "butcher_sweep",
     },
     "dagger": {
-        "name": "Dagger", "desc": "A knife so thin the wound opens before the blade arrives.",
+        "name": "Veinshiv", "desc": "A knife so thin the wound opens before the blade arrives.",
         "atk_range": (6, 11), "def_range": (2, 5), "scale_stat": "STR",
         "passive_pool": ["bleed", "poison", "crit", "life_steal"],
         "crate_weight": 10,
         "active": "vein_pierce",
     },
     "crossbow": {
-        "name": "Crossbow", "desc": "It does not fire arrows. It delivers verdicts.",
+        "name": "Corpsebolt", "desc": "It does not fire arrows. It delivers verdicts.",
         "atk_range": (9, 15), "def_range": (1, 4), "scale_stat": "STR",
         "passive_pool": ["crit", "stun", "strength", "bleed"],
         "crate_weight": 8,
         "active": "coffin_nail",
     },
     "staff": {
-        "name": "Staff", "desc": "A staff crowned with fire that whispers in the voices of dead witches.",
+        "name": "Witchflame", "desc": "A staff crowned with fire that whispers in the voices of dead witches.",
         "atk_range": (7, 13), "def_range": (4, 8), "scale_stat": "MAG",
         "passive_pool": ["magic", "burn", "stun", "xp_boost"],
         "crate_weight": 10,
         "active": "witchflame",
     },
     "staff_of_purity": {
-        "name": "Staff of Purity", "desc": "Purity in Abyssia is not holy. It is the refusal to rot.",
+        "name": "Pale Benediction", "desc": "Purity in Abyssia is not holy. It is the refusal to rot.",
         "atk_range": (7, 13), "def_range": (4, 8), "scale_stat": "MAG",
         "passive_pool": ["heal", "regeneration", "safeguard", "shield"],
         "crate_weight": 4,
         "active": "black_benediction",
     },
     "shield": {
-        "name": "Shield", "desc": "A shield carried by knights who died standing.",
+        "name": "Lastwall", "desc": "A shield carried by knights who died standing.",
         "atk_range": (2, 5), "def_range": (10, 18), "scale_stat": "HP",
         "passive_pool": ["shield", "safeguard", "thorns", "regeneration"],
         "crate_weight": 8,
         "active": "oath_of_the_last_wall",
     },
     "hammer": {
-        "name": "Hammer", "desc": "The hammer sounds like a funeral bell when it meets bone.",
+        "name": "Bellmaul", "desc": "The hammer sounds like a funeral bell when it meets bone.",
         "atk_range": (14, 24), "def_range": (0, 3), "scale_stat": "STR",
         "passive_pool": ["stun", "thorns", "strength", "safeguard"],
         "crate_weight": 8,
         "active": "bellringer",
     },
     "orb": {
-        "name": "Orb", "desc": "Crystallized void essence that channels the wielder's magic into restorative energies, carrying two passive affinities.",
+        "name": "Voidheart", "desc": "Crystallized void essence that channels the wielder's magic into restorative energies, carrying two passive affinities.",
         "atk_range": (8, 14), "def_range": (3, 6), "scale_stat": "MAG",
         "passive_pool": ["magic", "burn", "poison", "soul_gain", "adaptation", "crit"],
         "crate_weight": 7,
         "active": "void_resonance",
     },
     "rune": {
-        "name": "Rune", "desc": "A rune older than language, carved into the idea of pain.",
+        "name": "Hexrune", "desc": "A rune older than language, carved into the idea of pain.",
         "atk_range": (6, 11), "def_range": (2, 5), "scale_stat": "MAG",
         "passive_pool": ["adaptation", "safeguard", "xp_boost", "soul_gain", "gem_finder"],
         "crate_weight": 6,
         "active": "rune_empowerment",
     },
     "soulreaper": {
-        "name": "Soulreaper", "desc": "A scythe that harvests not just life, but the will to live.",
+        "name": "Mournreaper", "desc": "A scythe that harvests not just life, but the will to live.",
         "atk_range": (10, 16), "def_range": (2, 6), "scale_stat": "STR",
         "passive_pool": ["bleed", "life_steal", "sacrifice", "soul_gain"],
         "crate_weight": 5,
         "active": "mortal_harvest",
     },
     "briar_relic": {
-        "name": "Briar Relic", "desc": "Thorns that bind ally to protector in a covenant of pain.",
+        "name": "Thornheart", "desc": "Thorns that bind ally to protector in a covenant of pain.",
         "atk_range": (3, 7), "def_range": (8, 14), "scale_stat": "HP",
         "passive_pool": ["thorns", "safeguard", "shield", "regeneration"],
         "crate_weight": 5,
         "active": "thorn_tether",
     },
     "rot_chalice": {
-        "name": "Chalice of Rot", "desc": "A vessel that overflows with corruption and decay.",
+        "name": "Rotgrail", "desc": "A vessel that overflows with corruption and decay.",
         "atk_range": (7, 12), "def_range": (3, 7), "scale_stat": "MAG",
         "passive_pool": ["poison", "magic", "regeneration", "soul_gain"],
         "crate_weight": 5,
         "active": "rotten_communion",
     },
     "banner": {
-        "name": "Banner", "desc": "A war banner that darkens the sky and emboldens the march.",
+        "name": "Dawnbane", "desc": "A war banner that darkens the sky and emboldens the march.",
         "atk_range": (4, 8), "def_range": (5, 10), "scale_stat": "MAG",
         "passive_pool": ["safeguard", "regeneration", "xp_boost", "soul_gain"],
         "crate_weight": 4,
         "active": "war_under_no_dawn",
     },
     "eye": {
-        "name": "Eye", "desc": "An eye that sees madness and reflects it back tenfold.",
+        "name": "Gloomgaze", "desc": "An eye that sees madness and reflects it back tenfold.",
         "atk_range": (8, 14), "def_range": (3, 7), "scale_stat": "MAG",
         "passive_pool": ["magic", "fear", "poison", "adaptation"],
         "crate_weight": 4,
         "active": "witness_madness",
     },
     "judgement_blade": {
-        "name": "Judgement Blade", "desc": "A blade that weighs sin and virtue in equal measure.",
+        "name": "Sinblade", "desc": "A blade that weighs sin and virtue in equal measure.",
         "atk_range": (9, 15), "def_range": (3, 7), "scale_stat": "STR",
         "passive_pool": ["crit", "magic", "strength", "adaptation"],
         "crate_weight": 4,
         "active": "sin_and_sentence",
     },
     "lantern": {
-        "name": "Lantern", "desc": "A light that does not illuminate. It devours.",
+        "name": "Starvelight", "desc": "A light that does not illuminate. It devours.",
         "atk_range": (7, 13), "def_range": (3, 7), "scale_stat": "MAG",
         "passive_pool": ["mana_tap", "magic", "poison", "soul_gain"],
         "crate_weight": 5,
         "active": "light_that_starves",
     },
     "mirror_relic": {
-        "name": "Mirror Relic", "desc": "A mirror that shows not your face, but your curse.",
+        "name": "Curseglass", "desc": "A mirror that shows not your face, but your curse.",
         "atk_range": (4, 8), "def_range": (6, 12), "scale_stat": "HP",
         "passive_pool": ["safeguard", "adaptation", "regeneration", "shield"],
         "crate_weight": 4,
         "active": "reflected_curse",
     },
     "final_bell_scythe": {
-        "name": "Final Bell Scythe", "desc": "When the bell tolls, the living take notice. The dead take aim.",
+        "name": "Doomknell", "desc": "When the bell tolls, the living take notice. The dead take aim.",
         "atk_range": (10, 18), "def_range": (2, 6), "scale_stat": "STR",
         "passive_pool": ["bleed", "crit", "soul_gain", "fear"],
         "crate_weight": 3,
@@ -655,52 +655,159 @@ CRATE_TYPES: dict[str, dict[str, object]] = {
         "desc": "A sealed pouch of eldritch trinkets.",
         "weapon_chance": 1.00,
         "weapon_rarities": ("Common", "Uncommon", "Rare"),
-        "gold": (80, 250), "gems": (2, 6), "swords": (1, 3),
-        "materials": 2,
+        "gold": (80, 250), "gems": (2, 6), "swords": (0, 1),
+        "materials": 0,
     },
     "relic": {
         "name": "Eldritch Relic", "cost": {"gold": 5000, "gems": 30},
         "desc": "Pulsing with trapped souls.",
         "weapon_chance": 1.00,
         "weapon_rarities": ("Uncommon", "Rare", "Epic", "Legendary"),
-        "gold": (500, 1500), "gems": (10, 30), "swords": (3, 8),
-        "materials": 4,
+        "gold": (500, 1500), "gems": (10, 30), "swords": (0, 2),
+        "materials": 0,
     },
     "treasure": {
         "name": "Abyssal Treasure", "cost": {"gold": 25000, "gems": 150},
         "desc": "The deep calls to those who open it.",
         "weapon_chance": 1.00,
         "weapon_rarities": ("Rare", "Epic", "Legendary", "Mythic", "Ancient", "Divine", "Eldritch", "Abyssal"),
-        "gold": (2000, 6000), "gems": (40, 120), "swords": (8, 20),
-        "materials": 6,
+        "gold": (2000, 6000), "gems": (40, 120), "swords": (1, 4),
+        "materials": 0,
     },
 }
 
 EQUIPMENT: dict[str, Equipment] = {
     "rusted_sword": Equipment("rusted_sword", "Rusted Sword", "weapon", 1, {"strength": 1}, {}, {}, 100),
-    "iron_sword": Equipment("iron_sword", "Iron Sword", "weapon", 2, {"strength": 3}, {"battle_attack": 0.05}, {"bone_fragments": 15, "gold": 200}, 140),
-    "darksteel_blade": Equipment("darksteel_blade", "Darksteel Blade", "weapon", 3, {"strength": 6, "dexterity": 2}, {"battle_attack": 0.10}, {"bone_fragments": 25, "corrupted_essence": 15, "gold": 600}, 180),
-    "bloodfang_greatsword": Equipment("bloodfang_greatsword", "Bloodfang Greatsword", "weapon", 4, {"strength": 10, "endurance": 3}, {"battle_attack": 0.18}, {"demon_horns": 25, "corrupted_essence": 30, "gold": 1400}, 220),
-    "soulreaper": Equipment("soulreaper", "Soulreaper", "weapon", 5, {"strength": 16, "wisdom": 6}, {"battle_attack": 0.26, "catch": 0.05}, {"void_crystals": 25, "ancient_relics": 8, "gold": 3200}, 260),
-    "abyssal_cleaver": Equipment("abyssal_cleaver", "Abyssal Cleaver", "weapon", 6, {"strength": 25, "endurance": 10}, {"battle_attack": 0.38, "rarity": 0.08}, {"void_crystals": 45, "ancient_relics": 22, "abyssal_ichor": 10, "gold": 7500}, 320),
-    "lucky_charm": Equipment("lucky_charm", "Lucky Charm", "charm", 1, {"luck": 2}, {"gems": 0.08}, {"bone_fragments": 10, "gold": 150}),
-    "hunters_sigil": Equipment("hunters_sigil", "Hunter's Sigil", "charm", 2, {"luck": 3, "dexterity": 2}, {"catch": 0.08}, {"bone_fragments": 20, "corrupted_essence": 10, "gold": 500}),
-    "demon_eye": Equipment("demon_eye", "Demon Eye", "charm", 3, {"luck": 5, "wisdom": 3}, {"rarity": 0.05}, {"demon_horns": 18, "corrupted_essence": 20, "gold": 1200}),
-    "void_talisman": Equipment("void_talisman", "Void Talisman", "charm", 4, {"wisdom": 7, "luck": 7}, {"rarity": 0.09, "autohunt": 0.10}, {"void_crystals": 20, "demon_horns": 20, "gold": 2800}),
-    "forgotten_crown": Equipment("forgotten_crown", "Crown of the Forgotten King", "charm", 5, {"wisdom": 12, "luck": 10, "endurance": 5}, {"catch": 0.12, "rarity": 0.12, "gems": 0.15}, {"ancient_relics": 18, "void_crystals": 35, "abyssal_ichor": 5, "gold": 6400}),
+    "iron_sword": Equipment("iron_sword", "Iron Sword", "weapon", 2, {"strength": 3}, {"battle_attack": 0.05}, {"gold": 200}, 140),
+    "darksteel_blade": Equipment("darksteel_blade", "Darksteel Blade", "weapon", 3, {"strength": 6, "dexterity": 2}, {"battle_attack": 0.10}, {"gold": 600}, 180),
+    "bloodfang_greatsword": Equipment("bloodfang_greatsword", "Bloodfang Greatsword", "weapon", 4, {"strength": 10, "endurance": 3}, {"battle_attack": 0.18}, {"gold": 1400}, 220),
+    "soulreaper": Equipment("soulreaper", "Soulreaper", "weapon", 5, {"strength": 16, "wisdom": 6}, {"battle_attack": 0.26, "catch": 0.05}, {"gold": 3200}, 260),
+    "abyssal_cleaver": Equipment("abyssal_cleaver", "Abyssal Cleaver", "weapon", 6, {"strength": 25, "endurance": 10}, {"battle_attack": 0.38, "rarity": 0.08}, {"gold": 7500}, 320),
+    "lucky_charm": Equipment("lucky_charm", "Lucky Charm", "charm", 1, {"luck": 2}, {"gems": 0.08}, {"gold": 150}),
+    "hunters_sigil": Equipment("hunters_sigil", "Hunter's Sigil", "charm", 2, {"luck": 3, "dexterity": 2}, {"catch": 0.08}, {"gold": 500}),
+    "demon_eye": Equipment("demon_eye", "Demon Eye", "charm", 3, {"luck": 5, "wisdom": 3}, {"rarity": 0.05}, {"gold": 1200}),
+    "void_talisman": Equipment("void_talisman", "Void Talisman", "charm", 4, {"wisdom": 7, "luck": 7}, {"rarity": 0.09, "autohunt": 0.10}, {"gold": 2800}),
+    "forgotten_crown": Equipment("forgotten_crown", "Crown of the Forgotten King", "charm", 5, {"wisdom": 12, "luck": 10, "endurance": 5}, {"catch": 0.12, "rarity": 0.12, "gems": 0.15}, {"gold": 6400}),
 }
 
 BOSSES: tuple[Boss, ...] = (
-    Boss("hollow_king", "The Hollow King", 6_250_000, 12, "ancient_relics", "Kingbreaker"),
-    Boss("mother_of_rot", "Mother of Rot", 8_250_000, 18, "corrupted_essence", "Rotbane"),
-    Boss("void_leviathan", "Void Leviathan", 11_250_000, 25, "void_crystals", "Deepbreaker"),
-    Boss("nameless_god", "The Nameless God", 16_250_000, 35, "abyssal_ichor", "Godhunter"),
+    Boss("hollow_king", "The Hollow King", 6_250_000, 12, "", "Kingbreaker"),
+    Boss("mother_of_rot", "Mother of Rot", 8_250_000, 18, "", "Rotbane"),
+    Boss("void_leviathan", "Void Leviathan", 11_250_000, 25, "", "Deepbreaker"),
+    Boss("nameless_god", "The Nameless God", 16_250_000, 35, "", "Godhunter"),
 )
 
 QUESTS: dict[str, dict[str, int | str]] = {
-    "daily_hunts": {"name": "Complete 5 hunts", "target": 5, "gold": 250, "gems": 5},
-    "daily_catches": {"name": "Catch 2 monsters", "target": 2, "gold": 300, "gems": 8},
-    "daily_battle": {"name": "Win 1 battle", "target": 1, "gold": 400, "gems": 10},
+    "daily_hunts": {
+        "name": "Grave Trail",
+        "period": "daily",
+        "metric": "daily_hunts",
+        "difficulty": "Hard",
+        "desc": "Complete hunts in any unlocked zone.",
+        "target": 18,
+        "gold": 1800,
+        "gems": 25,
+        "shards": 35,
+    },
+    "daily_catches": {
+        "name": "Bind the Wild",
+        "period": "daily",
+        "metric": "daily_catches",
+        "difficulty": "Hard",
+        "desc": "Catch creatures from hunts, autohunts, or summons.",
+        "target": 6,
+        "gold": 2200,
+        "gems": 30,
+        "shards": 45,
+    },
+    "daily_battle": {
+        "name": "Prove the Team",
+        "period": "daily",
+        "metric": "daily_battle",
+        "difficulty": "Hard",
+        "desc": "Win battles with your active battle team.",
+        "target": 3,
+        "gold": 2600,
+        "gems": 35,
+        "shards": 55,
+    },
+    "daily_marathon": {
+        "name": "Black Bell Marathon",
+        "period": "daily",
+        "metric": "daily_hunts",
+        "difficulty": "Elite",
+        "desc": "Push a longer hunt chain before the daily reset.",
+        "target": 35,
+        "gold": 4200,
+        "gems": 50,
+        "shards": 85,
+    },
+    "daily_tamer": {
+        "name": "Cage the Aberrant",
+        "period": "daily",
+        "metric": "daily_catches",
+        "difficulty": "Elite",
+        "desc": "Bind a large batch of creatures today.",
+        "target": 10,
+        "gold": 4800,
+        "gems": 60,
+        "shards": 100,
+    },
+    "daily_warlord": {
+        "name": "No Mercy Circuit",
+        "period": "daily",
+        "metric": "daily_battle",
+        "difficulty": "Elite",
+        "desc": "Stack multiple battle wins with your current team.",
+        "target": 6,
+        "gold": 5200,
+        "gems": 70,
+        "shards": 120,
+    },
+    "weekly_hunts": {
+        "name": "Seven-Night Hunt",
+        "period": "weekly",
+        "metric": "daily_hunts",
+        "difficulty": "Weekly",
+        "desc": "Complete hunts across the week.",
+        "target": 120,
+        "gold": 16000,
+        "gems": 180,
+        "shards": 300,
+    },
+    "weekly_catches": {
+        "name": "Menagerie Expansion",
+        "period": "weekly",
+        "metric": "daily_catches",
+        "difficulty": "Weekly",
+        "desc": "Catch creatures across all weekly activity.",
+        "target": 35,
+        "gold": 20000,
+        "gems": 220,
+        "shards": 375,
+    },
+    "weekly_battles": {
+        "name": "Trial of the Iron Choir",
+        "period": "weekly",
+        "metric": "daily_battle",
+        "difficulty": "Weekly",
+        "desc": "Win battles before the weekly reset.",
+        "target": 18,
+        "gold": 24000,
+        "gems": 260,
+        "shards": 450,
+    },
+    "weekly_apex": {
+        "name": "Abyssal Oath",
+        "period": "weekly",
+        "metric": "daily_hunts",
+        "difficulty": "Apex",
+        "desc": "A long weekly hunt oath for high-activity hunters.",
+        "target": 220,
+        "gold": 40000,
+        "gems": 420,
+        "shards": 800,
+    },
 }
 
 ACHIEVEMENTS: dict[str, tuple[str, str]] = {
@@ -814,7 +921,7 @@ def _apply_content_overrides() -> None:
     global WEAPON_TYPES, WEAPON_PASSIVES, WEAPON_PASSIVE_CHANCE, WEAPON_AFFIXES
     global WEAPON_QUALITIES, WEAPON_AFFIX_COUNTS, WEAPON_BASE_ATTACK, WEAPON_BASE_DEFENSE
     global CRATE_TYPES, QUESTS, STATUS_EFFECTS, STATUS_EFFECTS_BY_KEY
-    global SIGILS, CHARMS, INFUSED_TYPES, INFUSED_WEIGHTS, INFUSED_PREFIXES
+    global SIGILS, CHARMS
 
     rarity_balance = balancing.get("rarity", {})
     if isinstance(rarity_balance, dict):
@@ -921,7 +1028,7 @@ def _apply_content_overrides() -> None:
             max_rarity,
             gold,
             _as_float(patch.get("gems_chance"), base.gems_chance if base else 0.08),
-            _as_list(patch.get("material_keys"), base.material_keys if base else ("bone_fragments",)),
+            _as_list(patch.get("material_keys"), base.material_keys if base else ()),
             str(patch.get("flavor") or (base.flavor if base else "The road ahead is cursed.")),
         )
     ZONES = zones
@@ -962,7 +1069,7 @@ def _apply_content_overrides() -> None:
             str(patch.get("name") or (base.name if base else safe.replace("_", " ").title())),
             _as_int(patch.get("hp"), base.hp if base else 25000),
             _as_int(patch.get("level"), base.level if base else 10),
-            str(patch.get("material_key") or (base.material_key if base else "ancient_relics")),
+            str(patch.get("material_key") or (base.material_key if base else "")),
             str(patch.get("title") or (base.title if base else "Boss Slayer")),
         )
         if safe not in boss_order:
@@ -1119,25 +1226,20 @@ def _apply_content_overrides() -> None:
                 if not isinstance(patch, dict):
                     continue
                 base = QUESTS.get(safe, {})
-                QUESTS[safe] = {
+                merged = dict(base)
+                merged.update({
                     "name": str(patch.get("name") or base.get("name") or safe.replace("_", " ").title()),
                     "target": _as_int(patch.get("target"), int(base.get("target", 1))),
                     "gold": _as_int(patch.get("gold"), int(base.get("gold", 0))),
                     "gems": _as_int(patch.get("gems"), int(base.get("gems", 0))),
-                }
+                    "shards": _as_int(patch.get("shards"), int(base.get("shards", 0))),
+                    "period": str(patch.get("period") or base.get("period") or "daily"),
+                    "metric": str(patch.get("metric") or base.get("metric") or safe),
+                    "difficulty": str(patch.get("difficulty") or base.get("difficulty") or "Hard"),
+                    "desc": str(patch.get("desc") or base.get("desc") or ""),
+                })
+                QUESTS[safe] = merged
 
-    infused_balance = balancing.get("infused", {})
-    if isinstance(infused_balance, dict):
-        chance = infused_balance.get("chance")
-        types = infused_balance.get("types")
-        if isinstance(types, list):
-            valid_types = [item for item in types if isinstance(item, dict) and item.get("prefix")]
-            if valid_types:
-                INFUSED_TYPES = valid_types
-                INFUSED_WEIGHTS = [_as_int(i.get("weight"), 1) for i in INFUSED_TYPES]
-                INFUSED_PREFIXES = [str(i["prefix"]) for i in INFUSED_TYPES]
-        if chance is not None:
-            globals()["INFUSED_CHANCE"] = max(0.0, min(1.0, _as_float(chance, globals().get("INFUSED_CHANCE", 0.08))))
 
 
 def zone_choices() -> str:
@@ -1412,30 +1514,6 @@ CHARMS: tuple[Charm, ...] = (
     Charm("eldritch_void", "Eldritch Void Charm", 0.16, 22, 25000, 0, "Adds +6 monsters and improves rare monster odds for 22 hunts.", extra_monsters=6),
     Charm("singularity_void", "Singularity Void Charm", 0.22, 30, 60000, 0, "Adds +8 monsters and improves rare monster odds for 30 hunts.", extra_monsters=8),
 )
-
-
-# Infused gem variants — applied on top of caught creatures
-INFUSED_CHANCE = 0.08
-INFUSED_TYPES: list[dict[str, object]] = [
-    {"prefix": "Ruby", "multiplier": 1.08, "weight": 50, "color": (235, 60, 80)},
-    {"prefix": "Emerald", "multiplier": 1.12, "weight": 25, "color": (60, 210, 120)},
-    {"prefix": "Sapphire", "multiplier": 1.16, "weight": 12, "color": (60, 140, 235)},
-    {"prefix": "Diamond", "multiplier": 1.20, "weight": 6, "color": (220, 220, 245)},
-    {"prefix": "Abyssal", "multiplier": 1.25, "weight": 2, "color": (130, 50, 200)},
-]
-
-INFUSED_WEIGHTS: list[int] = [i["weight"] for i in INFUSED_TYPES]
-INFUSED_PREFIXES: list[str] = [i["prefix"] for i in INFUSED_TYPES]
-
-
-def roll_infused() -> dict | None:
-    if random.random() < INFUSED_CHANCE:
-        return random.choices(INFUSED_TYPES, weights=INFUSED_WEIGHTS, k=1)[0]
-    return None
-
-
-def infused_name(base_name: str, prefix: str) -> str:
-    return f"{prefix} {base_name}"
 
 
 _apply_content_overrides()

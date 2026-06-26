@@ -90,7 +90,7 @@ class AbyssiaBot(commands.Bot):
     async def _claim_command_invocation(self, ctx: commands.Context) -> None:
         if ctx.guild is not None:
             try:
-                await ensure_application_emojis(self, max_age=60.0)
+                await ensure_application_emojis(self, max_age=600.0)
             except discord.HTTPException:
                 logging.exception("Could not refresh application emoji cache before command")
         if ctx.command and ctx.command.qualified_name not in ("start", "help", "commands"):
@@ -148,7 +148,7 @@ class AbyssiaBot(commands.Bot):
     async def process_commands(self, message: discord.Message) -> None:
         if message.guild is not None and not message.author.bot:
             try:
-                await ensure_application_emojis(self, max_age=60.0)
+                await ensure_application_emojis(self, max_age=600.0)
             except discord.HTTPException:
                 logging.exception("Could not refresh application emoji cache before command")
         await super().process_commands(message)

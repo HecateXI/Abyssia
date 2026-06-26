@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 
 from core.rpg import (
-    ensure_arena_stats,
     ensure_player,
     find_match,
     generate_npc_team,
@@ -11,7 +10,7 @@ from core.rpg import (
     prepare_battle,
     team_power,
 )
-from core.rpg_data import arena_rank, get_npc_pool
+from core.rpg_data import get_npc_pool
 
 
 async def get_or_make_opponent(
@@ -42,12 +41,10 @@ async def get_or_make_opponent(
             return opp_name, int(row["user_id"]), snap
 
     # NPC fallback
-    arena = await ensure_arena_stats(db, author_id, guild_id)
-    rating = int(arena["rating"])
-    pool = get_npc_pool(rating)
+    player_power = team_power(player_team)
+    pool = get_npc_pool(1000 + min(1400, player_power // 2))
     npc = random.choice(pool)
     npc_team = generate_npc_team(npc)
-    player_power = team_power(player_team)
     npc_power = team_power(npc_team)
     scale = max(0.7, min(1.3, player_power / max(1, npc_power)))
     for c in npc_team:

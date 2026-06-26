@@ -1,22 +1,24 @@
-"""Global PvP battle system with matchmaking, NPC fallback, streaks, and arena rating."""
+"""Global PvP battle system with matchmaking, NPC fallback, and streak rewards."""
 from __future__ import annotations
 
 import asyncio
-import io
 import random
 import sqlite3
 
 import discord
 from discord.ext import commands
 
-from core.battle_card_renderer import BattleCardRenderer
+from core.battle_card_renderer import BattleCardRenderer, battle_backdrop_keys
 from core.card_controls import shortcut_view
-from core.cards import render_arena_card, render_team_card
-from core.battle_rewards import daily_reset_timer, streak_milestone_reward
+from core.card_layout import AbyssiaLayoutView
+from core.card_ui import run_render
+from core.cards import render_team_card
+from core.team_display import team_slot_value
+from core.battle_rewards import streak_milestone_reward
 from core.battle_matchmaking import get_or_make_opponent
 from core.battle_images import select_battle_preview_frames, simulate_battle_timeline
 from core.battle_display import (
-    battle_overview_embed,
+    battle_team_line,
     format_battle_log,
     outcome_badge,
 )
@@ -41,23 +43,21 @@ from core.rpg import (
     team_creatures,
     team_power,
     top_creatures,
-    unlock_achievement,
     update_arena_after_battle,
 )
 from core.rpg_data import (
     BOUNTY_STREAK,
-    arena_rank,
     get_npc_pool,
     streak_multiplier,
 )
 from core.theme import (
     BLOOD_COLOR,
     GOLD_COLOR,
+    asset_emoji,
     creature_label,
+    currency_emoji,
     currency_label,
-    crate_label,
     dark_embed,
-    rarity_emoji,
     rarity_label,
     status_effect_label,
     status_embed,
@@ -156,6 +156,45 @@ class RPGBattle(commands.Cog):
 
     # ── Helpers ──────────────────────────────────────────────────────
 
+    def _battle_layout(
+        self,
+        ctx: commands.Context,
+        opponent_name: str,
+        left_team: list,
+        right_team: list,
+        *,
+        filename: str,
+        title: str,
+        subtitle: str,
+        color: discord.Color,
+        footer: str | None = None,
+        log_lines: list[str] | None = None,
+        rewards: str | None = None,
+    ) -> AbyssiaLayoutView:
+        team_lines = "\n".join(battle_team_line(cr) for cr in left_team) or "None"
+        enemy_lines = "\n".join(battle_team_line(cr) for cr in right_team) or "None"
+        sections: list[tuple[str, str]] = [
+            ("Matchup", f"**{ctx.author.display_name}**\n{team_lines}\n\n**{opponent_name}**\n{enemy_lines}"),
+        ]
+        if rewards:
+            sections.append(("Rewards", rewards))
+        if log_lines:
+            sections.append(("Turn Log", format_battle_log(log_lines[-12:], max_lines=12, max_chars=900)))
+        return AbyssiaLayoutView(
+            owner_id=ctx.author.id,
+            title=title,
+            subtitle=subtitle,
+            image_filename=filename,
+            image_description=f"{ctx.author.display_name} versus {opponent_name}",
+            sections=sections,
+            footer=footer,
+            shortcuts=[
+                ("Weapons", "b weapons"),
+                ("Upgrade", "b upgrade"),
+            ],
+            accent=color,
+        )
+
     async def _run_battle_and_reward(
         self, ctx: commands.Context, attacker: sqlite3.Row, left_team: list,
         opponent_name: str, opponent_id: int, right_team: list,
@@ -165,9 +204,11 @@ class RPGBattle(commands.Cog):
         pref = await self.bot.db.fetchone("SELECT battle_log FROM rpg_user_prefs WHERE user_id = ?", (ctx.author.id,))
         log_enabled = bool(int(pref["battle_log"])) if pref else False
         frames = simulate_battle_timeline(left_team, right_team, log_enabled=log_enabled)
-        preview_frames = select_battle_preview_frames(frames, max_frames=5)
+        preview_frames = select_battle_preview_frames(frames, max_frames=1)
         battle_message = None
         battle_renderer = BattleCardRenderer()
+        available_backdrops = battle_backdrop_keys()
+        battle_bg_key = random.choice(available_backdrops) if available_backdrops else None
         for frame_index, frame in enumerate(preview_frames, start=1):
             frame_data = {
                 "turn": int(frame["turn"]),
@@ -180,43 +221,54 @@ class RPGBattle(commands.Cog):
                 "player_wp": list(frame.get("left_wp", [])),
                 "enemy_wp": list(frame.get("right_wp", [])),
                 "zone_key": str(attacker["current_zone"]) if "current_zone" in attacker.keys() else "bloodmoon_forest",
+                "battle_bg_key": battle_bg_key,
                 "won": None,
             }
-            image = battle_renderer.render_battle_frame(frame_data)
+            frame_data["preview_card"] = True
+            image = await run_render(battle_renderer.render_battle_frame, frame_data)
             filename = f"abyssia_battle_turn_{frame_index}.png"
             file = discord.File(image, filename=filename)
-            embed = battle_overview_embed(
-                ctx.author,
+            view = self._battle_layout(
+                ctx,
                 opponent_name,
                 left_team,
                 right_team,
+                filename=filename,
+                title="Battle Turn",
+                subtitle=f"{ctx.author.display_name} vs {opponent_name}",
                 color=discord.Color.dark_gray(),
-                image_filename=filename,
-                footer=f"Battle animation {frame_index}/{len(preview_frames)}",
+                footer=f"Turn {int(frame['turn'])} | Battle animation {frame_index}/{len(preview_frames)}",
+                log_lines=list(frame.get("compact_log", [])) if log_enabled else None,
             )
             if battle_message is None:
-                battle_message = await ctx.send(embed=embed, file=file)
+                battle_message = await ctx.send(file=file, view=view)
             else:
-                await battle_message.edit(embed=embed, attachments=[file])
-            await asyncio.sleep(1)
+                await battle_message.edit(content=None, embed=None, attachments=[file], view=view)
 
         result = frames[-1]
         tied = result.get("tied", False)
         won = bool(result["left_won"]) if not tied else False
 
-        arena = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
-        previous_streak = int(arena["win_streak"])
-        opp_arena = await ensure_arena_stats(self.bot.db, opponent_id, ctx.guild.id) if not is_npc else None
-        opp_rating = int(opp_arena["rating"]) if opp_arena else int(arena["rating"])
+        battle_stats = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
+        previous_streak = int(battle_stats["win_streak"])
+        my_rating = int(battle_stats["rating"])
+        my_change = 0
+        opp_rating = 0
 
         if not tied:
-            winner_change, loser_change = elo_rating_change(int(arena["rating"]), opp_rating)
-            rating_change = winner_change if won else loser_change
-            await update_arena_after_battle(self.bot.db, ctx.author.id, ctx.guild.id, won, rating_change)
-            if not is_npc and opp_arena:
-                await update_arena_after_battle(self.bot.db, opponent_id, ctx.guild.id, not won, loser_change if won else winner_change)
+            if not is_npc and opponent_id:
+                opp_stats = await ensure_arena_stats(self.bot.db, opponent_id, ctx.guild.id)
+                opp_rating = int(opp_stats["rating"])
+                if won:
+                    my_change, opp_change = elo_rating_change(my_rating, opp_rating)
+                else:
+                    opp_change, my_change = elo_rating_change(opp_rating, my_rating)
+                await update_arena_after_battle(self.bot.db, ctx.author.id, ctx.guild.id, won, my_change)
+                await update_arena_after_battle(self.bot.db, opponent_id, ctx.guild.id, not won, opp_change)
+            else:
+                await update_arena_after_battle(self.bot.db, ctx.author.id, ctx.guild.id, won, 0)
         else:
-            rating_change = 0
+            pass
 
         streak = previous_streak + 1 if won else 0
         streak_bonus_str = ""
@@ -224,12 +276,11 @@ class RPGBattle(commands.Cog):
             mult = streak_multiplier(streak)
             streak_bonus_str = f"\n{status_effect_label('burn', f'{streak}-win streak')} | **+{mult:.0%}** rewards"
 
-        rewards = calculate_battle_rewards(won, int(attacker["level"]), streak if won else 0, int(arena["rating"]))
+        rewards = calculate_battle_rewards(won, int(attacker["level"]), streak if won else 0, 0)
         if won:
             await award_currency(self.bot.db, ctx.author.id, gold=rewards["gold"], gems=rewards["gems"])
             await award_player_xp(self.bot.db, attacker, rewards["xp"])
             await progress_quest(self.bot.db, ctx.author.id, "daily_battle")
-            await unlock_achievement(self.bot.db, ctx.author.id, "arena_victor")
 
             # Streak milestone reward
             milestone = streak_milestone_reward(streak)
@@ -243,17 +294,15 @@ class RPGBattle(commands.Cog):
         elif not tied:
             await award_currency(self.bot.db, ctx.author.id, gold=rewards["gold"])
 
-        checklist_crates, checklist_crate_count = await roll_checklist_battle_crates(self.bot.db, ctx.author.id, 1)
-
-        new_rating = int(arena["rating"]) + rating_change
+        await roll_checklist_battle_crates(self.bot.db, ctx.author.id, 1)
 
         log = list(result.get("full_log") or result["log"])
         await record_battle_history(
             self.bot.db, ctx.author.id, opponent_name, opponent_id,
-            won, rating_change, opp_rating, is_npc, log,
+            won, my_change if not tied else 0, opp_rating if not is_npc and opponent_id else 0, is_npc, log,
         )
 
-        # ── Build battle result card data ──
+        # Build battle result card data.
         has_ultra = any(str(c.get("rarity", "")) in ("Eldritch", "Abyssal") for c in left_team + right_team)
 
         damage_dealt = 0
@@ -309,10 +358,6 @@ class RPGBattle(commands.Cog):
             if w:
                 player_weapons.append({"name": str(w.get("name", "")), "rarity": str(w.get("rarity", "Common"))})
 
-        player_rank_label = arena_rank(int(attacker["arena_rating"]))
-        enemy_rating = opp_rating if not is_npc else int(arena["rating"])
-        enemy_rank_label = arena_rank(enemy_rating)
-
         tied = result.get("tied", False)
         battle_result_data = {
             "won": won if not tied else None,
@@ -327,13 +372,11 @@ class RPGBattle(commands.Cog):
             "enemy_hp": list(result["right_hp"]),
             "player_wp": list(result["left_wp"]),
             "enemy_wp": list(result["right_wp"]),
-            "player_rating": int(attacker["arena_rating"]),
-            "enemy_rating": enemy_rating,
-            "player_rank": f"{player_rank_label} Hunter",
-            "enemy_rank": f"{enemy_rank_label} Hunter",
-            "rating_change": rating_change,
+            "player_rank": "Battle Team",
+            "enemy_rank": "Opponent Team",
             "win_streak": streak if won else 0,
             "zone_key": str(attacker["current_zone"]) if "current_zone" in attacker.keys() else "bloodmoon_forest",
+            "battle_bg_key": battle_bg_key,
             "has_ultra_rare": has_ultra,
             "damage_stats": {
                 "player_damage_dealt": damage_dealt,
@@ -350,7 +393,7 @@ class RPGBattle(commands.Cog):
             "turns": int(result.get("turn", len(frames))),
         }
 
-        image = battle_renderer.render_battle_result(battle_result_data)
+        image = await run_render(battle_renderer.render_battle_result, battle_result_data)
         file = discord.File(image, filename="abyssia_battle.png")
         turns_total = int(result.get("turn", len(frames)))
         if tied:
@@ -358,9 +401,7 @@ class RPGBattle(commands.Cog):
         else:
             result_word = "won" if won else "lost"
         footer_bits = [
-            f"You {result_word} in {turns_total} turns!",
-            f"+{int(rewards.get('xp', 0))} xp",
-            f"Rating {new_rating} ({rating_change:+d})",
+            f"You {result_word} in {turns_total} turns",
         ]
         if won:
             streak_text = f"Streak: {streak}"
@@ -372,52 +413,36 @@ class RPGBattle(commands.Cog):
             footer_bits.append(streak_text)
         elif previous_streak > 0 and not tied:
             footer_bits.append(f"Streak broken: {previous_streak}")
-        embed = battle_overview_embed(
-            ctx.author,
+        xp_icon = asset_emoji("passives", "xp_boost") or asset_emoji("ui", "profile") or "XP"
+        souls_icon = currency_emoji("souls") or currency_emoji("gold") or "Souls"
+        reward_line = f"{xp_icon} `+{int(rewards.get('xp', 0)):,}`"
+        if int(rewards.get("gold", 0) or 0):
+            reward_line += f"  {souls_icon} `{int(rewards.get('gold', 0)):,}`"
+        result_title = "Battle Draw" if tied else ("Victory" if won else "Defeat")
+        view = self._battle_layout(
+            ctx,
             opponent_name,
             left_team,
             right_team,
+            filename="abyssia_battle.png",
+            title=result_title,
+            subtitle=f"{ctx.author.display_name} vs {opponent_name}",
             color=discord.Color.dark_gray() if tied else (discord.Color.green() if won else discord.Color.dark_red()),
-            image_filename="abyssia_battle.png",
             footer=" | ".join(footer_bits),
-        )
-        log_file = None
-        if log_enabled:
-            compact_log = result.get("compact_log", [])
-            if compact_log:
-                log_text = format_battle_log(compact_log, max_lines=18)
-                embed.add_field(name="⚔️ Battle Log", value=f"{log_text}", inline=False)
-                if len(compact_log) > 18:
-                    log_bytes = io.BytesIO("\n".join(compact_log).encode("utf-8"))
-                    log_file = discord.File(log_bytes, filename="battle_log.txt")
-        message_content = None
-        if checklist_crates:
-            message_content = (
-                f"{crate_label('cache', 'Weapon Crate')} | **{ctx.author.display_name}**, "
-                f"You found a **weapon crate!** `[{checklist_crate_count}/3]` "
-                f"**RESETS IN:** `{daily_reset_timer()}`"
-            )
-        view = shortcut_view(
-            ctx.author.id,
-            [
-                ("Team", "b team"),
-                ("Weapons", "b weapons"),
-                ("Arena", "b arena"),
-            ],
+            log_lines=list(result.get("compact_log", [])) if log_enabled else None,
+            rewards=reward_line,
         )
         if battle_message is not None:
-            attachments = [file] + ([log_file] if log_file else [])
-            await battle_message.edit(content=message_content, embed=embed, attachments=attachments, view=view)
+            await battle_message.edit(content=None, embed=None, attachments=[file], view=view)
         else:
-            send_files = [file] + ([log_file] if log_file else [])
-            await ctx.reply(content=message_content, embed=embed, files=send_files, view=view, mention_author=False)
+            await ctx.reply(files=[file], view=view, mention_author=False)
 
         # Bounty announcement
         if won and streak >= BOUNTY_STREAK:
             bounty_embed = dark_embed(
                 status_effect_label("burn", "Bounty Active"),
                 f"**{ctx.author.display_name}** has reached a **{streak} win streak**!\n"
-                f"Defeat them in the arena for bonus rewards.\n"
+                f"Defeat them in battle for bonus rewards.\n"
                 f"Use `b battle` to challenge them.",
                 color=discord.Color.red(),
             )
@@ -447,7 +472,7 @@ class RPGBattle(commands.Cog):
             )
                 await ctx.reply(
                     embed=embed,
-                    view=shortcut_view(ctx.author.id, [("Zoo", "b zoo"), ("Profile", "b profile")]),
+                    view=shortcut_view(ctx.author.id, [("Zoo", "b zoo")]),
                     mention_author=False,
                 )
                 return
@@ -480,8 +505,8 @@ class RPGBattle(commands.Cog):
         power = team_power(creatures)
         cids = [int(c["id"]) for c in creatures]
         weapons = await creature_weapons(self.bot.db, cids)
-        arena = await ensure_arena_stats(self.bot.db, target.id, ctx.guild.id)
-        streak = int(arena['win_streak'])
+        battle_stats = await ensure_arena_stats(self.bot.db, target.id, ctx.guild.id)
+        streak = int(battle_stats["win_streak"])
         streak_text = f"Current Streak: {streak}"
         if streak >= 3:
             from core.rpg_data import get_streak_tier
@@ -490,21 +515,28 @@ class RPGBattle(commands.Cog):
                 streak_text = f"{tier.emoji} Streak: {streak} ({tier.label})"
         image = render_team_card(target.display_name, creatures, team_power=power, weapons=weapons)
         file = discord.File(image, filename="abyssia_team.png")
-        embed = discord.Embed(color=GOLD_COLOR)
-        embed.set_author(name=str(target), icon_url=target.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_team.png")
-        embed.set_footer(text=f"Team Power: {power:,} | {streak_text} | Best: {int(arena['highest_win_streak'])}")
+        team_sections = [
+            ("Team Ledger", f"Power `{power:,}` | {streak_text} | Best `{int(battle_stats['highest_win_streak'])}`"),
+        ]
+        for slot, creature in enumerate(creatures, start=1):
+            weapon = weapons.get(int(creature["id"]))
+            team_sections.append(team_slot_value(slot, creature, weapon))
+        view = AbyssiaLayoutView(
+            owner_id=ctx.author.id,
+            title="Battle Team",
+            subtitle=f"{target.display_name} | Power `{power:,}`",
+            image_filename="abyssia_team.png",
+            image_description=f"{target.display_name}'s battle team",
+            sections=team_sections,
+            shortcuts=[
+                ("Weapons", "b weapons"),
+                ("Zoo", "b zoo"),
+            ],
+            accent=GOLD_COLOR,
+        )
         await ctx.reply(
-            embed=embed,
             file=file,
-            view=shortcut_view(
-                ctx.author.id,
-                [
-                    ("Weapons", "b weapons"),
-                    ("Profile", "b profile"),
-                    ("Zoo", "b zoo"),
-                ],
-            ),
+            view=view,
             mention_author=False,
         )
 
@@ -661,9 +693,7 @@ class RPGBattle(commands.Cog):
             raise commands.BadArgument("You need at least one creature.")
 
         if is_npc or opp_id == 0:
-            arena = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
-            rating = int(arena["rating"])
-            pool = get_npc_pool(rating)
+            pool = get_npc_pool(1000 + min(1400, team_power(left_team) // 2))
             npc = random.choice(pool)
             right_team = generate_npc_team(npc)
             opp_name = f"{npc.title} {npc.name}"
@@ -719,7 +749,7 @@ class RPGBattle(commands.Cog):
             losses += not won
             badge = outcome_badge(won) or ("WIN" if won else "LOSS")
             npc_tag = " [NPC]" if r["is_npc"] else ""
-            lines.append(f"{badge} vs **{r['opponent_name']}**{npc_tag} - rating `{r['rating_change']:+d}` -> `{r['opponent_rating']}`")
+            lines.append(f"{badge} vs **{r['opponent_name']}**{npc_tag}")
         embed = dark_embed(
             ui_label("battle", "Battle History"),
             f"Record: **{wins}W** / **{losses}L**\n\n" + "\n".join(lines),
@@ -729,95 +759,16 @@ class RPGBattle(commands.Cog):
 
     # ── Battle Log Toggle ──────────────────────────────────────────
 
-    # ── Arena Stats ──────────────────────────────────────────────────
-
-    @commands.hybrid_command(name="arena")
-    async def arena(self, ctx: commands.Context) -> None:
-        """Show your arena rating, rank, streak, and stats."""
-        assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
-        player = await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
-        arena = await ensure_arena_stats(self.bot.db, ctx.author.id, ctx.guild.id)
-        rank = arena_rank(int(arena["rating"]))
-        streak = int(arena["win_streak"])
-        best = int(arena["highest_win_streak"])
-        total = int(arena["total_battles"])
-        wins = int(arena["wins"])
-        losses = int(arena["losses"])
-        winrate = f"{round(wins / max(1, total) * 100)}%" if total > 0 else "N/A"
-
-        streak_line = f"{status_effect_label('burn', 'Current streak')}: **{streak}** | Best: **{best}**"
-        if streak >= 3:
-            from core.rpg_data import get_streak_tier, streak_bonus_text
-            tier = get_streak_tier(streak)
-            if tier.label:
-                bonus_text = streak_bonus_text(streak)
-                streak_line = f"{status_effect_label('burn', f'{tier.emoji} Streak: {streak}')}: **{tier.label}** | Best: **{best}**\n{bonus_text}"
-
-        message = (
-            f"{ui_label('leaderboard', 'Rating')}: **{arena['rating']}** | Rank: **{rank}**\n"
-            f"{ui_label('battle', 'Record')}: **{wins}W** / **{losses}L** ({winrate})\n"
-            f"{streak_line}\n"
-            f"Total battles: **{total}**"
-        )
-        if streak >= BOUNTY_STREAK:
-            message += f"\n\n{status_effect_label('burn', 'Bounty Active')} - You're a target. Defend your streak!"
-
-        last_match = None
-        last = await self.bot.db.fetchone(
-            "SELECT * FROM rpg_battle_history WHERE user_id = ? ORDER BY fought_at DESC LIMIT 1",
-            (ctx.author.id,),
-        )
-        if last:
-            outcome = "win" if last["won"] else "loss"
-            last_match = f"Last match: {outcome} vs {last['opponent_name']}, {last['rating_change']:+d} rating"
-
-        embed = dark_embed(ui_label("leaderboard", "Arena Ledger"), message, color=GOLD_COLOR)
-        image = render_arena_card(ctx.author.display_name, player, rank=rank, last_match=last_match)
-        file = discord.File(image, filename="abyssia_arena.png")
-        embed.set_image(url="attachment://abyssia_arena.png")
-        await ctx.reply(
-            embed=embed,
-            file=file,
-            view=shortcut_view(
-                ctx.author.id,
-                [("Team", "b team"), ("Leaderboard", "b leaderboard"), ("History", "b history")],
-            ),
-            mention_author=False,
-        )
+    # ── Leaderboard ──────────────────────────────────────────────────
 
     # ── Leaderboard ──────────────────────────────────────────────────
 
     @commands.hybrid_command(name="leaderboard", aliases=["lb", "rankings"])
-    async def leaderboard(self, ctx: commands.Context, category: str = "rating") -> None:
-        """Show top hunters: rating, streak, wins, level, souls."""
+    async def leaderboard(self, ctx: commands.Context, category: str = "level") -> None:
+        """Show top hunters by level or souls."""
         assert ctx.guild is not None
         await ensure_application_emojis(self.bot, max_age=60.0)
-        if category == "rating":
-            rows = await self.bot.db.fetchall(
-                """SELECT s.*, p.hunter_name FROM rpg_arena_stats s
-                   JOIN rpg_players p ON s.user_id = p.user_id
-                   ORDER BY s.rating DESC LIMIT 15""",
-            )
-            label = "Arena Rating"
-            fmt = lambda r: f"{rarity_emoji('Legendary') or ''} **{r['hunter_name']}** - `{r['rating']}` ({arena_rank(int(r['rating']))})"
-        elif category in ("streak", "win_streak"):
-            rows = await self.bot.db.fetchall(
-                """SELECT s.*, p.hunter_name FROM rpg_arena_stats s
-                   JOIN rpg_players p ON s.user_id = p.user_id
-                   ORDER BY s.win_streak DESC LIMIT 15""",
-            )
-            label = "Win Streak"
-            fmt = lambda r: f"{status_effect_label('burn', str(r['win_streak']) + ' streak')} - **{r['hunter_name']}**"
-        elif category in ("wins", "battles"):
-            rows = await self.bot.db.fetchall(
-                """SELECT s.*, p.hunter_name FROM rpg_arena_stats s
-                   JOIN rpg_players p ON s.user_id = p.user_id
-                   ORDER BY s.wins DESC LIMIT 15""",
-            )
-            label = "Most Wins"
-            fmt = lambda r: f"{ui_label('battle', str(r['wins']) + ' wins')} - **{r['hunter_name']}**"
-        elif category in ("level", "hunter"):
+        if category in ("level", "hunter"):
             rows = await self.bot.db.fetchall(
                 "SELECT user_id, hunter_name, level FROM rpg_players ORDER BY level DESC LIMIT 15",
             )
@@ -830,7 +781,7 @@ class RPGBattle(commands.Cog):
             label = "Souls"
             fmt = lambda r: f"{currency_label('gold')} **{r['gold']:,}** - **{r['hunter_name']}**"
         else:
-            raise commands.BadArgument("Categories: rating, streak, wins, level, souls.")
+            raise commands.BadArgument("Categories: level, souls.")
 
         if not rows:
             await ctx.reply(embed=status_embed(ui_label("leaderboard", f"{label} Leaderboard"), "No hunters ranked yet."), mention_author=False)

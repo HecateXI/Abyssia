@@ -14,6 +14,7 @@ class CardShortcut:
     command: str
     description: str = ""
     style: discord.ButtonStyle = discord.ButtonStyle.secondary
+    emoji: str | None = None
 
 
 @dataclass(frozen=True)
@@ -66,20 +67,36 @@ SAFE_ROUTES: dict[str, _Route] = {
     "b pcard": _Route("RPGProfile", "profilecustomize"),
     "b inventory": _Route("RPGProfile", "inventory"),
     "b inv": _Route("RPGProfile", "inventory"),
+    "b daily": _Route("RPGProfile", "daily"),
+    "b checklist": _Route("RPGProfile", "checklist"),
+    "b tasks": _Route("RPGProfile", "checklist"),
+    "b quests": _Route("RPGProfile", "quests"),
+    "b quest": _Route("RPGProfile", "quest"),
+    "b quests claim": _Route("RPGProfile", "claim_quests"),
+    "b quest claim": _Route("RPGProfile", "claim_quests"),
+    "b quests reroll": _Route("RPGProfile", "reroll_quest"),
+    "b quest reroll": _Route("RPGProfile", "reroll_quest"),
     "b zoo": _Route("RPGProfile", "bestiary"),
     "b bestiary": _Route("RPGProfile", "bestiary"),
     "b team": _Route("RPGBattle", "team"),
     "b weapons": _Route("RPGEquipment", "weapons", (None,)),
     "b weapon": _Route("RPGEquipment", "weapons", (None,)),
     "b w": _Route("RPGEquipment", "weapons", (None,)),
+    "b open": _Route("RPGShop", "open_crate_cmd"),
+    "b unbox": _Route("RPGShop", "open_crate_cmd"),
+    "b openall": _Route("RPGShop", "openall"),
+    "b massopen": _Route("RPGShop", "openall"),
+    "b crateshop": _Route("RPGShop", "crateshop"),
+    "b crates": _Route("RPGShop", "crateshop"),
     "b explore": _Route("RPGHunting", "explore", kwargs={"zone": None}),
-    "b arena": _Route("RPGBattle", "arena"),
-    "b leaderboard": _Route("RPGBattle", "leaderboard", ("rating",)),
-    "b history": _Route("RPGBattle", "history"),
     "b incursion": _Route("RPGIncursion", "incursion_status"),
     "b inc": _Route("RPGIncursion", "incursion_status"),
     "b raid": _Route("RPGIncursion", "incursion_status"),
     "b boss": _Route("RPGIncursion", "incursion_status"),
+    "b upgrade": _Route("RPGProfile", "upgrade_creature", kwargs={"creature": None}),
+    "b creatureupgrade": _Route("RPGProfile", "upgrade_creature", kwargs={"creature": None}),
+    "b levelpet": _Route("RPGProfile", "upgrade_creature", kwargs={"creature": None}),
+    "b petupgrade": _Route("RPGProfile", "upgrade_creature", kwargs={"creature": None}),
 }
 
 BLOCKED_ACTION_PREFIXES = (
@@ -101,6 +118,48 @@ BLOCKED_ACTION_PREFIXES = (
 
 def _normalize_command(command: str) -> str:
     return " ".join(command.strip().split()).lower()
+
+
+SHORTCUT_EMOJIS: dict[str, str] = {
+    "battle": "⚔️",
+    "boss": "💀",
+    "customize": "🎨",
+    "equip": "🗡️",
+    "explore": "🧭",
+    "favorite": "⭐",
+    "inventory": "🎒",
+    "profile": "📜",
+    "raid": "🩸",
+    "team": "⚔️",
+    "vault": "🗡️",
+    "weapons": "🗡️",
+    "upgrade": "⬆️",
+    "zoo": "🔮",
+}
+
+
+def _shortcut_emoji(shortcut: CardShortcut) -> str | None:
+    if shortcut.emoji:
+        return shortcut.emoji
+    text = f"{shortcut.label} {shortcut.command}".lower()
+    if "daily" in text:
+        return "\U0001f4c5"
+    if "quest" in text or "checklist" in text or "task" in text:
+        return "\U0001f4dc"
+    if "bulk" in text or "open all" in text or "openall" in text or "mass" in text:
+        return "\U0001f4e6"
+    if "open" in text or "crate" in text or "box" in text:
+        return "\U0001f381"
+    if "slot 1" in text:
+        return "\u0031\ufe0f\u20e3"
+    if "slot 2" in text:
+        return "\u0032\ufe0f\u20e3"
+    if "slot 3" in text:
+        return "\u0033\ufe0f\u20e3"
+    for key, emoji in SHORTCUT_EMOJIS.items():
+        if key in text:
+            return emoji
+    return "◆"
 
 
 def _command_callback(command: Any) -> Callable[..., Awaitable[Any]] | None:
@@ -159,7 +218,7 @@ async def _invoke_dynamic_route(interaction: discord.Interaction, command: str) 
 
 class CommandShortcutButton(discord.ui.Button):
     def __init__(self, shortcut: CardShortcut) -> None:
-        super().__init__(label=shortcut.label[:80], style=shortcut.style)
+        super().__init__(label=shortcut.label[:80], style=shortcut.style, emoji=_shortcut_emoji(shortcut))
         self.shortcut = shortcut
 
     async def callback(self, interaction: discord.Interaction) -> None:
@@ -206,10 +265,18 @@ class CommandShortcutView(discord.ui.View):
         return False
 
 
+BLOCKED_SHORTCUT_LABELS = frozenset({"profile", "team", "inventory"})
+
+
+def shortcut_label_blocked(label: str) -> bool:
+    return str(label).strip().casefold() in BLOCKED_SHORTCUT_LABELS
+
+
 def shortcut_view(owner_id: int | None, shortcuts: list[tuple[str, str] | tuple[str, str, str]]) -> CommandShortcutView:
     items = [
         CardShortcut(label=item[0], command=item[1], description=item[2] if len(item) > 2 else "")
         for item in shortcuts
+        if not shortcut_label_blocked(item[0])
     ]
     return CommandShortcutView(owner_id, items)
 
@@ -221,6 +288,8 @@ def add_shortcuts(
     max_children: int = 25,
 ) -> discord.ui.View:
     for item in shortcuts:
+        if shortcut_label_blocked(item[0]):
+            continue
         if len(view.children) >= max_children:
             break
         view.add_item(

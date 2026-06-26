@@ -58,23 +58,33 @@ class Admin(commands.Cog):
 
     @config.command(name="setup-emojis")
     @is_staff()
-    async def setup_emojis(self, ctx: commands.Context, replace_existing: bool = True) -> None:
+    async def setup_emojis(self, ctx: commands.Context, replace_existing: bool = True, delete_unused: bool = True) -> None:
         """Upload or refresh generated PNG assets as application emojis."""
         assert ctx.guild is not None
         await ctx.defer()
 
-        result = await upload_application_asset_emojis(self.bot, replace_existing=replace_existing)
+        result = await upload_application_asset_emojis(self.bot, replace_existing=replace_existing, delete_missing=delete_unused)
         uploaded = int(result["uploaded"])
         existing = int(result["existing"])
         replaced = int(result["replaced"])
+        deleted = int(result.get("deleted", 0))
         failed = list(result["failed"])
 
         embed = dark_embed("Application Emoji Setup Complete")
         embed.add_field(name="Uploaded", value=f"**{uploaded}** app emojis", inline=True)
         embed.add_field(name="Existing", value=f"**{existing}** already configured", inline=True)
         embed.add_field(name="Replaced", value=f"**{replaced}** refreshed", inline=True)
-        creature_count = next((len(keys) for kind, keys in asset_emoji_targets() if kind == "creatures"), 0)
-        embed.add_field(name="Creature Bank", value=f"**{creature_count}** creature emojis included", inline=True)
+        embed.add_field(name="Deleted", value=f"**{deleted}** unused managed emojis", inline=True)
+        counts = {kind: len(keys) for kind, keys in asset_emoji_targets()}
+        embed.add_field(
+            name="Icon Banks",
+            value=(
+                f"Creatures **{counts.get('creatures', 0)}**\n"
+                f"Weapons **{counts.get('weapons', 0)}**\n"
+                f"Passives **{counts.get('passives', 0)}**"
+            ),
+            inline=True,
+        )
         if failed:
             embed.add_field(name="Failed or Skipped", value="\n".join(failed[:15]), inline=False)
         else:

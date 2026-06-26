@@ -124,14 +124,14 @@ def process_record(
 
     source = validate_png(master_path)
     compact_category = category in {"weapons", "passives"}
-    master = normalize_icon(source, MASTER_SIZE, mode=mode, fit_ratio=0.92 if compact_category else 0.875)
+    master = normalize_icon(source, MASTER_SIZE, mode=mode, fit_ratio=0.96 if compact_category else 0.94)
     if write_masters:
         save_png(master, master_path)
         source_for_emoji = master
     else:
         source_for_emoji = master
 
-    emoji = normalize_icon(source_for_emoji, EMOJI_SIZE, mode=mode, fit_ratio=0.80 if compact_category else 0.875)
+    emoji = normalize_icon(source_for_emoji, EMOJI_SIZE, mode=mode, fit_ratio=0.92 if compact_category else 0.94)
     save_png(emoji, emoji_path)
     if write_data_assets:
         save_png(emoji, data_asset_path)

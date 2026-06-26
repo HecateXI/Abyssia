@@ -5,12 +5,15 @@ import random
 from io import BytesIO
 from typing import Any
 
-from PIL import Image, ImageChops, ImageDraw, ImageFilter
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 from core import card_ui as cui
+from core.content_config import ROOT_DIR
 from core.rpg_data import normalize_key
 
 W, H = 1200, 760
+_BOSS_ARENA_BG = ROOT_DIR / "assets" / "ui" / "backgrounds" / "abyssia_bossfight_arena_ai.png"
+_CLEAN_FONT_CACHE: dict[tuple[int, bool], ImageFont.ImageFont] = {}
 
 BOSS_THEMES: dict[str, tuple[int, int, int]] = {
     "hollow_king": (190, 202, 218),
@@ -30,6 +33,28 @@ ACTION_COLORS: dict[str, tuple[int, int, int]] = {
     "spawn": (215, 168, 75),
     "rewards": (236, 196, 82),
 }
+
+
+def _clean_font(size: int, *, bold: bool = False) -> ImageFont.ImageFont:
+    key = (size, bold)
+    if key in _CLEAN_FONT_CACHE:
+        return _CLEAN_FONT_CACHE[key]
+    names = [
+        "C:/Windows/Fonts/segoeuib.ttf" if bold else "C:/Windows/Fonts/segoeui.ttf",
+        "C:/Windows/Fonts/arialbd.ttf" if bold else "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/bahnschrift.ttf",
+        "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf",
+    ]
+    for name in names:
+        try:
+            font = ImageFont.truetype(name, size)
+            _CLEAN_FONT_CACHE[key] = font
+            return font
+        except OSError:
+            continue
+    font = cui.get_font(size, bold=bold)
+    _CLEAN_FONT_CACHE[key] = font
+    return font
 
 
 def _rgb(value: Any, fallback: tuple[int, int, int]) -> tuple[int, int, int]:
@@ -62,6 +87,17 @@ def _fmt(value: int | float) -> str:
     return f"{value:,}"
 
 
+def _duration_short(seconds: int) -> str:
+    seconds = max(0, int(seconds))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h {minutes}m"
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
+
 def _shadow_text(
     draw: ImageDraw.ImageDraw,
     xy: tuple[int, int],
@@ -79,6 +115,27 @@ def _shadow_text(
 
 def _blend(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> tuple[int, int, int]:
     return cui.lerp_color(a, b, t)
+
+
+def _load_boss_arena_bg(size: tuple[int, int], accent: tuple[int, int, int]) -> Image.Image:
+    if _BOSS_ARENA_BG.exists():
+        try:
+            with Image.open(_BOSS_ARENA_BG) as raw:
+                bg = cui.cover_resize(raw.convert("RGBA"), size).convert("RGBA")
+            bg.alpha_composite(Image.new("RGBA", size, (0, 0, 0, 34)))
+            tint = Image.new("RGBA", size, (*accent, 18))
+            bg.alpha_composite(tint)
+            cui.draw_vignette(bg, 0.82)
+            return bg
+        except OSError:
+            pass
+    fallback = Image.new("RGBA", size, (7, 6, 14, 255))
+    for y in range(size[1]):
+        t = y / max(1, size[1] - 1)
+        color = _blend((10, 8, 18), _blend(accent, (9, 8, 18), 0.74), min(1.0, t * 1.2))
+        ImageDraw.Draw(fallback).line((0, y, size[0], y), fill=(*color, 255))
+    cui.draw_vignette(fallback, 0.88)
+    return fallback
 
 
 def _arena(image: Image.Image, accent: tuple[int, int, int], seed: int) -> None:
@@ -117,6 +174,8 @@ def _sprite_3d(
     *,
     boss: bool = False,
     opacity: int = 255,
+    clip_box: tuple[int, int, int, int] | None = None,
+    clip_radius: int = 10,
 ) -> None:
     icon = cui.load_asset_icon(kind, key, (size, size), pixel=True).convert("RGBA")
     if opacity < 255:
@@ -124,16 +183,23 @@ def _sprite_3d(
         icon.putalpha(alpha)
     x = center[0] - size // 2
     y = center[1] - size // 2
+
+    if clip_box is not None:
+        layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        target = layer
+    else:
+        target = image
+
     shadow = Image.new("RGBA", (size + 90, size // 2 + 50), (0, 0, 0, 0))
     sd = ImageDraw.Draw(shadow)
     sd.ellipse((34, 14, shadow.width - 34, shadow.height - 18), fill=(0, 0, 0, 125 if boss else 92))
     shadow = shadow.filter(ImageFilter.GaussianBlur(18 if boss else 12))
-    image.alpha_composite(shadow, (center[0] - shadow.width // 2, center[1] + size // 3))
+    target.alpha_composite(shadow, (center[0] - shadow.width // 2, center[1] + size // 3))
 
     glow = Image.new("RGBA", (size + 150, size + 150), (0, 0, 0, 0))
     gd = ImageDraw.Draw(glow)
     gd.ellipse((24, 24, glow.width - 24, glow.height - 24), fill=cui.rgba(accent, 80 if boss else 48))
-    image.alpha_composite(glow.filter(ImageFilter.GaussianBlur(30 if boss else 20)), (center[0] - glow.width // 2, center[1] - glow.height // 2))
+    target.alpha_composite(glow.filter(ImageFilter.GaussianBlur(30 if boss else 20)), (center[0] - glow.width // 2, center[1] - glow.height // 2))
 
     rim_mask = ImageChops.subtract(
         icon.split()[-1].filter(ImageFilter.MaxFilter(13 if boss else 9)),
@@ -141,14 +207,14 @@ def _sprite_3d(
     ).filter(ImageFilter.GaussianBlur(1.6 if boss else 1.1))
     rim = Image.new("RGBA", icon.size, cui.rgba(_blend(accent, cui.TEXT_BRIGHT, 0.28), 175 if boss else 126))
     rim.putalpha(rim_mask.point(lambda p: min(180, int(p * (0.82 if boss else 0.64)))))
-    image.alpha_composite(rim, (x - (2 if boss else 1), y - (2 if boss else 1)))
+    target.alpha_composite(rim, (x - (2 if boss else 1), y - (2 if boss else 1)))
 
     for i in range(8 if boss else 5, 0, -1):
         extrusion = Image.new("RGBA", icon.size, (0, 0, 0, 0))
         extrusion.alpha_composite(icon)
         dark = Image.new("RGBA", icon.size, (0, 0, 0, 0))
         dark.paste(cui.rgba(_blend(accent, (0, 0, 0), 0.7), 45), mask=extrusion.split()[-1])
-        image.alpha_composite(dark, (x + i * 2, y + i * 3))
+        target.alpha_composite(dark, (x + i * 2, y + i * 3))
 
     mask = icon.split()[-1]
     lit_icon = Image.new("RGBA", icon.size, (0, 0, 0, 0))
@@ -183,7 +249,16 @@ def _sprite_3d(
     shade.putalpha(shade_alpha)
     lit_icon.alpha_composite(shade)
     lit_icon.alpha_composite(highlight)
-    image.alpha_composite(lit_icon, (x, y))
+    target.alpha_composite(lit_icon, (x, y))
+
+    if clip_box is not None:
+        clip_mask = Image.new("L", image.size, 0)
+        cmd = ImageDraw.Draw(clip_mask)
+        cmd.rounded_rectangle(clip_box, radius=clip_radius, fill=255)
+        layer_alpha = layer.split()[-1]
+        clipped_alpha = ImageChops.multiply(layer_alpha, clip_mask)
+        layer.putalpha(clipped_alpha)
+        image.alpha_composite(layer)
 
     ring = Image.new("RGBA", image.size, (0, 0, 0, 0))
     rd = ImageDraw.Draw(ring)
@@ -521,6 +596,8 @@ def _draw_compact_team_slot(
         116,
         border,
         opacity=255 if alive else 95,
+        clip_box=box,
+        clip_radius=10,
     )
     cui.draw_text_fit(
         draw,
@@ -566,7 +643,7 @@ def _draw_boss_showcase(image: Image.Image, payload: dict[str, Any], accent: tup
         align="right",
         bold=True,
     )
-    _sprite_3d(image, "bosses", boss_key, ((box[0] + box[2]) // 2, box[1] + 178), 260, accent, boss=True)
+    _sprite_3d(image, "bosses", boss_key, ((box[0] + box[2]) // 2, box[1] + 178), 260, accent, boss=True, clip_box=box, clip_radius=10)
     cui.draw_text_fit(
         draw,
         str(payload.get("boss_name", "Boss")),
@@ -706,7 +783,7 @@ def _draw_bottom_bar(image: Image.Image, payload: dict[str, Any], accent: tuple[
             ("Rewards", "bincursion rewards", cui.GOLD, "crate", "treasure"),
             ("Boss", "Defeated", cui.GREEN, "bosses", str(payload.get("boss_key", "hollow_king"))),
             ("Team", "Claim split", accent, "ui", "profile"),
-            ("Loot", "Score based", cui.CYAN, "materials", "weapon_shard"),
+            ("Loot", "Score based", cui.CYAN, "materials", "weapon_shards"),
         ]
     else:
         data = [
@@ -733,32 +810,15 @@ def _draw_battle_arena(image: Image.Image, payload: dict[str, Any], accent: tupl
         glow=cui.GOLD if defeated else accent,
     )
     sx, sy, ex, ey = scene
+    bg = _load_boss_arena_bg((ex - sx, ey - sy), accent)
+    mask = Image.new("L", bg.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, bg.width - 1, bg.height - 1), radius=16, fill=255)
+    bg.putalpha(ImageChops.multiply(bg.split()[-1], mask))
+    image.alpha_composite(bg, (sx, sy))
+
     layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
     rng = random.Random(_safe_int(payload.get("incursion_id"), 17) + sum(accent))
-
-    for y in range(sy + 12, ey - 10):
-        t = (y - sy) / max(1, ey - sy)
-        col = _blend((4, 4, 12), _blend(accent, (9, 8, 18), 0.70), min(1.0, t * 1.2))
-        draw.line((sx + 12, y, ex - 12, y), fill=(*col, 104))
-
-    sun = _blend(accent, cui.TEXT_BRIGHT, 0.18)
-    draw.ellipse((660, 42, 1254, 610), fill=cui.rgba(sun, 34), outline=cui.rgba(sun, 58), width=3)
-    draw.ellipse((722, 96, 1196, 552), outline=cui.rgba(cui.TEXT_BRIGHT, 22), width=2)
-    draw.rectangle((sx + 22, sy + 212, ex - 22, sy + 218), fill=cui.rgba(cui.TEXT_BRIGHT, 22))
-
-    floor_top = sy + 278
-    floor = [(sx + 52, ey - 42), (sx + 420, floor_top), (ex - 360, floor_top), (ex - 34, ey - 42)]
-    draw.polygon(floor, fill=(13, 11, 24, 224), outline=cui.rgba(accent, 96))
-    for i in range(13):
-        t = i / 12
-        x_top = sx + 420 + (ex - sx - 780) * t
-        x_bot = sx + 52 + (ex - sx - 86) * t
-        draw.line((x_top, floor_top, x_bot, ey - 42), fill=cui.rgba(accent, 32), width=2)
-    for i in range(7):
-        y = floor_top + i * 42
-        inset = i * 50
-        draw.line((sx + 420 - inset, y, ex - 360 + inset, y), fill=cui.rgba(cui.TEXT_BRIGHT, 20 + i * 4), width=2)
 
     draw.ellipse((694, sy + 286, 1052, sy + 370), fill=cui.rgba(accent, 30), outline=cui.rgba(accent, 118), width=4)
     draw.ellipse((158, sy + 362, 508, sy + 466), fill=cui.rgba(cui.BLUE, 26), outline=cui.rgba(cui.BLUE, 98), width=4)
@@ -1167,6 +1227,501 @@ def _draw_battle_bottom_hud(image: Image.Image, payload: dict[str, Any], accent:
         x += chip_w + 14
 
 
+def _scene_text(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    size: int,
+    fill: tuple[int, int, int] | tuple[int, int, int, int] = cui.TEXT_BRIGHT,
+    *,
+    bold: bool = False,
+) -> None:
+    font = _clean_font(size, bold=bold)
+    x, y = xy
+    draw.text((x + 1, y + 2), text, font=font, fill=(0, 0, 0, 170))
+    draw.text((x, y), text, font=font, fill=fill)
+
+
+def _center_scene_text(
+    draw: ImageDraw.ImageDraw,
+    box: tuple[int, int, int, int],
+    text: str,
+    size: int,
+    fill: tuple[int, int, int] | tuple[int, int, int, int] = cui.TEXT_BRIGHT,
+    *,
+    bold: bool = False,
+) -> None:
+    font = _clean_font(size, bold=bold)
+    text = str(text)
+    bounds = draw.textbbox((0, 0), text, font=font)
+    tw = bounds[2] - bounds[0]
+    th = bounds[3] - bounds[1]
+    x = box[0] + (box[2] - box[0] - tw) // 2
+    y = box[1] + (box[3] - box[1] - th) // 2 - 1
+    draw.text((x + 1, y + 2), text, font=font, fill=(0, 0, 0, 170))
+    draw.text((x, y), text, font=font, fill=fill)
+
+
+def _glass_panel(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    accent: tuple[int, int, int],
+    *,
+    fill_alpha: int = 178,
+    border_alpha: int = 118,
+    radius: int = 16,
+) -> None:
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    fill = (8, 10, 16, fill_alpha)
+    draw.rounded_rectangle(box, radius=radius, fill=fill, outline=cui.rgba(accent, border_alpha), width=2)
+    inset = (box[0] + 2, box[1] + 2, box[2] - 2, box[3] - 2)
+    draw.rounded_rectangle(inset, radius=max(4, radius - 3), outline=(255, 255, 255, 24), width=1)
+    draw.line((box[0] + radius, box[1] + 1, box[2] - radius, box[1] + 1), fill=(255, 255, 255, 36), width=1)
+    image.alpha_composite(layer)
+
+
+def _draw_clean_bar(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    current: int,
+    maximum: int,
+    color: tuple[int, int, int],
+    label: str,
+    *,
+    back_alpha: int = 216,
+    label_size: int = 17,
+) -> None:
+    current = max(0, int(current))
+    maximum = max(1, int(maximum))
+    pct = _pct(current, maximum)
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    radius = max(4, (box[3] - box[1]) // 2)
+    draw.rounded_rectangle(box, radius=radius, fill=(5, 6, 10, back_alpha), outline=(255, 255, 255, 42), width=1)
+    inner = (box[0] + 4, box[1] + 4, box[2] - 4, box[3] - 4)
+    fill_w = int((inner[2] - inner[0]) * pct)
+    if fill_w > 0:
+        fill_box = (inner[0], inner[1], inner[0] + max(8, fill_w), inner[3])
+        draw.rounded_rectangle(fill_box, radius=max(3, radius - 4), fill=(*color, 232))
+        draw.rectangle((fill_box[0], fill_box[1], fill_box[2], fill_box[1] + 4), fill=(255, 255, 255, 34))
+    image.alpha_composite(layer)
+    if label:
+        _center_scene_text(ImageDraw.Draw(image), box, label, label_size, cui.TEXT_BRIGHT, bold=True)
+
+
+def _trim_loaded_icon(kind: str, key: str, size: int) -> Image.Image:
+    icon = cui.load_asset_icon(kind, key, (size, size), pixel=True).convert("RGBA").copy()
+    bbox = icon.getbbox()
+    if bbox:
+        icon = icon.crop(bbox)
+    icon.thumbnail((size, size), Image.Resampling.NEAREST)
+    return icon
+
+
+def _stage_shadow(
+    image: Image.Image,
+    foot: tuple[int, int],
+    width: int,
+    accent: tuple[int, int, int],
+    *,
+    boss: bool = False,
+) -> None:
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    x, y = foot
+    h = max(16, width // 5)
+    draw.ellipse((x - width // 2, y - h // 2, x + width // 2, y + h // 2), fill=(0, 0, 0, 118 if boss else 92))
+    draw.ellipse(
+        (x - width // 2 - 10, y - h // 2 - 3, x + width // 2 + 10, y + h // 2 + 3),
+        outline=cui.rgba(accent, 80 if boss else 62),
+        width=2,
+    )
+    image.alpha_composite(layer.filter(ImageFilter.GaussianBlur(1.1)))
+
+
+def _paste_stage_sprite(
+    image: Image.Image,
+    kind: str,
+    key: str,
+    foot: tuple[int, int],
+    size: int,
+    accent: tuple[int, int, int],
+    *,
+    boss: bool = False,
+    opacity: int = 255,
+) -> tuple[int, int, int, int]:
+    icon = _trim_loaded_icon(kind, key, size)
+    if opacity < 255:
+        alpha = icon.split()[-1].point(lambda p: int(p * opacity / 255))
+        icon.putalpha(alpha)
+    x = foot[0] - icon.width // 2
+    y = foot[1] - icon.height
+    _stage_shadow(image, foot, max(icon.width + 34, size), accent, boss=boss)
+
+    if boss:
+        aura = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        ad = ImageDraw.Draw(aura)
+        ad.ellipse(
+            (foot[0] - size // 2 - 24, foot[1] - size - 40, foot[0] + size // 2 + 24, foot[1] + 42),
+            fill=cui.rgba(accent, 26),
+            outline=cui.rgba(_blend(accent, cui.TEXT_BRIGHT, 0.22), 82),
+            width=2,
+        )
+        image.alpha_composite(aura.filter(ImageFilter.GaussianBlur(11)))
+    else:
+        aura = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        ad = ImageDraw.Draw(aura)
+        ad.ellipse((foot[0] - size // 2, foot[1] - size + 8, foot[0] + size // 2, foot[1] + 18), fill=cui.rgba(accent, 24))
+        image.alpha_composite(aura.filter(ImageFilter.GaussianBlur(9)))
+
+    mask = icon.split()[-1]
+    rim_mask = ImageChops.subtract(mask.filter(ImageFilter.MaxFilter(5 if boss else 3)), mask).filter(ImageFilter.GaussianBlur(0.8))
+    rim = Image.new("RGBA", icon.size, cui.rgba(_blend(accent, cui.TEXT_BRIGHT, 0.24), 116 if boss else 86))
+    rim.putalpha(rim_mask)
+    image.alpha_composite(rim, (x, y))
+    image.alpha_composite(icon, (x, y))
+    return (x, y, x + icon.width, y + icon.height)
+
+
+def _draw_top_scene_hud(image: Image.Image, payload: dict[str, Any], accent: tuple[int, int, int]) -> None:
+    draw = ImageDraw.Draw(image)
+    defeated = bool(payload.get("defeated"))
+    hp = _safe_int(payload.get("hp"))
+    max_hp = max(1, _safe_int(payload.get("max_hp"), 1))
+    phase = _safe_int(payload.get("phase"), 1)
+    boss_name = str(payload.get("boss_name", "Incursion Boss"))
+    phase_name_text = str(payload.get("phase_name", "Awakening"))
+    seconds = _safe_int(payload.get("seconds_left"))
+    participants = _safe_int(payload.get("participants"))
+    action = str(payload.get("action", "status"))
+    action_label = "Defeated" if defeated else str(payload.get("action_label", action.title()))
+    action_color = cui.GOLD if defeated else ACTION_COLORS.get(action, accent)
+
+    _glass_panel(image, (36, 30, 378, 112), accent, fill_alpha=168, border_alpha=92, radius=18)
+    _scene_text(draw, (56, 45), "Abyssal Bossfight", 26, cui.TEXT_BRIGHT, bold=True)
+    sub = f"{participants} hunters - {_duration_short(seconds)} left" if seconds else f"{participants} hunters"
+    _scene_text(draw, (58, 78), sub, 16, cui.TEXT_MUTED, bold=False)
+
+    _glass_panel(image, (454, 30, 1164, 126), action_color, fill_alpha=184, border_alpha=124, radius=18)
+    title = cui.truncate_text(draw, boss_name, 418, _clean_font(27, bold=True))
+    _scene_text(draw, (478, 45), title, 27, cui.TEXT_BRIGHT, bold=True)
+    phase_label = f"Phase {phase} - {phase_name_text}"
+    _scene_text(draw, (480, 78), phase_label, 16, _blend(action_color, cui.TEXT_BRIGHT, 0.30), bold=True)
+    chip = (1004, 46, 1138, 78)
+    chip_layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    chip_draw = ImageDraw.Draw(chip_layer)
+    chip_draw.rounded_rectangle(chip, radius=13, fill=cui.rgba(action_color, 46), outline=cui.rgba(action_color, 132), width=1)
+    image.alpha_composite(chip_layer)
+    _center_scene_text(ImageDraw.Draw(image), chip, action_label, 14, cui.TEXT_BRIGHT, bold=True)
+    _draw_clean_bar(image, (478, 91, 1138, 122), hp, max_hp, action_color, f"Boss HP {_fmt(hp)} / {_fmt(max_hp)}")
+
+
+def _draw_team_stage(image: Image.Image, payload: dict[str, Any], accent: tuple[int, int, int]) -> None:
+    draw = ImageDraw.Draw(image)
+    team = _team_members(payload)
+    positions = [
+        ((248, 456), 154, "back"),
+        ((156, 570), 126, "front"),
+        ((338, 640), 134, "front"),
+    ]
+    if not team:
+        _glass_panel(image, (70, 154, 370, 214), accent, fill_alpha=128, border_alpha=64, radius=14)
+        _center_scene_text(draw, (70, 160, 370, 188), "Bind your team to enter", 18, cui.TEXT_BRIGHT, bold=True)
+        _center_scene_text(draw, (70, 186, 370, 210), "Use the Join button below", 14, cui.TEXT_MUTED, bold=False)
+        for foot, size, _ in positions:
+            _stage_shadow(image, foot, size, accent)
+            slot = Image.new("RGBA", image.size, (0, 0, 0, 0))
+            sd = ImageDraw.Draw(slot)
+            sd.arc((foot[0] - size // 2, foot[1] - 22, foot[0] + size // 2, foot[1] + 24), 0, 360, fill=cui.rgba(accent, 70), width=2)
+            sd.arc((foot[0] - size // 3, foot[1] - 14, foot[0] + size // 3, foot[1] + 16), 0, 360, fill=(255, 255, 255, 22), width=1)
+            image.alpha_composite(slot)
+        return
+
+    team_hp = _safe_int(payload.get("team_hp"))
+    team_max = max(1, _safe_int(payload.get("team_max_hp"), 1))
+    _glass_panel(image, (50, 132, 412, 248), accent, fill_alpha=156, border_alpha=74, radius=14)
+    _scene_text(draw, (70, 146), "Bound Team", 18, cui.TEXT_BRIGHT, bold=True)
+    _draw_clean_bar(image, (70, 148, 386, 172), team_hp, team_max, cui.GREEN, f"{_fmt(team_hp)} / {_fmt(team_max)}")
+    _scene_text(draw, (70, 176), "Creature HP persists during this boss", 12, cui.TEXT_MUTED, bold=False)
+
+    for index, member in enumerate(team[:3]):
+        foot, size, _ = positions[index]
+        alive = member["current_hp"] > 0
+        rarity = cui.rarity_color(member["rarity"])
+        _paste_stage_sprite(
+            image,
+            "creatures",
+            member["key"],
+            foot,
+            size,
+            rarity,
+            opacity=255 if alive else 110,
+        )
+        ground_bar = (foot[0] - 60, foot[1] + 11, foot[0] + 60, foot[1] + 24)
+        _draw_clean_bar(image, ground_bar, member["current_hp"], member["max_hp"], cui.GREEN if alive else cui.TEXT_MUTED, "")
+
+        row_y = 198 + index * 15
+        dot = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        dd = ImageDraw.Draw(dot)
+        dd.rounded_rectangle((70, row_y + 1, 82, row_y + 13), radius=4, fill=cui.rgba(rarity, 170))
+        image.alpha_composite(dot)
+        name = cui.truncate_text(draw, member["name"], 164, _clean_font(12, bold=True))
+        _scene_text(draw, (90, row_y - 1), name, 12, cui.TEXT_BRIGHT if alive else cui.TEXT_MUTED, bold=True)
+        bar_color = cui.GREEN if alive else cui.TEXT_MUTED
+        _draw_clean_bar(
+            image,
+            (220, row_y, 386, row_y + 14),
+            member["current_hp"],
+            member["max_hp"],
+            bar_color,
+            f"{_fmt(member['current_hp'])}/{_fmt(member['max_hp'])}",
+            label_size=10,
+        )
+
+
+def _draw_boss_stage(image: Image.Image, payload: dict[str, Any], accent: tuple[int, int, int]) -> None:
+    defeated = bool(payload.get("defeated"))
+    boss_key = str(payload.get("boss_key", "hollow_king"))
+    action = str(payload.get("action", "status"))
+    color = cui.GOLD if defeated else ACTION_COLORS.get(action, accent)
+    _paste_stage_sprite(image, "bosses", boss_key, (910, 592), 338, color, boss=True, opacity=210 if defeated else 255)
+
+
+def _draw_action_energy(image: Image.Image, payload: dict[str, Any], accent: tuple[int, int, int]) -> None:
+    action = str(payload.get("action", "status"))
+    if action in {"status", "spawn", "join"} and not payload.get("defeated"):
+        return
+    color = cui.GOLD if payload.get("defeated") else ACTION_COLORS.get(action, accent)
+    rng = random.Random(_safe_int(payload.get("seed"), 1) + sum(color) + len(action))
+    layer = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(layer)
+    if action in {"strike", "channel"}:
+        for _ in range(7):
+            sy = rng.randint(435, 610)
+            ey = rng.randint(315, 520)
+            draw.line(
+                (rng.randint(300, 420), sy, rng.randint(720, 880), ey),
+                fill=cui.rgba(color, rng.randint(80, 150)),
+                width=rng.randint(3, 6),
+            )
+    elif action == "guard":
+        for radius in (92, 132, 172):
+            draw.arc((70, 360 - radius // 2, 430, 625 + radius // 2), 200, 344, fill=cui.rgba(color, 94), width=4)
+    elif action == "focus":
+        for _ in range(22):
+            x = rng.randint(430, 700)
+            y = rng.randint(260, 610)
+            draw.ellipse((x - 3, y - 3, x + 3, y + 3), fill=cui.rgba(color, rng.randint(80, 170)))
+    elif action == "cleanse":
+        for _ in range(14):
+            x = rng.randint(120, 390)
+            y = rng.randint(330, 620)
+            draw.ellipse((x - 10, y - 10, x + 10, y + 10), outline=cui.rgba(color, rng.randint(70, 142)), width=2)
+    if payload.get("defeated"):
+        for radius in (130, 210, 290):
+            draw.ellipse((910 - radius, 485 - radius, 910 + radius, 485 + radius), outline=cui.rgba(color, 66), width=3)
+    image.alpha_composite(layer.filter(ImageFilter.GaussianBlur(0.35)))
+
+
+def _draw_bottom_status_strip(image: Image.Image, payload: dict[str, Any], accent: tuple[int, int, int]) -> None:
+    draw = ImageDraw.Draw(image)
+    defeated = bool(payload.get("defeated"))
+    action = str(payload.get("action", "status"))
+    color = cui.GOLD if defeated else ACTION_COLORS.get(action, accent)
+    _glass_panel(image, (34, 690, 1166, 738), color, fill_alpha=176, border_alpha=82, radius=16)
+    summary = str(payload.get("summary") or "Coordinate tactics and keep pressure on the boss.")
+    summary = cui.truncate_text(draw, summary, 560, _clean_font(17, bold=True))
+    _scene_text(draw, (58, 705), summary, 17, cui.TEXT_BRIGHT, bold=True)
+
+    stats: list[tuple[str, str, tuple[int, int, int]]] = []
+    damage = _safe_int(payload.get("damage"))
+    taken = _safe_int(payload.get("damage_taken"))
+    healed = _safe_int(payload.get("healing"))
+    if defeated:
+        stats = [("Boss", "Fallen", cui.GOLD), ("Rewards", "Ready", cui.GREEN), ("Claim", "Chest", color)]
+    elif damage or taken or healed:
+        stats = [
+            ("Damage", _fmt(damage), ACTION_COLORS["strike"]),
+            ("Taken", _fmt(taken), cui.RED),
+            ("Healed", _fmt(healed), cui.GREEN),
+        ]
+    else:
+        stats = [
+            ("Focus", str(_safe_int(payload.get("focus"))), ACTION_COLORS["focus"]),
+            ("Guard", str(_safe_int(payload.get("guard"))), ACTION_COLORS["guard"]),
+            ("Ward", str(_safe_int(payload.get("ward"))), cui.GREEN),
+            ("Fracture", str(_safe_int(payload.get("fracture"))), ACTION_COLORS["strike"]),
+        ]
+    x = 728
+    for label, value, stat_color in stats:
+        box = (x, 701, x + 102, 729)
+        chip = Image.new("RGBA", image.size, (0, 0, 0, 0))
+        cd = ImageDraw.Draw(chip)
+        cd.rounded_rectangle(box, radius=10, fill=(9, 10, 15, 186), outline=cui.rgba(stat_color, 110), width=1)
+        image.alpha_composite(chip)
+        _scene_text(draw, (box[0] + 10, box[1] + 5), label, 11, cui.TEXT_MUTED, bold=True)
+        _scene_text(draw, (box[0] + 56, box[1] + 3), value, 14, _blend(stat_color, cui.TEXT_BRIGHT, 0.22), bold=True)
+        x += 112
+
+
+def _render_clean_bossfight_card(payload: dict[str, Any], accent: tuple[int, int, int]) -> Image.Image:
+    image = _load_boss_arena_bg((W, H), accent)
+    shade = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shade)
+    sd.rectangle((0, 0, W, H), fill=(0, 0, 0, 42))
+    for y in range(H):
+        alpha = int(14 + 58 * (y / max(1, H - 1)))
+        sd.line((0, y, W, y), fill=(0, 0, 0, alpha))
+    image.alpha_composite(shade)
+    _draw_action_energy(image, payload, accent)
+    _draw_team_stage(image, payload, accent)
+    _draw_boss_stage(image, payload, accent)
+    _draw_top_scene_hud(image, payload, accent)
+    _draw_bottom_status_strip(image, payload, accent)
+
+    frame = Image.new("RGBA", image.size, (0, 0, 0, 0))
+    fd = ImageDraw.Draw(frame)
+    fd.rounded_rectangle((18, 18, W - 18, H - 18), radius=24, outline=cui.rgba(accent, 84), width=2)
+    fd.rounded_rectangle((24, 24, W - 24, H - 24), radius=20, outline=(255, 255, 255, 18), width=1)
+    image.alpha_composite(frame)
+    return image
+
+
+def _icon_for(kind: str, key: str, size: int) -> Image.Image | None:
+    try:
+        return cui.load_asset_icon(kind, key, (size, size), pixel=True).convert("RGBA").copy()
+    except Exception:
+        return None
+
+
+def _save_transparent_png(image: Image.Image, *, compress_level: int = 3) -> BytesIO:
+    output = BytesIO()
+    image.convert("RGBA").save(output, "PNG", optimize=False, compress_level=compress_level)
+    output.seek(0)
+    return output
+
+
+def _draw_embed_pill(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    label: str,
+    value: str,
+    color: tuple[int, int, int],
+    *,
+    icon: Image.Image | None = None,
+    value_size: int = 22,
+) -> None:
+    draw = ImageDraw.Draw(image)
+    draw.rounded_rectangle(box, radius=13, fill=(43, 44, 52, 238), outline=cui.rgba(color, 145), width=2)
+    draw.rounded_rectangle((box[0] + 2, box[1] + 2, box[2] - 2, box[3] - 2), radius=11, outline=(255, 255, 255, 28), width=1)
+    draw.line((box[0] + 14, box[1] + 3, box[2] - 14, box[1] + 3), fill=(255, 255, 255, 34), width=1)
+    x = box[0] + 14
+    if icon is not None:
+        icon = icon.copy()
+        icon.thumbnail((42, 42), Image.Resampling.NEAREST)
+        image.alpha_composite(icon, (x, box[1] + (box[3] - box[1] - icon.height) // 2))
+        x += 52
+    _scene_text(draw, (x, box[1] + 10), label, 12, (198, 199, 207), bold=True)
+    value = cui.truncate_text(draw, str(value), max(24, box[2] - x - 14), _clean_font(value_size, bold=True))
+    _scene_text(draw, (x, box[1] + 30), value, value_size, _blend(color, cui.TEXT_BRIGHT, 0.20), bold=True)
+
+
+def _draw_mini_meter(
+    image: Image.Image,
+    box: tuple[int, int, int, int],
+    label: str,
+    current: int,
+    maximum: int,
+    color: tuple[int, int, int],
+    *,
+    content_left: int | None = None,
+) -> None:
+    draw = ImageDraw.Draw(image)
+    left = content_left if content_left is not None else box[0] + 18
+    draw.rounded_rectangle(box, radius=12, fill=(43, 44, 52, 238), outline=cui.rgba(color, 140), width=2)
+    _scene_text(draw, (left, box[1] + 12), label, 14, (214, 215, 224), bold=True)
+    _draw_clean_bar(
+        image,
+        (left, box[1] + 43, box[2] - 18, box[1] + 68),
+        current,
+        maximum,
+        color,
+        f"{_fmt(current)} / {_fmt(maximum)}",
+        label_size=15,
+    )
+
+
+def render_incursion_status_strip(payload: dict[str, Any]) -> BytesIO:
+    boss_key = str(payload.get("boss_key", "hollow_king"))
+    accent = _rgb(payload.get("boss_color"), BOSS_THEMES.get(boss_key, BOSS_THEMES["hollow_king"]))
+    action = str(payload.get("action", "status"))
+    action_color = cui.GOLD if payload.get("defeated") else ACTION_COLORS.get(action, accent)
+    image = Image.new("RGBA", (1040, 112), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+
+    boss_hp = _safe_int(payload.get("hp"))
+    boss_max = max(1, _safe_int(payload.get("max_hp"), 1))
+    team_hp = _safe_int(payload.get("team_hp"))
+    team_max = max(1, _safe_int(payload.get("team_max_hp"), 1))
+    team = payload.get("team") if isinstance(payload.get("team"), list) else []
+
+    _draw_mini_meter(image, (0, 8, 500, 104), "Boss HP", boss_hp, boss_max, action_color, content_left=92)
+    icon = _icon_for("bosses", boss_key, 58)
+    if icon is not None:
+        image.alpha_composite(icon, (18, 26))
+    boss_name = cui.truncate_text(draw, str(payload.get("boss_name", "Boss")), 300, _clean_font(17, bold=True))
+    _scene_text(draw, (92, 17), boss_name, 17, cui.TEXT_BRIGHT, bold=True)
+    _scene_text(draw, (92, 38), f"Phase {_safe_int(payload.get('phase'), 1)}", 12, _blend(action_color, cui.TEXT_BRIGHT, 0.26), bold=True)
+
+    team_label = "Team HP" if team else "Team"
+    team_value = f"{_fmt(team_hp)} / {_fmt(team_max)}" if team else "Not bound"
+    _draw_embed_pill(
+        image,
+        (520, 8, 1020, 104),
+        team_label,
+        team_value,
+        cui.GREEN if team else cui.TEXT_MUTED,
+        icon=_icon_for("stats", "hp", 42),
+        value_size=22,
+    )
+    return _save_transparent_png(image)
+
+
+def _reward_items_from_payload(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    provided = payload.get("reward_items")
+    if isinstance(provided, list) and provided:
+        return [row for row in provided if isinstance(row, dict)]
+    return [
+        {"kind": "currency", "key": "gold", "label": "Gold", "value": "Score"},
+        {"kind": "currency", "key": "gems", "label": "Gems", "value": "Rank"},
+        {"kind": "materials", "key": "weapon_shards", "label": "Shards", "value": "Damage"},
+        {"kind": "crate", "key": "treasure", "label": "Crate", "value": "Top Rank"},
+    ]
+
+
+def render_incursion_reward_strip(payload: dict[str, Any]) -> BytesIO:
+    boss_key = str(payload.get("boss_key", "hollow_king"))
+    accent = _rgb(payload.get("boss_color"), BOSS_THEMES.get(boss_key, BOSS_THEMES["hollow_king"]))
+    image = Image.new("RGBA", (1040, 96), (0, 0, 0, 0))
+    items = _reward_items_from_payload(payload)[:6]
+    if not items:
+        return cui.save_png(image)
+    gap = 12
+    pill_w = (1040 - gap * (len(items) - 1)) // len(items)
+    x = 0
+    for item in items:
+        kind = str(item.get("kind", "currency"))
+        key = str(item.get("key", "weapon_shards"))
+        label = str(item.get("label", key.replace("_", " ").title()))
+        value = str(item.get("value", ""))
+        color = _rgb(item.get("color"), cui.GOLD if kind in {"currency", "crate"} else accent)
+        icon = _icon_for(kind, key, 42)
+        _draw_embed_pill(image, (x, 8, x + pill_w, 88), label, value, color, icon=icon, value_size=18 if len(items) > 5 else 20)
+        x += pill_w + gap
+    return _save_transparent_png(image)
+
+
 def _draw_bossfight_card(image: Image.Image, payload: dict[str, Any], accent: tuple[int, int, int]) -> None:
     defeated = bool(payload.get("defeated"))
     action = str(payload.get("action", "status"))
@@ -1180,13 +1735,10 @@ def _draw_bossfight_card(image: Image.Image, payload: dict[str, Any], accent: tu
     _draw_battle_action_fx(image, payload, battle_accent)
     _draw_boss_battle_hud(image, payload, battle_accent)
     _draw_team_combined_hud(image, payload, battle_accent)
-    footer = "bincursion join | strike | focus | guard | cleanse | channel | rewards"
-    cui.draw_footer(image, footer, cui.GOLD if defeated else accent)
 
 
 def render_incursion_scene(payload: dict[str, Any]) -> BytesIO:
     boss_key = str(payload.get("boss_key", "hollow_king"))
     accent = _rgb(payload.get("boss_color"), BOSS_THEMES.get(boss_key, BOSS_THEMES["hollow_king"]))
-    image = cui.new_card(W, H, accent)
-    _draw_bossfight_card(image, payload, accent)
+    image = _render_clean_bossfight_card(payload, accent)
     return cui.save_png(image)

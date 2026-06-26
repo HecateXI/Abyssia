@@ -17,71 +17,71 @@
     "buffs": {
       "abyssal_blood": {
         "file": "buffs/abyssal_blood.png",
-        "sha256": "080b19148b1e1fb8365eae01b9affa53591f6c6f9b54c9cb01940905206b5ac2",
-        "updated_at": 1780680328
+        "sha256": "5a2a76ec2303bf53d18e277dff87caeba0912e42e28c99e98df045539c15297b",
+        "updated_at": 1782218562
       },
       "deep_void": {
         "file": "buffs/deep_void.png",
-        "sha256": "2dd906bca4f682f19aea7521c4352e0f5f8fff681f8052ed3f1bf579ce8e1ffe",
-        "updated_at": 1780680399
+        "sha256": "32d3aabd15de4a8e2ec2da1d1ff0ac01518f18303beff0b7e5e20c5da5ea7c94",
+        "updated_at": 1782218562
       },
       "dread_blood": {
         "file": "buffs/dread_blood.png",
-        "sha256": "a1760ce84f7a564345570fae113e8296746ba95c11741baeff549398f5dc3a50",
-        "updated_at": 1780680302
+        "sha256": "5a2a76ec2303bf53d18e277dff87caeba0912e42e28c99e98df045539c15297b",
+        "updated_at": 1782218562
       },
       "eldritch_void": {
         "file": "buffs/eldritch_void.png",
-        "sha256": "66f704ada76058bf0338938e2ae65600190eca50f989ef3e4dfbd5c258969967",
-        "updated_at": 1780680407
+        "sha256": "32d3aabd15de4a8e2ec2da1d1ff0ac01518f18303beff0b7e5e20c5da5ea7c94",
+        "updated_at": 1782218562
       },
       "greater_blood": {
         "file": "buffs/greater_blood.png",
-        "sha256": "4b075f8d5a4edd4823ed8eae69c8d17ce21c62c3ea8f942acd4a8cee00ad539a",
-        "updated_at": 1780680290
+        "sha256": "5a2a76ec2303bf53d18e277dff87caeba0912e42e28c99e98df045539c15297b",
+        "updated_at": 1782218562
       },
       "greater_void": {
         "file": "buffs/greater_void.png",
-        "sha256": "a9f9bac4fd2ebfe1427c6e7de45f654aa33d16d15a426dbbab68652365e000d1",
-        "updated_at": 1780680379
+        "sha256": "32d3aabd15de4a8e2ec2da1d1ff0ac01518f18303beff0b7e5e20c5da5ea7c94",
+        "updated_at": 1782218562
       },
       "lesser_blood": {
         "file": "buffs/lesser_blood.png",
-        "sha256": "b76b44ba918d845a73325a95521aa1b6b6729f87609689df2dc2464d1fb006bd",
-        "updated_at": 1780680242
+        "sha256": "5a2a76ec2303bf53d18e277dff87caeba0912e42e28c99e98df045539c15297b",
+        "updated_at": 1782218562
       },
       "lesser_void": {
         "file": "buffs/lesser_void.png",
-        "sha256": "69843100c20f31fc78348663967e046a73a1e5b7188af0db1bd2d9bfa441ddf9",
-        "updated_at": 1780680364
+        "sha256": "32d3aabd15de4a8e2ec2da1d1ff0ac01518f18303beff0b7e5e20c5da5ea7c94",
+        "updated_at": 1782218562
       },
       "singularity_void": {
         "file": "buffs/singularity_void.png",
-        "sha256": "2fc7c78ec5ddfa18790ee7ae7b3faeca5defc6a7d074f535a8bb3d3483021a59",
-        "updated_at": 1780680416
+        "sha256": "32d3aabd15de4a8e2ec2da1d1ff0ac01518f18303beff0b7e5e20c5da5ea7c94",
+        "updated_at": 1782218563
       },
       "sovereign_blood": {
         "file": "buffs/sovereign_blood.png",
-        "sha256": "affc356955aa12c8cfa657a8d3c321d1e4a20595d1c9da14f8d5ed9479a361cc",
-        "updated_at": 1780680340
+        "sha256": "5a2a76ec2303bf53d18e277dff87caeba0912e42e28c99e98df045539c15297b",
+        "updated_at": 1782218563
       }
     },
     "consumable": {},
     "crate": {
       "cache": {
         "file": "crate/cache.png",
-        "sha256": "f92c4375657c5bcfdc4879a61fe7db361ca42a9c24c952d164fb27ec29d12f7c",
-        "updated_at": 1780680872
+        "sha256": "e1801d8dd355f5a35f5f92b24358f1abcb1ea9a54483ff21eaddb6944487deb3",
+        "updated_at": 1782218562
       },
       "relic": {
         "file": "crate/relic.png",
-        "sha256": "5399389a31f44a98a14fba2165c203c13e795d925606402f1ef12d99ca272885",
-        "updated_at": 1780680885
+        "sha256": "940d3b29075367b7f64bd2eeca1de7b2e7f851f61fa53a7a10ae1b1502f497c2",
+        "updated_at": 1782218562
       },
       "treasure": {
         "file": "crate/treasure.png",
-        "sha256": "b974f16db3dabec7d35357085846948ba607370f9cb96a4040612d2abe4e591d",
-        "updated_at": 1780680895
+        "sha256": "96f94939ec90f8e8e82d66d0f7329478af6e2f49cde36de15b0d22842dcab505",
+        "updated_at": 1782218562
       }
     },
     "creatures": {
@@ -861,30 +861,20 @@
       }
     },
     "currency": {
-      "corrupted_essence": {
-        "file": "currency/corrupted_essence.png",
-        "sha256": "d8bbc3d799ebd0f90f4a5a03595c3c41c7f529293142e1bd0f370e1785976c75",
-        "updated_at": 1780681405
+      "gold": {
+        "file": "currency/gold.png",
+        "sha256": "0d13e120e517bf18c46908604f08f4c3280592ed50c77b997379281f708133e5",
+        "updated_at": 1782218563
       },
       "gems": {
         "file": "currency/gems.png",
-        "sha256": "f95da8f481d05ee4ed1aca1a55633e8b016a03bd2cad3e71ee52994118188c5b",
-        "updated_at": 1780681097
-      },
-      "gold": {
-        "file": "currency/gold.png",
-        "sha256": "00926c5b4d226d46e196c88e8010015413ec8a508a17a1a769d4afee324e5c82",
-        "updated_at": 1780680946
+        "sha256": "d7547d97791d8e98ca7bec164da335246a91bf7082b4274ac14218b89272a6ca",
+        "updated_at": 1782218563
       },
       "souls": {
         "file": "currency/souls.png",
-        "sha256": "6493184a4b9e7275689a0acddb06144a3a9d3d15050e86f42b809d945f51ef68",
-        "updated_at": 1780681111
-      },
-      "void_crystals": {
-        "file": "currency/void_crystals.png",
-        "sha256": "71743a4bb8551bcf6d92aa850345b634b601f1abdf02dbfa6ba9bed0c319f8bd",
-        "updated_at": 1780681125
+        "sha256": "0d13e120e517bf18c46908604f08f4c3280592ed50c77b997379281f708133e5",
+        "updated_at": 1782218563
       }
     },
     "equipment": {
@@ -923,32 +913,10 @@
       }
     },
     "materials": {
-      "abyssal_ichor": {
-        "file": "materials/abyssal_ichor.png",
-        "placeholder": true
-      },
-      "ancient_relics": {
-        "file": "materials/ancient_relics.png",
-        "placeholder": true
-      },
-      "bone_fragments": {
-        "file": "materials/bone_fragments.png",
-        "placeholder": true
-      },
-      "corrupted_essence": {
-        "file": "materials/corrupted_essence.png"
-      },
-      "demon_horns": {
-        "file": "materials/demon_horns.png",
-        "placeholder": true
-      },
-      "void_crystals": {
-        "file": "materials/void_crystals.png"
-      },
       "weapon_shards": {
         "file": "materials/weapon_shards.png",
-        "sha256": "a5e1c42984687aac1a301daaff37fcee27dde4f97c11cf504ebd900a26c106c7",
-        "updated_at": 1780680850
+        "sha256": "120881ff18cba2ade1120eb5a7f8cdae1f7a020a3e8b6fe01524af70c33256ff",
+        "updated_at": 1782218563
       }
     },
     "passives": {
@@ -991,7 +959,13 @@
     "rarity": {},
     "stats": {},
     "status": {},
-    "ui": {},
+    "ui": {
+      "crateshop_vault": {
+        "file": "ui/crateshop_vault.png",
+        "sha256": "7490731c71fe062622b50ff163b2e2615a3636485ad5ab000511a63589caf829",
+        "updated_at": 1782219461
+      }
+    },
     "weapons": {
       "axe": {
         "file": "weapons/axe.png",
@@ -1096,20 +1070,20 @@
       "autohunt_rolls_per_hour": 3,
       "base_catch_rate": 0.6,
       "base_cooldown_seconds": 15,
-      "base_crate_chance": 0.04,
-      "checklist_battle_crate_chance": 0.05,
+      "base_crate_chance": 0.012,
+      "checklist_battle_crate_chance": 0.025,
       "checklist_battle_crate_target": 3,
-      "checklist_hunt_lootbox_chance": 0.05,
+      "checklist_hunt_lootbox_chance": 0.025,
       "checklist_hunt_lootbox_target": 3,
       "hunt_sword_duration_seconds": 1200,
       "hunt_sword_extra_rolls": 1,
       "level_cooldown_reduction": 0.1,
       "luck_catch_bonus": 0.015,
-      "luck_crate_bonus": 0.002,
+      "luck_crate_bonus": 0.00045,
       "max_catch_rate": 0.95,
-      "max_crate_chance": 0.2,
+      "max_crate_chance": 0.06,
       "min_cooldown_seconds": 10,
-      "zone_level_crate_bonus": 0.003
+      "zone_level_crate_bonus": 0.0008
     },
     "patreon": {
       "tier_pets": {

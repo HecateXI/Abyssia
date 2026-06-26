@@ -1,27 +1,27 @@
 # Abyssia Icon Generation Prompts
 
-This repository does not currently include a live image-model integration for these premium icon prompts. Do not mark the icon art complete until 512x512 transparent PNGs exist at the listed `output_path` values.
+This repository stores the weapon/passive prompt set and local processing pipeline. Do not mark the icon art complete until 512x512 transparent PNGs exist at the listed `output_path` values.
 
 ## Workflow
 
 1. Run `python scripts/generate_icon_prompts.py` after editing prompt records.
-2. Send each `prompt` and `negative_prompt` from `data/icon_prompts.json` to the selected image model.
-3. Save each 512x512 transparent PNG exactly to its `output_path`.
-4. Run `python scripts/process_icons.py` to normalize masters and create Discord-ready 128x128 PNGs.
+2. Generate one source image per record with the selected image model. For built-in image generation, ask for a flat chroma-key background (`#00ff00` by default, `#ff00ff` for green subjects).
+3. Process each built-in source with `python scripts/process_ai_icon_source.py --category <weapons|passives> --key <key> --source <generated.png>`. This copies the raw source under `tmp/imagegen/icons_ai/raw/` and writes the final transparent master to `output_path`.
+4. Run `python scripts/process_icons.py --mode pixel` to normalize masters and create Discord-ready 128x128 PNGs plus 64px previews.
 5. Run `python scripts/build_icon_contact_sheet.py` and review the sheets under `tmp/icon_contact_sheets/`.
-6. Run `python scripts/validate_icons.py --strict-assets` once all masters are present.
+6. Run `python scripts/validate_icons.py --strict-assets --strict-transparency` once all masters are present.
 7. Set `DISCORD_TOKEN` and `EMOJI_GUILD_ID`, then run `python scripts/sync_emojis.py` to upload and update `data/emoji_map.json`.
 
 ## Art Direction Rules
 
 - Dark fantasy RPG, gothic, cursed relics, abyssal/void magic.
-- Premium 3D pixel-art game UI asset, crisp silhouette, readable at Discord emoji size.
-- Transparent background, centered object, generous padding, consistent rim light and outline/glow.
+- Crisp pixel-art game UI asset, bold silhouette, moderate detail, readable at Discord emoji size.
+- Final transparent background, centered object, generous padding, consistent rim light and outline/glow.
 - No text, letters, numbers, watermarks, generic emoji art, or flat circles with initials.
 
 ## Weapons
 
-### weapon_sword - Sword
+### weapon_sword - Gravecut
 
 - Bot key: `sword`
 - Output: `assets/icons/weapons/sword.png`
@@ -30,7 +30,7 @@ This repository does not currently include a live image-model integration for th
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Sword: black steel sword, bone hilt, grave mist, cyan edge glow. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Gravecut: black steel grave-sword with bone hilt and cyan edge glow. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -39,7 +39,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_bow - Bow
+### weapon_bow - Dreadbow
 
 - Bot key: `bow`
 - Output: `assets/icons/weapons/bow.png`
@@ -48,7 +48,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Bow: twisted bone-and-shadow bow, spectral arrow, blue void glow. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Dreadbow: twisted bone-and-shadow bow with a spectral arrow. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -57,7 +57,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_axe - Axe
+### weapon_axe - Goreaxe
 
 - Bot key: `axe`
 - Output: `assets/icons/weapons/axe.png`
@@ -66,7 +66,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Axe: brutal crimson axe, chipped blade, blood-rust glow. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Goreaxe: brutal crimson execution axe, chipped head, blood-rust glow. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -75,7 +75,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_dagger - Dagger
+### weapon_dagger - Veinshiv
 
 - Bot key: `dagger`
 - Output: `assets/icons/weapons/dagger.png`
@@ -84,7 +84,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Dagger: curved fang dagger, poison green edge, black handle. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Veinshiv: curved fang shiv with poison green edge and black handle. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -93,7 +93,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_crossbow - Crossbow
+### weapon_crossbow - Corpsebolt
 
 - Bot key: `crossbow`
 - Output: `assets/icons/weapons/crossbow.png`
@@ -102,7 +102,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Crossbow: gothic crossbow with coffin-bolt, iron and bone. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Corpsebolt: gothic bone crossbow loaded with a coffin-bolt. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -111,7 +111,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_staff - Staff
+### weapon_staff - Witchflame
 
 - Bot key: `staff`
 - Output: `assets/icons/weapons/staff.png`
@@ -120,7 +120,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Staff: witch staff with violet flame and carved runes. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Witchflame: witch staff crowned with violet flame and simple carved runes. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -129,7 +129,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_staff_of_purity - Staff of Purity
+### weapon_staff_of_purity - Pale Benediction
 
 - Bot key: `staff_of_purity`
 - Output: `assets/icons/weapons/staff_of_purity.png`
@@ -138,7 +138,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Staff of Purity: pale staff, black halo, white-blue cleansing flame. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Pale Benediction: pale staff with black halo and white-blue cleansing flame. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -147,7 +147,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_shield - Shield
+### weapon_shield - Lastwall
 
 - Bot key: `shield`
 - Output: `assets/icons/weapons/shield.png`
@@ -156,7 +156,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Shield: ancient cracked shield with crown sigil and blue ward glow. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Lastwall: ancient cracked shield with crown sigil and blue ward glow. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -165,7 +165,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_hammer - Hammer
+### weapon_hammer - Bellmaul
 
 - Bot key: `hammer`
 - Output: `assets/icons/weapons/hammer.png`
@@ -174,7 +174,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Hammer: funeral hammer with bell motif and glowing cracks. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Bellmaul: funeral maul with bell motif and a few glowing cracks. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -183,7 +183,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_orb - Orb
+### weapon_orb - Voidheart
 
 - Bot key: `orb`
 - Output: `assets/icons/weapons/orb.png`
@@ -192,7 +192,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Orb: floating black orb with blue void core and orbiting shards. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Voidheart: floating black orb with blue void core and orbiting shards. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -201,7 +201,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_rune - Rune
+### weapon_rune - Hexrune
 
 - Bot key: `rune`
 - Output: `assets/icons/weapons/rune.png`
@@ -210,7 +210,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Rune: stone rune slab with impossible glowing glyph. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Hexrune: stone rune slab with one impossible glowing glyph. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -219,7 +219,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_soulreaper - Soulreaper
+### weapon_soulreaper - Mournreaper
 
 - Bot key: `soulreaper`
 - Output: `assets/icons/weapons/soulreaper.png`
@@ -228,7 +228,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Soulreaper: crescent scythe with soul mist. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Mournreaper: crescent scythe with pale soul mist. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -237,7 +237,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_briar_relic - Briar Relic
+### weapon_briar_relic - Thornheart
 
 - Bot key: `briar_relic`
 - Output: `assets/icons/weapons/briar_relic.png`
@@ -246,7 +246,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Briar Relic: thorn-wrapped relic heart, green-black thorns. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Thornheart: thorn-wrapped relic heart with green-black briars. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -255,7 +255,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_rot_chalice - Chalice of Rot
+### weapon_rot_chalice - Rotgrail
 
 - Bot key: `rot_chalice`
 - Output: `assets/icons/weapons/rot_chalice.png`
@@ -264,7 +264,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Chalice of Rot: cursed chalice dripping green rot and black ichor. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Rotgrail: cursed chalice dripping green rot and black ichor. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -273,7 +273,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_banner - Banner
+### weapon_banner - Dawnbane
 
 - Bot key: `banner`
 - Output: `assets/icons/weapons/banner.png`
@@ -282,7 +282,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Banner: torn war banner with black sun emblem. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Dawnbane: torn war banner with black sun emblem. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -291,7 +291,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_eye - Eye
+### weapon_eye - Gloomgaze
 
 - Bot key: `eye`
 - Output: `assets/icons/weapons/eye.png`
@@ -300,7 +300,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Eye: eldritch eye in a half-open stone doorway. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Gloomgaze: eldritch eye in a half-open stone doorway. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -309,7 +309,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_judgement_blade - Judgement Blade
+### weapon_judgement_blade - Sinblade
 
 - Bot key: `judgement_blade`
 - Output: `assets/icons/weapons/judgement_blade.png`
@@ -318,7 +318,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Judgement Blade: judgment blade with broken crown and scale motif. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Sinblade: judgment blade with broken crown and scale motif. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -327,7 +327,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_lantern - Lantern
+### weapon_lantern - Starvelight
 
 - Bot key: `lantern`
 - Output: `assets/icons/weapons/lantern.png`
@@ -336,7 +336,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Lantern: black lantern with starving blue flame. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Starvelight: black lantern with starving blue flame. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -345,7 +345,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_mirror_relic - Mirror Relic
+### weapon_mirror_relic - Curseglass
 
 - Bot key: `mirror_relic`
 - Output: `assets/icons/weapons/mirror_relic.png`
@@ -354,7 +354,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Mirror Relic: cracked mirror with an eye in reflection. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Curseglass: cracked mirror with an eye in reflection. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -363,7 +363,7 @@ Negative prompt:
 text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with letter, simple emoji, cluttered background, cropped object, photorealism, cartoon sticker, generic app icon, UI button text.
 ```
 
-### weapon_final_bell_scythe - Final Bell Scythe
+### weapon_final_bell_scythe - Doomknell
 
 - Bot key: `final_bell_scythe`
 - Output: `assets/icons/weapons/final_bell_scythe.png`
@@ -372,7 +372,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Final Bell Scythe: scythe with hanging funeral bell and pale death glow. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Doomknell: scythe with hanging funeral bell and pale death glow. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -392,7 +392,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Strength: cursed gauntlet breaking bone chains. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Strength: cursed gauntlet breaking bone chains. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -410,7 +410,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Magic: purple spell sigil with floating sparks. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Magic: purple spell sigil with floating sparks. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -428,7 +428,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Bloodwell: red blood crystal heart. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Bloodwell: red blood crystal heart. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -446,7 +446,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Mana Vein: blue glowing crystal-vein network. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Mana Vein: blue glowing crystal-vein network. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -464,7 +464,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Ironhide: cracked iron scale plate. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Ironhide: cracked iron scale plate. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -482,7 +482,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Witchward: teal ward circle over dark shield. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Witchward: teal ward circle over dark shield. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -500,7 +500,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Thorns: thorn crown around a blood drop. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Thorns: thorn crown around a blood drop. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -518,7 +518,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Safeguard: barrier dome over skull. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Safeguard: barrier dome over skull. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -536,7 +536,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Regeneration: green life flame rising from bone. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Regeneration: green life flame rising from bone. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -554,7 +554,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Adaptation: split shield, half stone, half magic aura. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Adaptation: split shield, half stone, half magic aura. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -572,7 +572,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Sacrifice: black hand offering a red soul. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Sacrifice: black hand offering a red soul. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -590,7 +590,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Rending: claw marks dripping blood. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Rending: claw marks dripping blood. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -608,7 +608,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Infernal: black-red flame. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Infernal: black-red flame. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -626,7 +626,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Virulent: poison skull/vial with green vapor. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Virulent: poison skull/vial with green vapor. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -644,7 +644,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Stunning: cracked bell with lightning impact. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Stunning: cracked bell with lightning impact. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -662,7 +662,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Aegis: blue ward shield. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Aegis: blue ward shield. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -680,7 +680,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Lifestream: green healing stream around a heart. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Lifestream: green healing stream around a heart. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -698,7 +698,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Precision: eye through crosshair with gold star glint. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Precision: eye through crosshair with gold star glint. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -716,7 +716,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Lifesteal: fangs draining red essence. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Lifesteal: fangs draining red essence. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -734,7 +734,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Mana Tap: blue siphon spiral pulling mana drops. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Mana Tap: blue siphon spiral pulling mana drops. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -752,7 +752,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Soul Gain: golden soul coin with ghost trail. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Soul Gain: golden soul coin with ghost trail. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -770,7 +770,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Gem Finder: prism gem held in dark claws. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Gem Finder: prism gem held in dark claws. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -788,7 +788,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for XP Boost: open book with gold flame. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for XP Boost: open book with gold flame. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -806,7 +806,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Rare Finder: magnifying glass over tiny relic. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Rare Finder: magnifying glass over tiny relic. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -824,7 +824,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Energize: blue lightning battery rune. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Energize: blue lightning battery rune. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:
@@ -842,7 +842,7 @@ text, letters, numbers, watermark, logo, blurry, low contrast, flat circle with 
 Prompt:
 
 ```text
-Premium 3D pixel-art dark fantasy RPG icon for Dread: ghostly mask with fear aura. Centered object, transparent background, 512x512, crisp readable silhouette, high contrast, gothic Abyssia style, subtle rim light, detailed but readable at Discord emoji size, polished game UI asset, no text, no letters, no watermark, no character, no full scene.
+Crisp pixel-art dark fantasy RPG icon for Dread: ghostly mask with fear aura. Centered object, transparent background, 512x512, bold readable silhouette, high contrast, gothic Abyssia style, subtle rim light, cool game UI asset, moderate detail only, readable at Discord emoji size, no text, no letters, no watermark, no character, no full scene.
 ```
 
 Negative prompt:

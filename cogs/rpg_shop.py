@@ -1,8 +1,12 @@
+import json
 from typing import Any
 
 import discord
 from discord.ext import commands
 
+from core.card_controls import shortcut_view
+from core.card_layout import AbyssiaLayoutView
+from core.card_ui import run_render
 from core.cards import render_crate_open_card, render_shop_card
 from core.rpg import (
     CHECKLIST_LOOTBOX_KEY,
@@ -18,7 +22,7 @@ from core.rpg import (
     weapon_salvage_shards,
 )
 from core.rpg_data import CRATE_TYPES, RARITY_INDEX, WEAPON_SHARD_KEY, normalize_key, normalize_rarity
-from core.theme import crate_emoji, crate_label, creature_label, material_label, rarity_label
+from core.theme import consumable_label, crate_emoji, crate_label, creature_label, currency_label, material_label, passive_label, rarity_label, weapon_label
 
 
 SHARD_CRATE_COSTS: dict[str, int] = {
@@ -32,6 +36,17 @@ def _embed(title: str, desc: str, color=discord.Color.dark_purple()) -> discord.
     return discord.Embed(title=title, description=desc, color=color)
 
 
+def _box_result_view(ctx: commands.Context) -> discord.ui.View:
+    return shortcut_view(
+        ctx.author.id,
+        [
+            ("Open More", "b open"),
+            ("Bulk Open", "b openall"),
+            ("Weapons", "b weapons"),
+        ],
+    )
+
+
 def _int(v: Any) -> int:
     try:
         return int(v)
@@ -41,6 +56,86 @@ def _int(v: Any) -> int:
 
 def _weapon_tier(row: Any) -> str:
     return weapon_quality_rarity(_int(row_get(row, "quality_pct", 50)))
+
+
+def _weapon_id(row: Any) -> str:
+    return f"#{_int(row_get(row, 'id', 0)):05d}"
+
+
+def _weapon_passive_summary(row: Any) -> str:
+    passive_raw = row_get(row, "passive")
+    if not passive_raw:
+        return "No passive"
+    try:
+        passive = json.loads(str(passive_raw)) if isinstance(passive_raw, str) else passive_raw
+    except (TypeError, json.JSONDecodeError):
+        return "No passive"
+    if not isinstance(passive, dict) or not passive.get("key"):
+        return "No passive"
+    key = str(passive.get("key", ""))
+    name = str(passive.get("name") or key.replace("_", " ").title())
+    chance = _int(passive.get("chance", passive.get("roll", 0)))
+    return passive_label(key, name, chance=chance if chance else None, show_rarity=False)
+
+
+def _crate_weapon_lines(weapons: list[Any], *, limit: int = 12) -> list[str]:
+    lines: list[str] = []
+    for weapon in weapons[:limit]:
+        wtype = str(row_get(weapon, "weapon_type", "sword") or "sword")
+        quality = _int(row_get(weapon, "quality_pct", 50))
+        tier = _weapon_tier(weapon)
+        name = weapon_display_name(weapon)
+        passive = _weapon_passive_summary(weapon)
+        lines.append(f"`{_weapon_id(weapon)}` {rarity_label(tier)} {weapon_label(wtype, name)} `{quality}%` - {passive}")
+    if len(weapons) > limit:
+        lines.append(f"`+{len(weapons) - limit}` more in your weapon vault")
+    if not lines:
+        lines.append("No weapons dropped this time.")
+    return lines
+
+
+def _crate_reward_summary(result: dict[str, object]) -> str:
+    parts: list[str] = []
+    gold = _int(result.get("gold", 0))
+    gems = _int(result.get("gems", 0))
+    swords = _int(result.get("swords", 0))
+    if gold:
+        parts.append(f"{currency_label('gold')} `{gold:,}`")
+    if gems:
+        parts.append(f"{currency_label('gems')} `{gems:,}`")
+    if swords:
+        parts.append(f"{consumable_label('hunt_sword', 'Hunt Sword')} `x{swords:,}`")
+    return "  ".join(parts) if parts else "Only weapons were found."
+
+
+def _crate_result_layout(
+    ctx: commands.Context,
+    crate_name: str,
+    result: dict[str, object],
+    *,
+    filename: str = "abyssia_crate.png",
+    footer: str | None = None,
+) -> AbyssiaLayoutView:
+    weapons = list(result.get("weapons") or [])
+    sections = [
+        ("Rewards", _crate_reward_summary(result)),
+        ("Weapons Acquired", "\n".join(_crate_weapon_lines(weapons))),
+    ]
+    return AbyssiaLayoutView(
+        owner_id=ctx.author.id,
+        title="Crate Opened",
+        subtitle=f"{ctx.author.display_name} | {crate_name} | `{len(weapons)}` weapon(s)",
+        image_filename=filename,
+        image_description=f"{crate_name} opening results",
+        sections=sections,
+        footer=footer,
+        shortcuts=[
+            ("Open", "b open"),
+            ("Open All", "b openall"),
+            ("Weapons", "b weapons"),
+        ],
+        accent=discord.Color.orange(),
+    )
 
 
 def _crate_key(value: str) -> str | None:
@@ -181,13 +276,11 @@ class CrateOpenView(discord.ui.View):
             await add_item(db, ctx.author.id, "crate", crate_key, -1)
             result = await open_crate(db, ctx.author.id, crate_key)
             box_name = str(crate["name"])
-        image = render_crate_open_card(ctx.author.display_name, box_name, result, weapons=result.get("weapons"))
+        image = await run_render(render_crate_open_card, ctx.author.display_name, box_name, result, weapons=result.get("weapons"))
         file = discord.File(image, filename="abyssia_crate.png")
-        embed = discord.Embed(color=discord.Color.orange())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_crate.png")
+        view = _crate_result_layout(ctx, box_name, result)
         self.stop()
-        await interaction.edit_original_response(embed=embed, attachments=[file], view=None)
+        await interaction.edit_original_response(content=None, embed=None, attachments=[file], view=view)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.ctx.author.id
@@ -200,19 +293,30 @@ class MassOpenView(discord.ui.View):
 
     async def load_owned_options(self) -> bool:
         options: list[discord.SelectOption] = []
+        lootboxes = await get_quantity(self.ctx.bot.db, self.ctx.author.id, "lootbox", CHECKLIST_LOOTBOX_KEY)
+        if lootboxes > 0:
+            emoji = crate_emoji("cache")
+            options.append(discord.SelectOption(
+                label="Lootboxes",
+                value=f"lootbox:{CHECKLIST_LOOTBOX_KEY}",
+                description=f"Open all {lootboxes} owned",
+                emoji=discord.PartialEmoji.from_str(emoji) if emoji else None,
+            ))
         for crate_key, crate in CRATE_TYPES.items():
             qty = await get_quantity(self.ctx.bot.db, self.ctx.author.id, "crate", crate_key)
             if qty <= 0:
                 continue
+            emoji = crate_emoji(crate_key)
             options.append(discord.SelectOption(
                 label=str(crate["name"]),
-                value=crate_key,
+                value=f"crate:{crate_key}",
                 description=f"Open all {qty} owned",
+                emoji=discord.PartialEmoji.from_str(emoji) if emoji else None,
             ))
         if not options:
             return False
         self.crate_select.options = options
-        self.crate_select.placeholder = "Select a crate type to open all..."
+        self.crate_select.placeholder = "Select a lootbox or crate stack to open all..."
         return True
 
     @discord.ui.select(
@@ -222,7 +326,17 @@ class MassOpenView(discord.ui.View):
     async def crate_select(self, interaction: discord.Interaction, select: discord.ui.Select) -> None:
         await interaction.response.defer()
         ctx = self.ctx
-        crate_key = select.values[0]
+        raw_value = select.values[0]
+        box_type, box_key = raw_value.split(":", 1) if ":" in raw_value else ("crate", raw_value)
+        if box_type == "lootbox":
+            owned = await get_quantity(ctx.bot.db, ctx.author.id, "lootbox", box_key)
+            if owned < 1:
+                await interaction.followup.send("You no longer have any lootboxes.", ephemeral=True)
+                return
+            self.stop()
+            await MassOpenView._do_mass_open_lootbox(ctx, box_key, owned, defer=False)
+            return
+        crate_key = box_key
         crate = CRATE_TYPES.get(crate_key)
         if crate is None:
             await interaction.followup.send("That crate is no longer available.", ephemeral=True)
@@ -232,73 +346,136 @@ class MassOpenView(discord.ui.View):
             await interaction.followup.send("You no longer have any of those crates.", ephemeral=True)
             return
         self.stop()
-        await MassOpenView._do_mass_open(ctx, crate_key, crate, owned)
+        await MassOpenView._do_mass_open(ctx, crate_key, crate, owned, defer=False)
 
     @staticmethod
-    async def _do_mass_open(ctx: commands.Context, crate_key: str, crate: dict, count: int) -> None:
-        await ctx.defer()
+    def _merge_result(merged: dict[str, object], result: dict[str, object]) -> None:
+        merged["gold"] = int(merged["gold"]) + int(result.get("gold", 0))
+        merged["gems"] = int(merged["gems"]) + int(result.get("gems", 0))
+        merged["swords"] = int(merged["swords"]) + int(result.get("swords", 0))
+        for mk, mv in (result.get("materials") or {}).items():
+            dm = dict(merged.get("materials", {})) if not isinstance(merged["materials"], dict) else merged["materials"]
+            dm[mk] = dm.get(mk, 0) + int(mv)
+            merged["materials"] = dm
+        merged["weapons"].extend(result.get("weapons") or [])
+
+    @staticmethod
+    async def _do_mass_open(ctx: commands.Context, crate_key: str, crate: dict, count: int, *, defer: bool = True) -> None:
+        if defer:
+            await ctx.defer()
         merged: dict[str, object] = {"gold": 0, "gems": 0, "materials": {}, "swords": 0, "weapons": []}
         for _ in range(count):
             await add_item(ctx.bot.db, ctx.author.id, "crate", crate_key, -1)
             r = await open_crate(ctx.bot.db, ctx.author.id, crate_key)
-            merged["gold"] = int(merged["gold"]) + int(r.get("gold", 0))
-            merged["gems"] = int(merged["gems"]) + int(r.get("gems", 0))
-            merged["swords"] = int(merged["swords"]) + int(r.get("swords", 0))
-            for mk, mv in (r.get("materials") or {}).items():
-                dm = dict(merged.get("materials", {})) if not isinstance(merged["materials"], dict) else merged["materials"]
-                dm[mk] = dm.get(mk, 0) + int(mv)
-                merged["materials"] = dm
-            merged["weapons"].extend(r.get("weapons") or [])
+            MassOpenView._merge_result(merged, r)
         box_name = f'{count}× {crate["name"]}'
-        image = render_crate_open_card(ctx.author.display_name, box_name, merged, weapons=merged.get("weapons"), compact=True)
+        image = await run_render(render_crate_open_card, ctx.author.display_name, box_name, merged, weapons=merged.get("weapons"), compact=True)
         file = discord.File(image, filename="abyssia_crate.png")
-        embed = discord.Embed(color=discord.Color.orange())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_crate.png")
-        embed.set_footer(text=f"Opened {count} crate(s) | {len(merged['weapons'])} weapon(s) acquired")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
+        view = _crate_result_layout(ctx, box_name, merged, footer=f"Opened {count} crate(s) | {len(merged['weapons'])} weapon(s) acquired")
+        await ctx.reply(file=file, view=view, mention_author=False)
+
+    @staticmethod
+    async def _do_mass_open_lootbox(ctx: commands.Context, lootbox_key: str, count: int, *, defer: bool = True) -> None:
+        if defer:
+            await ctx.defer()
+        merged: dict[str, object] = {"gold": 0, "gems": 0, "materials": {}, "swords": 0, "weapons": []}
+        for _ in range(count):
+            await add_item(ctx.bot.db, ctx.author.id, "lootbox", lootbox_key, -1)
+            result = await open_lootbox(ctx.bot.db, ctx.author.id)
+            MassOpenView._merge_result(merged, result)
+        image = await run_render(render_crate_open_card, ctx.author.display_name, f"{count}x Lootbox", merged, weapons=merged.get("weapons"), compact=True)
+        file = discord.File(image, filename="abyssia_crate.png")
+        view = _crate_result_layout(ctx, f"{count}x Lootbox", merged, footer=f"Opened {count} lootbox(es) | {len(merged['weapons'])} weapon(s) acquired")
+        await ctx.reply(file=file, view=view, mention_author=False)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.ctx.author.id
 
 
-class ShardCrateShopView(discord.ui.View):
-    def __init__(self, ctx: commands.Context, deals: list[dict[str, object]]) -> None:
-        super().__init__(timeout=90)
-        self.ctx = ctx
-        self.deals = deals
+class ShardCrateBuySelect(discord.ui.Select):
+    def __init__(self, deals: list[dict[str, object]]) -> None:
+        options: list[discord.SelectOption] = []
+        for deal in deals:
+            emoji = crate_emoji(str(deal["item_key"]))
+            options.append(
+                discord.SelectOption(
+                    label=str(deal["item_name"]),
+                    value=str(deal["item_key"]),
+                    description=f"{deal['shard_cost']:,} Weapon Shards",
+                    emoji=discord.PartialEmoji.from_str(emoji) if emoji else None,
+                )
+            )
+        super().__init__(
+            placeholder="Buy and open with Weapon Shards...",
+            min_values=1,
+            max_values=1,
+            options=options[:25],
+        )
 
-    @discord.ui.select(placeholder="Buy and open with Weapon Shards...", options=[])
-    async def buy_select(self, interaction: discord.Interaction, select: discord.ui.Select) -> None:
+    async def callback(self, interaction: discord.Interaction) -> None:
+        view = self.view
+        if not isinstance(view, ShardCrateShopView):
+            await interaction.response.send_message("This shop panel expired.", ephemeral=True)
+            return
         await interaction.response.defer()
-        crate_key = select.values[0]
+        crate_key = self.values[0]
         try:
-            result, cost = await _buy_and_open_shard_crate(self.ctx.bot, interaction.user, interaction.user.display_name, crate_key)
+            result, cost = await _buy_and_open_shard_crate(view.ctx.bot, interaction.user, interaction.user.display_name, crate_key)
         except ValueError as exc:
             await interaction.followup.send(str(exc), ephemeral=True)
             return
         crate = CRATE_TYPES[crate_key]
-        image = render_crate_open_card(interaction.user.display_name, crate["name"], result, weapons=result.get("weapons"))
+        image = await run_render(render_crate_open_card, interaction.user.display_name, crate["name"], result, weapons=result.get("weapons"))
         file = discord.File(image, filename="abyssia_crate.png")
-        embed = discord.Embed(color=discord.Color.orange())
-        embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_crate.png")
-        embed.set_footer(text=f"Bought with {cost} Weapon Shards")
-        await interaction.edit_original_response(embed=embed, attachments=[file], view=None)
+        result_view = _crate_result_layout(view.ctx, str(crate["name"]), result, footer=f"Bought with {cost:,} Weapon Shards")
+        await interaction.edit_original_response(content=None, embed=None, attachments=[file], view=result_view)
+
+
+class ShardCrateShopView(discord.ui.LayoutView):
+    def __init__(
+        self,
+        ctx: commands.Context,
+        deals: list[dict[str, object]],
+        *,
+        shard_qty: int,
+        owned_crates: dict[str, int],
+    ) -> None:
+        super().__init__(timeout=90)
+        self.ctx = ctx
+        self.deals = deals
+
+        container = discord.ui.Container(accent_colour=discord.Color.gold())
+        container.add_item(
+            discord.ui.TextDisplay(
+                f"## Crate Shop\n{ctx.author.display_name} | {material_label(WEAPON_SHARD_KEY)} `{shard_qty:,}`"
+            )
+        )
+        container.add_item(
+            discord.ui.MediaGallery(
+                discord.MediaGalleryItem(
+                    "attachment://abyssia_shop.png",
+                    description="Abyssia weapon crate shop",
+                )
+            )
+        )
+        deal_lines: list[str] = []
+        for deal in deals:
+            key = str(deal["item_key"])
+            owned = owned_crates.get(key, 0)
+            deal_lines.append(
+                f"{crate_label(key, str(deal['item_name']))} - {material_label(WEAPON_SHARD_KEY)} `{int(deal['shard_cost']):,}` | Owned `{owned:,}`"
+            )
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay("**Available Crates**\n" + "\n".join(deal_lines)))
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay("Buying opens the crate immediately and lists every weapon plus its passive in the result card."))
+        row = discord.ui.ActionRow()
+        row.add_item(ShardCrateBuySelect(deals))
+        container.add_item(row)
+        self.add_item(container)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         return interaction.user.id == self.ctx.author.id
-
-    def add_options(self) -> None:
-        self.buy_select.options = [
-            discord.SelectOption(
-                label=str(deal["item_name"]),
-                value=str(deal["item_key"]),
-                description=f"{deal['shard_cost']} Weapon Shards",
-                emoji=discord.PartialEmoji.from_str(crate_emoji(str(deal["item_key"]))) if crate_emoji(str(deal["item_key"])) else None,
-            )
-            for deal in self.deals
-        ]
 
 
 class RPGShop(commands.Cog):
@@ -313,14 +490,15 @@ class RPGShop(commands.Cog):
         assert ctx.guild is not None
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         deals = shard_crate_deals()
-        image = render_shop_card(ctx.author.display_name, deals, page=1, total_pages=1)
+        shard_qty = await get_quantity(self.bot.db, ctx.author.id, "material", WEAPON_SHARD_KEY)
+        owned_crates = {
+            crate_key: await get_quantity(self.bot.db, ctx.author.id, "crate", crate_key)
+            for crate_key in CRATE_TYPES
+        }
+        image = await run_render(render_shop_card, ctx.author.display_name, deals, page=1, total_pages=1)
         file = discord.File(image, filename="abyssia_shop.png")
-        embed = discord.Embed(color=discord.Color.gold())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_shop.png")
-        view = ShardCrateShopView(ctx, deals)
-        view.add_options()
-        await ctx.reply(embed=embed, file=file, view=view, mention_author=False)
+        view = ShardCrateShopView(ctx, deals, shard_qty=shard_qty, owned_crates=owned_crates)
+        await ctx.reply(file=file, view=view, mention_author=False)
 
     @commands.hybrid_command(name="open", aliases=["unbox", "wc"])
     async def open_crate_cmd(self, ctx: commands.Context, crate_key: str | None = None) -> None:
@@ -354,12 +532,10 @@ class RPGShop(commands.Cog):
                 return
             await add_item(self.bot.db, ctx.author.id, "lootbox", key, -1)
             result = await open_lootbox(self.bot.db, ctx.author.id)
-            image = render_crate_open_card(ctx.author.display_name, "Lootbox", result, weapons=result.get("weapons"))
+            image = await run_render(render_crate_open_card, ctx.author.display_name, "Lootbox", result, weapons=result.get("weapons"))
             file = discord.File(image, filename="abyssia_crate.png")
-            embed = discord.Embed(color=discord.Color.orange())
-            embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-            embed.set_image(url="attachment://abyssia_crate.png")
-            await ctx.reply(embed=embed, file=file, mention_author=False)
+            view = _crate_result_layout(ctx, "Lootbox", result)
+            await ctx.reply(file=file, view=view, mention_author=False)
             return
 
         crate = CRATE_TYPES[key]
@@ -374,12 +550,10 @@ class RPGShop(commands.Cog):
 
         await add_item(self.bot.db, ctx.author.id, "crate", key, -1)
         result = await open_crate(self.bot.db, ctx.author.id, key)
-        image = render_crate_open_card(ctx.author.display_name, crate["name"], result, weapons=result.get("weapons"))
+        image = await run_render(render_crate_open_card, ctx.author.display_name, crate["name"], result, weapons=result.get("weapons"))
         file = discord.File(image, filename="abyssia_crate.png")
-        embed = discord.Embed(color=discord.Color.orange())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_crate.png")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
+        view = _crate_result_layout(ctx, str(crate["name"]), result)
+        await ctx.reply(file=file, view=view, mention_author=False)
 
     @commands.hybrid_command(name="openall", aliases=["batchopen", "massopen", "openmulti"])
     async def openall(self, ctx: commands.Context, crate_key: str | None = None) -> None:
@@ -390,20 +564,28 @@ class RPGShop(commands.Cog):
             view = MassOpenView(ctx)
             if not await view.load_owned_options():
                 await ctx.reply(
-                    embed=_embed("Open All", f"You do not own any weapon crates to open in bulk. Use `{ctx.prefix}hunt` or `{ctx.prefix}battle` to earn crates."),
+                    embed=_embed("Open All", f"You do not own any lootboxes or weapon crates to open in bulk. Use `{ctx.prefix}hunt` or `{ctx.prefix}battle` to earn crates."),
                     mention_author=False,
                 )
                 return
-            embed = _embed("Mass Open", "Choose a crate type to open all of:\n> This will open **every** crate of that type you own.", discord.Color.orange())
+            embed = _embed("Mass Open", "Choose a lootbox or crate stack:\n> This opens **every** item in that stack.", discord.Color.orange())
             await ctx.reply(embed=embed, view=view, mention_author=False)
             return
 
-        key = _crate_key(crate_key)
-        if key is None:
+        box = _box_key(crate_key)
+        if box is None:
             await ctx.reply(
-                embed=_embed("Open All", f"Unknown crate. Valid types: cache, relic, treasure."),
+                embed=_embed("Open All", f"Unknown lootbox or crate. Valid types: lootbox, cache, relic, treasure."),
                 mention_author=False, ephemeral=True,
             )
+            return
+        box_type, key = box
+        if box_type == "lootbox":
+            owned = await get_quantity(self.bot.db, ctx.author.id, "lootbox", key)
+            if owned < 1:
+                await ctx.reply(embed=_embed("Open All", "You do not own any lootboxes."), mention_author=False)
+                return
+            await MassOpenView._do_mass_open_lootbox(ctx, key, owned)
             return
         crate = CRATE_TYPES[key]
         owned = await get_quantity(self.bot.db, ctx.author.id, "crate", key)
@@ -413,12 +595,14 @@ class RPGShop(commands.Cog):
                 mention_author=False,
             )
             return
+        warned = False
         if owned > 50:
             await ctx.reply(
                 embed=_embed("Open All", f"You have **{owned}× {crate['name']}**. Opening more than 50 at once may take a while.\nProceeding..."),
                 mention_author=False,
             )
-        await MassOpenView._do_mass_open(ctx, key, crate, owned)
+            warned = True
+        await MassOpenView._do_mass_open(ctx, key, crate, owned, defer=not warned)
 
     @commands.hybrid_command(name="shardcrate", aliases=["buywc", "wcbuy"])
     async def shard_crate(self, ctx: commands.Context, crate_key: str = "cache") -> None:
@@ -431,13 +615,10 @@ class RPGShop(commands.Cog):
             return
         key = _crate_key(crate_key) or "cache"
         crate = CRATE_TYPES[key]
-        image = render_crate_open_card(ctx.author.display_name, crate["name"], result, weapons=result.get("weapons"))
+        image = await run_render(render_crate_open_card, ctx.author.display_name, crate["name"], result, weapons=result.get("weapons"))
         file = discord.File(image, filename="abyssia_crate.png")
-        embed = discord.Embed(color=discord.Color.orange())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.set_image(url="attachment://abyssia_crate.png")
-        embed.set_footer(text=f"Bought with {cost} Weapon Shards")
-        await ctx.reply(embed=embed, file=file, mention_author=False)
+        view = _crate_result_layout(ctx, str(crate["name"]), result, footer=f"Bought with {cost} Weapon Shards")
+        await ctx.reply(file=file, view=view, mention_author=False)
 
     @commands.hybrid_command(name="bulkcrate", aliases=["bulkbuy", "multibuy"])
     async def bulk_crate(self, ctx: commands.Context, crate_key: str = "cache", amount: int = 1) -> None:
@@ -480,39 +661,29 @@ class RPGShop(commands.Cog):
                 all_weapons.extend(result["weapons"])
         
         crate = CRATE_TYPES[key]
-        embed = discord.Embed(
-            title=f"Opened {amount}x {crate['name']}",
-            color=discord.Color.orange()
+        merged: dict[str, object] = {
+            "gold": total_gold,
+            "gems": total_gems,
+            "materials": {},
+            "swords": total_swords,
+            "weapons": all_weapons,
+        }
+        image = await run_render(
+            render_crate_open_card,
+            ctx.author.display_name,
+            f"{amount}x {crate['name']}",
+            merged,
+            weapons=all_weapons,
+            compact=True,
         )
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        
-        summary_lines = []
-        if total_gold:
-            summary_lines.append(f"💰 **{total_gold:,}** Souls")
-        if total_gems:
-            summary_lines.append(f"💎 **{total_gems}** Gems")
-        if total_swords:
-            summary_lines.append(f"⚔️ **{total_swords}** Hunt Swords")
-        
-        if all_weapons:
-            # Sort weapons by rarity (highest first), then by quality
-            rarity_order = {"Common": 0, "Uncommon": 1, "Rare": 2, "Epic": 3, "Legendary": 4, "Mythic": 5, "Ancient": 6, "Patreon": 6, "Divine": 7, "Eldritch": 8, "Abyssal": 9, "Prismatic": 10, "Ethereal": 11, "Void Lord": 12, "Hidden": 13}
-            all_weapons.sort(key=lambda w: (rarity_order.get(weapon_quality_rarity(int(row_get(w, "quality_pct", 50))), 0), int(row_get(w, "quality_pct", 50))), reverse=True)
-            
-            summary_lines.append(f"\n **{len(all_weapons)}** Weapon(s):")
-            for w in all_weapons[:10]:
-                wname = weapon_display_name(w)
-                wr = weapon_quality_rarity(int(row_get(w, "quality_pct", 50)))
-                summary_lines.append(f"> {rarity_label(wr)} {wname}")
-            if len(all_weapons) > 10:
-                summary_lines.append(f"> ... and {len(all_weapons) - 10} more")
-        else:
-            summary_lines.append("\n🎁 No weapons this time!")
-        
-        embed.description = "\n".join(summary_lines)
-        embed.set_footer(text=f"Spent {total_cost:,} Weapon Shards")
-        
-        await ctx.reply(embed=embed, mention_author=False)
+        file = discord.File(image, filename="abyssia_crate.png")
+        view = _crate_result_layout(
+            ctx,
+            f"{amount}x {crate['name']}",
+            merged,
+            footer=f"Spent {total_cost:,} Weapon Shards",
+        )
+        await ctx.reply(file=file, view=view, mention_author=False)
 
     @commands.hybrid_command(name="sellall", aliases=["massrelease"])
     async def sellall(self, ctx: commands.Context, rarity: str | None = None) -> None:
@@ -553,23 +724,21 @@ class RPGShop(commands.Cog):
             )
         }
 
-        keep_remaining: dict[str, int] = {}
-        if not rarity_clean:
-            counts: dict[str, int] = {}
-            for cr in creatures:
-                r = str(cr["rarity"])
-                counts[r] = counts.get(r, 0) + 1
-            keep_remaining = {r: 3 for r in counts}
+        keep: dict[str, int] = {}
+        for cr in creatures:
+            n = str(cr["name"])
+            if n not in keep:
+                keep[n] = 1
 
         total_value = 0
         sold_count = 0
         for cr in creatures:
-            r = str(cr["rarity"])
+            n = str(cr["name"])
             cid = int(cr["id"])
             if cid in equipped_ids or cid in team_ids:
                 continue
-            if keep_remaining.get(r, 0) > 0:
-                keep_remaining[r] -= 1
+            if keep.get(n, 0) > 0:
+                keep[n] -= 1
                 continue
             total_value += _int(cr["value"])
             sold_count += 1
@@ -628,6 +797,8 @@ class RPGShop(commands.Cog):
             weapon_ids = [int(row_get(weapon, "id", 0)) for weapon in weapons]
             placeholders = ",".join("?" for _ in weapon_ids)
             await add_item(self.bot.db, ctx.author.id, "material", WEAPON_SHARD_KEY, total_shards)
+            from core.rpg import invalidate_player_weapons_cache
+            invalidate_player_weapons_cache(ctx.author.id)
             await self.bot.db.execute(f"DELETE FROM weapons WHERE user_id = ? AND id IN ({placeholders})", (ctx.author.id, *weapon_ids))
             skip_count = _int(skipped["total"]) if skipped else 0
             extra = f" Skipped **{skip_count}** equipped or favorited weapon(s)." if skip_count else ""
@@ -658,6 +829,8 @@ class RPGShop(commands.Cog):
             weapon_ids = [int(row_get(weapon, "id", 0)) for weapon in weapons]
             placeholders = ",".join("?" for _ in weapon_ids)
             await add_item(self.bot.db, ctx.author.id, "material", WEAPON_SHARD_KEY, total_shards)
+            from core.rpg import invalidate_player_weapons_cache
+            invalidate_player_weapons_cache(ctx.author.id)
             await self.bot.db.execute(f"DELETE FROM weapons WHERE user_id = ? AND id IN ({placeholders})", (ctx.author.id, *weapon_ids))
             extra = f" Skipped **{skip_count}** equipped or favorited weapon(s)." if skip_count else ""
             return await ctx.reply(
@@ -681,6 +854,8 @@ class RPGShop(commands.Cog):
         shards = weapon_salvage_shards(weapon)
         display = weapon_display_name(weapon)
         await add_item(self.bot.db, ctx.author.id, "material", WEAPON_SHARD_KEY, shards)
+        from core.rpg import invalidate_player_weapons_cache
+        invalidate_player_weapons_cache(ctx.author.id)
         await self.bot.db.execute("DELETE FROM weapons WHERE id = ?", (weapon_id,))
         return await ctx.reply(embed=_embed("Salvage", f"Dismantled **{display}** into {material_label(WEAPON_SHARD_KEY)} **{shards}**."), mention_author=False)
 

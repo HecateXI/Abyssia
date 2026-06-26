@@ -46,6 +46,25 @@ from core.rpg_data import (
 from core.theme import material_label
 
 
+# In-memory TTL caches for read-heavy lookups
+_creature_counts_cache: dict[int, tuple[dict[tuple[str, str], dict], float]] = {}
+_CREATURE_COUNTS_TTL = 60
+
+_zoo_summary_cache: dict[int, tuple[dict[tuple[str, str], dict], float]] = {}
+_ZOO_SUMMARY_TTL = 60
+
+_inventory_quantity_cache: dict[tuple[int, str, str], tuple[int, float]] = {}
+_INVENTORY_QUANTITY_TTL = 30
+
+_player_weapons_cache: dict[int, tuple[list[sqlite3.Row], float]] = {}
+_PLAYER_WEAPONS_TTL = 30
+
+
+def _invalidate_creature_caches(user_id: int) -> None:
+    _creature_counts_cache.pop(user_id, None)
+    _zoo_summary_cache.pop(user_id, None)
+
+
 def _json_obj(raw: Any, fallback: Any) -> Any:
     if not raw:
         return fallback
@@ -61,6 +80,11 @@ def now_ts() -> int:
 
 def today_key() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+
+def week_key() -> str:
+    year, week, _ = datetime.now(timezone.utc).isocalendar()
+    return f"{year}-W{week:02d}"
 
 
 def utc_day_start(ts: int | None = None) -> int:
@@ -186,6 +210,7 @@ async def refresh_player(db: BotDatabase, user_id: int) -> sqlite3.Row:
 async def add_item(db: BotDatabase, user_id: int, item_type: str, item_key: str, quantity: int) -> None:
     if quantity == 0:
         return
+    _inventory_quantity_cache.pop((user_id, item_type, item_key), None)
     await db.execute(
         """
         INSERT INTO rpg_inventory (user_id, item_type, item_key, quantity)
@@ -198,11 +223,18 @@ async def add_item(db: BotDatabase, user_id: int, item_type: str, item_key: str,
 
 
 async def get_quantity(db: BotDatabase, user_id: int, item_type: str, item_key: str) -> int:
+    cache_key = (user_id, item_type, item_key)
+    now = time.monotonic()
+    cached = _inventory_quantity_cache.get(cache_key)
+    if cached is not None and now - cached[1] < _INVENTORY_QUANTITY_TTL:
+        return cached[0]
     row = await db.fetchone(
         "SELECT quantity FROM rpg_inventory WHERE user_id = ? AND item_type = ? AND item_key = ?",
         (user_id, item_type, item_key),
     )
-    return 0 if row is None else int(row["quantity"])
+    value = 0 if row is None else int(row["quantity"])
+    _inventory_quantity_cache[cache_key] = (value, now)
+    return value
 
 
 async def inventory_rows(db: BotDatabase, user_id: int) -> list[sqlite3.Row]:
@@ -210,6 +242,47 @@ async def inventory_rows(db: BotDatabase, user_id: int) -> list[sqlite3.Row]:
         "SELECT item_type, item_key, quantity FROM rpg_inventory WHERE user_id = ? AND quantity > 0 ORDER BY item_type, item_key",
         (user_id,),
     )
+
+
+async def get_creature_counts(db: BotDatabase, user_id: int) -> dict[tuple[str, str], dict]:
+    """Return lifetime {(name, rarity): {total, max_level}} with short TTL cache."""
+    now = time.monotonic()
+    cached = _creature_counts_cache.get(user_id)
+    if cached is not None and now - cached[1] < _CREATURE_COUNTS_TTL:
+        return cached[0]
+    rows = await db.fetchall(
+        "SELECT name, rarity, total_caught AS total, max_level FROM rpg_creature_collection WHERE user_id = ?",
+        (user_id,),
+    )
+    result: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        result[(str(r["name"]), str(r["rarity"]))] = {
+            "total": int(r["total"]),
+            "max_level": int(r["max_level"]),
+        }
+    _creature_counts_cache[user_id] = (result, now)
+    return result
+
+
+async def get_creature_zoo_summary(db: BotDatabase, user_id: int) -> dict[tuple[str, str], dict]:
+    """Return lifetime {(name, rarity): {total, total_levels, total_value}} with short TTL cache."""
+    now = time.monotonic()
+    cached = _zoo_summary_cache.get(user_id)
+    if cached is not None and now - cached[1] < _ZOO_SUMMARY_TTL:
+        return cached[0]
+    rows = await db.fetchall(
+        "SELECT name, rarity, total_caught AS total, max_level AS total_levels, total_value FROM rpg_creature_collection WHERE user_id = ?",
+        (user_id,),
+    )
+    result: dict[tuple[str, str], dict] = {}
+    for r in rows:
+        result[(str(r["name"]), str(r["rarity"]))] = {
+            "total": int(r["total"]),
+            "total_levels": int(r["total_levels"] or 0),
+            "total_value": int(r["total_value"] or 0),
+        }
+    _zoo_summary_cache[user_id] = (result, now)
+    return result
 
 
 async def award_player_xp(db: BotDatabase, player: sqlite3.Row, gained_xp: int) -> tuple[sqlite3.Row, int]:
@@ -278,7 +351,7 @@ async def roll_checklist_hunt_lootboxes(db: BotDatabase, user_id: int, attempts:
         final_count = current
         if current >= CHECKLIST_HUNT_LOOTBOX_TARGET:
             break
-        if current == 0 or random.random() < max(0.0, min(1.0, CHECKLIST_HUNT_LOOTBOX_CHANCE)):
+        if random.random() < max(0.0, min(1.0, CHECKLIST_HUNT_LOOTBOX_CHANCE)):
             final_count = current + 1
             found += 1
             await add_item(db, user_id, "lootbox", CHECKLIST_LOOTBOX_KEY, 1)
@@ -298,7 +371,7 @@ async def roll_checklist_battle_crates(db: BotDatabase, user_id: int, attempts: 
         final_count = current
         if current >= CHECKLIST_BATTLE_CRATE_TARGET:
             break
-        if current == 0 or random.random() < max(0.0, min(1.0, CHECKLIST_BATTLE_CRATE_CHANCE)):
+        if random.random() < max(0.0, min(1.0, CHECKLIST_BATTLE_CRATE_CHANCE)):
             final_count = current + 1
             found += 1
             await add_item(db, user_id, "crate", "cache", 1)
@@ -387,13 +460,33 @@ def roll_creature_stats(template: CreatureTemplate, hunter_level: int) -> dict[s
 
 
 async def create_creature(db: BotDatabase, user_id: int, stats: dict[str, int | str]) -> int:
-    return await db.insert(
+    caught_at = now_ts()
+    creature_id = await db.insert(
         """INSERT INTO rpg_creatures (user_id, name, rarity, attack, defense, hp, speed, crit, mana, str_stat, pr_stat, wp_stat, mag_stat, mr_stat, spd, role, ability, value, image, level, xp, caught_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)""",
         (user_id, stats["name"], stats["rarity"], stats.get("attack", 0), stats.get("defense", 0), stats["hp"], stats.get("speed", 1), stats["crit"], stats["mana"],
          stats["str_stat"], stats["pr_stat"], stats["wp_stat"], stats["mag_stat"], stats["mr_stat"], stats["spd"], stats["role"],
-         stats["ability"], stats["value"], stats["image"], stats["level"], now_ts()),
+         stats["ability"], stats["value"], stats["image"], stats["level"], caught_at),
     )
+    await db.execute(
+        """
+        INSERT INTO rpg_creature_collection
+            (user_id, name, rarity, total_caught, total_value, max_level, first_caught_at, last_caught_at)
+        VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+        ON CONFLICT(user_id, name, rarity) DO UPDATE SET
+            total_caught = total_caught + 1,
+            total_value = total_value + excluded.total_value,
+            max_level = MAX(max_level, excluded.max_level),
+            first_caught_at = CASE
+                WHEN first_caught_at = 0 THEN excluded.first_caught_at
+                ELSE MIN(first_caught_at, excluded.first_caught_at)
+            END,
+            last_caught_at = excluded.last_caught_at
+        """,
+        (user_id, stats["name"], stats["rarity"], stats["value"], stats["level"], caught_at, caught_at),
+    )
+    _invalidate_creature_caches(user_id)
+    return creature_id
 
 
 async def top_creatures(db: BotDatabase, user_id: int, limit: int = 3) -> list[sqlite3.Row]:
@@ -411,14 +504,24 @@ async def team_creatures(db: BotDatabase, user_id: int) -> list[sqlite3.Row]:
 
 
 async def progress_quest(db: BotDatabase, user_id: int, quest_key: str, amount: int = 1) -> None:
-    if quest_key not in QUESTS:
+    amount = max(0, int(amount))
+    if amount <= 0:
         return
-    period_key = today_key()
-    await db.execute(
-        """INSERT INTO rpg_quests (user_id, quest_key, period_key, progress, claimed) VALUES (?, ?, ?, ?, 0)
-        ON CONFLICT(user_id, quest_key, period_key) DO UPDATE SET progress = MIN(progress + excluded.progress, ?)""",
-        (user_id, quest_key, period_key, amount, int(QUESTS[quest_key]["target"])),
-    )
+    matched = [
+        (key, quest)
+        for key, quest in QUESTS.items()
+        if key == quest_key or str(quest.get("metric", key)) == quest_key
+    ]
+    if not matched:
+        return
+    for key, quest in matched:
+        period_type = str(quest.get("period", "daily")).lower()
+        period_key = week_key() if period_type == "weekly" else today_key()
+        await db.execute(
+            """INSERT INTO rpg_quests (user_id, quest_key, period_key, progress, claimed) VALUES (?, ?, ?, ?, 0)
+            ON CONFLICT(user_id, quest_key, period_key) DO UPDATE SET progress = MIN(progress + excluded.progress, ?)""",
+            (user_id, key, period_key, amount, int(quest["target"])),
+        )
 
 
 async def unlock_achievement(db: BotDatabase, user_id: int, key: str) -> bool:
@@ -807,6 +910,7 @@ def weapon_display_name(weapon_row) -> str:
 
 
 async def insert_weapon(db: BotDatabase, weapon: dict[str, object]) -> int:
+    invalidate_player_weapons_cache(int(weapon["user_id"]))
     return await db.insert(
         """INSERT INTO weapons
            (user_id, name, rarity, weapon_type, quality, quality_pct, mana_cost, wear,
@@ -816,7 +920,7 @@ async def insert_weapon(db: BotDatabase, weapon: dict[str, object]) -> int:
          weapon.get("weapon_type", "sword"), weapon.get("quality", "Normal"),
          weapon.get("quality_pct", 50), weapon.get("mana_cost", 3), weapon.get("wear", "Unknown"),
          weapon["attack_bonus"], weapon["defense_bonus"],
-         weapon.get("passive"), weapon["affixes"], weapon.get("stat_rolls"), weapon["created_at"]),
+         weapon.get("passive"), weapon.get("affixes"), weapon.get("stat_rolls"), weapon["created_at"]),
     )
 
 
@@ -838,8 +942,18 @@ async def ensure_weapon_passives(db: BotDatabase) -> int:
     return updated
 
 
+def invalidate_player_weapons_cache(user_id: int) -> None:
+    _player_weapons_cache.pop(user_id, None)
+
+
 async def player_weapons(db: BotDatabase, user_id: int) -> list[sqlite3.Row]:
-    return await db.fetchall("SELECT * FROM weapons WHERE user_id = ? ORDER BY quality_pct DESC, id DESC", (user_id,))
+    now = time.monotonic()
+    cached = _player_weapons_cache.get(user_id)
+    if cached is not None and now - cached[1] < _PLAYER_WEAPONS_TTL:
+        return cached[0]
+    rows = await db.fetchall("SELECT * FROM weapons WHERE user_id = ? ORDER BY quality_pct DESC, id DESC", (user_id,))
+    _player_weapons_cache[user_id] = (rows, now)
+    return rows
 
 
 def weapon_salvage_shards(weapon_row) -> int:
@@ -940,6 +1054,7 @@ async def reroll_weapon(db: BotDatabase, user_id: int, weapon_id: int, mode: str
     else:
         raise ValueError("Reroll mode must be `stat`, `passive`, or `full`.")
 
+    invalidate_player_weapons_cache(user_id)
     updated = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
     if updated is None:
         raise RuntimeError("Weapon disappeared after reroll.")
@@ -1046,6 +1161,7 @@ async def owo_reroll_stat(db: BotDatabase, user_id: int, weapon_id: int) -> sqli
         ),
     )
 
+    invalidate_player_weapons_cache(user_id)
     updated = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
     if updated is None:
         raise RuntimeError("Weapon disappeared after reroll.")
@@ -1125,6 +1241,7 @@ async def owo_reroll_passive(db: BotDatabase, user_id: int, weapon_id: int) -> s
         ),
     )
 
+    invalidate_player_weapons_cache(user_id)
     updated = await db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, user_id))
     if updated is None:
         raise RuntimeError("Weapon disappeared after reroll.")
@@ -1132,10 +1249,16 @@ async def owo_reroll_passive(db: BotDatabase, user_id: int, weapon_id: int) -> s
 
 
 async def equip_weapon_to_creature(db: BotDatabase, weapon_id: int, creature_id: int) -> None:
+    row = await db.fetchone("SELECT user_id FROM weapons WHERE id = ?", (weapon_id,))
+    if row is not None:
+        invalidate_player_weapons_cache(int(row["user_id"]))
     await db.execute("UPDATE weapons SET equipped_creature_id = ? WHERE id = ?", (creature_id, weapon_id))
 
 
 async def unequip_weapon(db: BotDatabase, weapon_id: int) -> None:
+    row = await db.fetchone("SELECT user_id FROM weapons WHERE id = ?", (weapon_id,))
+    if row is not None:
+        invalidate_player_weapons_cache(int(row["user_id"]))
     await db.execute("UPDATE weapons SET equipped_creature_id = NULL WHERE id = ?", (weapon_id,))
 
 
@@ -1319,7 +1442,7 @@ def weapon_effects(weapon_row) -> dict[str, int]:
         try:
             passive = json.loads(str(passive_raw))
             if isinstance(passive, dict) and passive.get("key"):
-                effects[passive["key"]] = passive.get("chance", 0)
+                effects[passive["key"]] = passive.get("value", passive.get("chance", 0))
         except Exception:
             pass
     return effects

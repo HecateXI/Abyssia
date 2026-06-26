@@ -9,8 +9,10 @@ from discord.ext import commands
 
 from core.battle_engine import Ability
 from core.card_controls import shortcut_view
+from core.card_layout import AbyssiaLayoutView
+from core.card_ui import run_render
 from core.cards import render_weapon_detail_card, render_weapons_card
-from core.discord_assets import embed_asset, ensure_application_emojis
+from core.discord_assets import ensure_application_emojis
 from core.rpg import (
     OWO_REROLL_COST,
     add_item,
@@ -39,6 +41,7 @@ from core.theme import (
     passive_label,
     rarity_emoji,
     rarity_label,
+    stat_emoji,
     weapon_emoji,
     weapon_label,
 )
@@ -53,8 +56,12 @@ def _int(v: Any) -> int:
     except (TypeError, ValueError): return 0
 
 
+def _stat_icon(key: str, fallback: str) -> str:
+    return stat_emoji(key) or fallback
+
+
 WEAPONS_PER_PAGE = 15
-WEAPON_CARD_PAGE_SIZE = 4
+WEAPON_CARD_PAGE_SIZE = 5
 STATUS_ICON_KEYS = {"bleed", "burn", "poison", "stun", "shield", "heal", "crit"}
 
 
@@ -158,14 +165,6 @@ def _weapon_icon_stack(weapon: Any) -> str:
     if wemoji:
         icons.append(wemoji)
 
-    passive = _json_obj(row_get(weapon, "passive"), {})
-    if isinstance(passive, dict):
-        key = str(passive.get("key", ""))
-        if key:
-            icon = passive_emoji(key)
-            if icon and icon not in icons:
-                icons.append(icon)
-
     if _int(row_get(weapon, "is_favorite", 0)):
         icons.append("\u2B50")
 
@@ -174,19 +173,69 @@ def _weapon_icon_stack(weapon: Any) -> str:
 
 def _weapon_list_line(weapon: Any, creature_name: str | None = None, creature_emoji_str: str | None = None) -> str:
     quality_pct = _weapon_quality_pct(weapon)
+    tier = _weapon_tier(weapon)
+    tier_badge = _rarity_badge(tier)
     icons = _weapon_icon_stack(weapon)
     name = weapon_display_name(weapon)
     prefix = f"{creature_emoji_str} → " if creature_emoji_str else ""
-    return f"{prefix}`{_weapon_id(weapon)}` {icons} **{name}** **{quality_pct}%**"
+    return f"{prefix}`{_weapon_id(weapon)}` {tier_badge} {icons} **{name}** **{quality_pct}%**"
 
 
-def _weapon_filter_text(type_filter: str, tier_filter: str, *, fav_only: bool = False) -> str:
+def _weapon_passive_label_short(weapon: Any) -> str:
+    passive = _json_obj(row_get(weapon, "passive"), {})
+    if not isinstance(passive, dict) or not passive.get("key"):
+        return "`No passive`"
+    key = str(passive.get("key", ""))
+    emoji = passive_emoji(key)
+    chance = _int(passive.get("chance", 0))
+    chance_str = f" `{chance}%`" if chance > 0 else ""
+    return f"{emoji}{chance_str}" if emoji else f"`{key}`{chance_str}"
+
+
+def _weapon_card_page_weapons(weapons: list, page: int) -> list:
+    start = (max(1, page) - 1) * WEAPON_CARD_PAGE_SIZE
+    return list(weapons or [])[start:start + WEAPON_CARD_PAGE_SIZE]
+
+
+def _weapon_vault_summary_lines(
+    weapons: list,
+    page: int,
+    *,
+    creature_map: dict[int, tuple[str, str]] | None = None,
+) -> list[str]:
+    lines: list[str] = []
+    for idx, weapon in enumerate(_weapon_card_page_weapons(weapons, page)):
+        wtype = str(row_get(weapon, "weapon_type", "sword"))
+        type_data = WEAPON_TYPES.get(wtype, {})
+        type_name = str(type_data.get("name", wtype.replace("_", " ").title()))
+        icons = _weapon_icon_stack(weapon)
+        rarity = _weapon_tier(weapon)
+        name = weapon_display_name(weapon)
+        passive = _weapon_passive_label_short(weapon)
+        quality_pct = _weapon_quality_pct(weapon)
+        equipped_text = ""
+        equipped_id = _int(row_get(weapon, "equipped_creature_id", 0))
+        if creature_map and equipped_id in creature_map:
+            cname, crarity = creature_map[equipped_id]
+            equipped_text = f" -> {creature_emoji(cname, crarity)}"
+        featured = "**Featured** " if idx == 0 else ""
+        lines.append(
+            f"{featured}`{_weapon_id(weapon)}` {_rarity_badge(rarity)} {icons} "
+            f"**{name}** `{quality_pct}%` - {passive}{equipped_text}"
+        )
+    if not lines:
+        lines.append("No weapons match these filters.")
+    return lines
+
+
+def _weapon_filter_text(type_filter: str, tier_filter: str, *, fav_only: bool = False, sort_filter: str = "quality") -> str:
     type_text = "All Types"
     if type_filter != "all":
         type_data = WEAPON_TYPES.get(type_filter, {})
         type_text = str(type_data.get("name", type_filter.replace("_", " ").title()))
     tier_text = "All Tiers" if tier_filter == "all" else tier_filter
-    parts = [f"Type `{type_text}`", f"Tier `{tier_text}`"]
+    sort_text = "Recently Added" if sort_filter == "recent" else "Best Quality"
+    parts = [f"Type `{type_text}`", f"Tier `{tier_text}`", f"Sort `{sort_text}`"]
     if fav_only:
         parts.append("\u2B50 Favorites")
     return " | ".join(parts)
@@ -601,6 +650,35 @@ def _weapon_index_embeds() -> list[discord.Embed]:
     return embeds
 
 
+def _sections_from_embeds(embeds: list[discord.Embed]) -> list[tuple[str, str]]:
+    sections: list[tuple[str, str]] = []
+    for embed in embeds:
+        title = str(embed.title or "Info")
+        desc = str(embed.description or "").strip()
+        if desc:
+            sections.append((title, desc[:3900]))
+        for field in embed.fields:
+            sections.append((str(field.name), str(field.value)[:3900]))
+    return sections
+
+
+def _weapon_type_sections(matched_key: str) -> list[tuple[str, str]]:
+    data = WEAPON_TYPES[matched_key]
+    passive_lines = [
+        (
+            f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']), show_rarity=False)} "
+            f"`{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-"
+            f"{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` - "
+            f"{format_passive_description(key, 0, index_mode=True)}"
+        )
+        for key in data.get("passive_pool", [])
+    ]
+    return [
+        ("Weapon Type", "\n".join(_weapon_type_lines(matched_key))),
+        ("Passive Pool", "\n".join(passive_lines) or "None"),
+    ]
+
+
 def _weapon_identity_lines(weapon: Any, owner: discord.abc.User | discord.Member | discord.User, *, include_owner: bool = True) -> list[str]:
     wdisplay = weapon_display_name(weapon)
     wtype = str(row_get(weapon, "weapon_type", "sword"))
@@ -640,13 +718,14 @@ def _weapon_desc_text(weapon: Any, owner: discord.abc.User | discord.Member | di
     ws = weapon_stats(weapon)
     stat_parts = []
     labels = [
-        ("str_stat", "STR"), ("pr_stat", "DEF"), ("hp", "HP"),
-        ("wp_stat", "MANA"), ("mag_stat", "MAG"), ("mr_stat", "RES"), ("spd", "SPD"),
+        ("str_stat", "str"), ("pr_stat", "def"), ("hp", "hp"),
+        ("wp_stat", "mana"), ("mag_stat", "mag"), ("mr_stat", "res"),
     ]
-    for key, label in labels:
+    label_names = {"str_stat": "STR", "pr_stat": "DEF", "hp": "HP", "wp_stat": "MANA", "mag_stat": "MAG", "mr_stat": "RES"}
+    for key, icon_key in labels:
         val = ws.get(key, 0)
         if val:
-            stat_parts.append(f"**{label}:** `+{val}`")
+            stat_parts.append(f"{_stat_icon(icon_key, label_names[key])} `+{val}`")
     if stat_parts:
         mid = len(stat_parts) // 2
         stats = [" ".join(stat_parts[:mid]), " ".join(stat_parts[mid:])]
@@ -689,7 +768,7 @@ def _weapon_desc_text(weapon: Any, owner: discord.abc.User | discord.Member | di
     return desc
 
 
-def _weapon_detail_embed(owner: discord.abc.User | discord.Member | discord.User, weapon: Any) -> tuple[discord.Embed, discord.File | None]:
+async def _weapon_detail_embed(owner: discord.abc.User | discord.Member | discord.User, weapon: Any) -> tuple[discord.Embed, discord.File | None]:
     wr = _weapon_tier(weapon)
     title = f"{owner.display_name}'s {weapon_display_name(weapon)} [0]"
     rarity = RARITY_BY_NAME.get(wr)
@@ -697,7 +776,7 @@ def _weapon_detail_embed(owner: discord.abc.User | discord.Member | discord.User
     embed = _embed(title, _weapon_desc_text(weapon, owner), discord.Color(rarity.color) if rarity else discord.Color.dark_gray())
     embed.set_author(name=owner.display_name, icon_url=owner.display_avatar.url)
     embed.set_footer(text="Reroll Changes: 0 | Reroll Attempts: 0")
-    card_file = discord.File(render_weapon_detail_card(owner.display_name, weapon), filename="abyssia_weapon_detail.png")
+    card_file = discord.File(await run_render(render_weapon_detail_card, owner.display_name, weapon), filename="abyssia_weapon_detail.png")
     embed.set_image(url="attachment://abyssia_weapon_detail.png")
     return embed, card_file
 
@@ -721,6 +800,8 @@ def _weapon_snapshot(weapon: Any) -> dict[str, Any]:
 
 
 async def _restore_weapon_snapshot(db, user_id: int, weapon_id: int, snapshot: dict[str, Any]) -> None:
+    from core.rpg import invalidate_player_weapons_cache
+    invalidate_player_weapons_cache(user_id)
     await db.execute(
         """UPDATE weapons
            SET name = ?, rarity = ?, weapon_type = ?, quality = ?, quality_pct = ?, mana_cost = ?, wear = ?,
@@ -734,8 +815,7 @@ async def _restore_weapon_snapshot(db, user_id: int, weapon_id: int, snapshot: d
     )
 
 
-def _weapon_reroll_embed(owner: discord.Member | discord.User, before: Any, after: Any, *, cost: int, mode: str, attempts: int, remaining: int, color=discord.Color.dark_gray()) -> tuple[discord.Embed, discord.File | None]:
-    wtype = str(row_get(before, "weapon_type", "sword"))
+async def _weapon_reroll_embed(owner: discord.Member | discord.User, before: Any, after: Any, *, cost: int, mode: str, attempts: int, remaining: int, color=discord.Color.dark_gray()) -> tuple[discord.Embed, discord.File | None]:
     title = f"{owner.display_name}'s {weapon_display_name(before)} Reroll"
     wear_before = str(row_get(before, "wear", "Unknown"))
     wear_after = str(row_get(after, "wear", "Unknown"))
@@ -758,10 +838,9 @@ def _weapon_reroll_embed(owner: discord.Member | discord.User, before: Any, afte
     embed = _embed(title, desc, color if color else discord.Color.dark_gray())
     embed.set_author(name=owner.display_name, icon_url=owner.display_avatar.url)
     embed.set_footer(text=f"Reroll Attempts: {attempts} | Shards left: {remaining:,}")
-    _, asset_file = embed_asset("weapons", wtype)
-    if asset_file:
-        embed.set_thumbnail(url=f"attachment://{asset_file.filename}")
-    return embed, asset_file
+    card_file = discord.File(await run_render(render_weapon_detail_card, owner.display_name, after), filename="abyssia_weapon_reroll.png")
+    embed.set_image(url="attachment://abyssia_weapon_reroll.png")
+    return embed, card_file
 
 
 class WeaponRerollView(discord.ui.View):
@@ -786,27 +865,27 @@ class WeaponRerollView(discord.ui.View):
             if isinstance(item, discord.ui.Button):
                 item.disabled = True
 
-    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, row=0)
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.success, emoji="✅", row=0)
     async def confirm_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         self._disable()
-        embed, asset_file = _weapon_reroll_embed(self.author, self.before_row, self.after_row, cost=self.cost, mode=self.mode, attempts=self.attempts, remaining=self.remaining, color=discord.Color.dark_green())
+        embed, asset_file = await _weapon_reroll_embed(self.author, self.before_row, self.after_row, cost=self.cost, mode=self.mode, attempts=self.attempts, remaining=self.remaining, color=discord.Color.dark_green())
         kwargs = {"embed": embed, "view": self}
         if asset_file:
             kwargs["attachments"] = [asset_file]
         await interaction.response.edit_message(**kwargs)
 
-    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, row=0)
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.danger, emoji="✖️", row=0)
     async def cancel_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         await _restore_weapon_snapshot(self.cog.bot.db, self.author.id, self.weapon_id, self.before_snapshot)
         self._disable()
-        embed, asset_file = _weapon_reroll_embed(self.author, self.before_row, self.after_row, cost=self.cost, mode=self.mode, attempts=self.attempts, remaining=self.remaining, color=discord.Color.dark_red())
+        embed, asset_file = await _weapon_reroll_embed(self.author, self.before_row, self.after_row, cost=self.cost, mode=self.mode, attempts=self.attempts, remaining=self.remaining, color=discord.Color.dark_red())
         embed.title = "Weapon Reroll Cancelled"
         kwargs = {"embed": embed, "view": self}
         if asset_file:
             kwargs["attachments"] = [asset_file]
         await interaction.response.edit_message(**kwargs)
 
-    @discord.ui.button(label="Reroll", style=discord.ButtonStyle.primary, row=0)
+    @discord.ui.button(label="Reroll", style=discord.ButtonStyle.primary, emoji="🔁", row=0)
     async def reroll_btn(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
         before = await self.cog.bot.db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (self.weapon_id, self.author.id))
         if before is None:
@@ -827,11 +906,182 @@ class WeaponRerollView(discord.ui.View):
         self.attempts += 1
         self.remaining = remaining
         self.before_snapshot = _weapon_snapshot(before)
-        embed, asset_file = _weapon_reroll_embed(self.author, before, after, cost=OWO_REROLL_COST, mode=self.mode, attempts=self.attempts, remaining=remaining)
+        embed, asset_file = await _weapon_reroll_embed(self.author, before, after, cost=OWO_REROLL_COST, mode=self.mode, attempts=self.attempts, remaining=remaining)
         kwargs = {"embed": embed, "view": self}
         if asset_file:
             kwargs["attachments"] = [asset_file]
         await interaction.response.edit_message(**kwargs)
+
+
+def _weapon_reroll_summary(weapon: Any) -> str:
+    wtype = str(row_get(weapon, "weapon_type", "sword"))
+    quality_pct = _weapon_quality_pct(weapon)
+    tier = _weapon_tier(weapon)
+    wear = str(row_get(weapon, "wear", "Unknown"))
+    stats = weapon_stats(weapon)
+    stat_bits: list[str] = []
+    stat_meta = (
+        ("hp", "hp", "HP"),
+        ("str_stat", "str", "STR"),
+        ("pr_stat", "def", "DEF"),
+        ("wp_stat", "mana", "MANA"),
+        ("mag_stat", "mag", "MAG"),
+        ("mr_stat", "res", "RES"),
+    )
+    for key, icon_key, label in stat_meta:
+        value = _int(stats.get(key, 0))
+        if value:
+            stat_bits.append(f"{_stat_icon(icon_key, label)} `+{value}`")
+    passive = _json_obj(row_get(weapon, "passive"), {})
+    if isinstance(passive, dict) and passive.get("key"):
+        p_key = str(passive.get("key", ""))
+        p_name = str(passive.get("name") or p_key.replace("_", " ").title())
+        p_roll = min(100, _int(passive.get("roll", passive.get("chance", 0)) or 0))
+        p_chance = _int(passive.get("chance", 0))
+        p_icon = passive_emoji(p_key)
+        passive_text = f"{p_icon} **{p_name}**".strip()
+        if p_roll:
+            passive_text += f" `{p_roll}%`"
+        if p_chance:
+            passive_text += f" | Trigger `{p_chance}%`"
+        p_desc = format_passive_description(p_key, p_roll)
+        if p_desc:
+            passive_text += f"\n_{p_desc}_"
+    else:
+        passive_text = "No passive"
+    if stat_bits:
+        stat_lines = ["  ".join(stat_bits[i:i + 3]) for i in range(0, len(stat_bits), 3)]
+        stat_text = "\n".join(stat_lines)
+    else:
+        stat_text = "No rolled stat bonuses"
+    rarity_icon = rarity_emoji(tier) or tier
+    weapon_icon = weapon_emoji(wtype) or ""
+    return (
+        f"`{_weapon_id(weapon)}` {rarity_icon} {weapon_icon} **{weapon_display_name(weapon)}**\n"
+        f"Quality `{quality_pct}%` | Wear `{wear}`\n"
+        f"Stats: {stat_text}\n"
+        f"Passive: {passive_text}"
+    )
+
+
+class WeaponRerollActionButton(discord.ui.Button):
+    def __init__(self, action: str, *, disabled: bool = False) -> None:
+        labels = {"confirm": "Keep", "cancel": "Restore", "reroll": "Reroll Again"}
+        emojis = {"confirm": "\u2705", "cancel": "\u21a9\ufe0f", "reroll": "\U0001f501"}
+        styles = {
+            "confirm": discord.ButtonStyle.success,
+            "cancel": discord.ButtonStyle.danger,
+            "reroll": discord.ButtonStyle.primary,
+        }
+        super().__init__(label=labels[action], emoji=emojis[action], style=styles[action], disabled=disabled)
+        self.action = action
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        view = self.view
+        if not isinstance(view, WeaponRerollView):
+            await interaction.response.send_message("This reroll view expired.", ephemeral=True)
+            return
+        if self.action == "confirm":
+            view.completed = True
+            view.notice = "Kept the current roll."
+            await view._edit(interaction, color=discord.Color.dark_green())
+            return
+        if self.action == "cancel":
+            await _restore_weapon_snapshot(view.cog.bot.db, view.author.id, view.weapon_id, view.before_snapshot)
+            restored = await view.cog.bot.db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (view.weapon_id, view.author.id))
+            if restored is not None:
+                view.after_row = restored
+            view.completed = True
+            view.notice = "Restored the original weapon roll."
+            await view._edit(interaction, color=discord.Color.dark_red())
+            return
+
+        try:
+            if view.mode == "passive":
+                after = await owo_reroll_passive(view.cog.bot.db, view.author.id, view.weapon_id)
+            else:
+                after = await owo_reroll_stat(view.cog.bot.db, view.author.id, view.weapon_id)
+        except ValueError as exc:
+            await interaction.response.send_message(str(exc), ephemeral=True)
+            return
+        view.after_row = after
+        view.cost = OWO_REROLL_COST
+        view.attempts += 1
+        view.remaining = await get_quantity(view.cog.bot.db, view.author.id, "material", WEAPON_SHARD_KEY)
+        view.notice = None
+        await view._edit(interaction)
+
+
+class WeaponRerollView(discord.ui.LayoutView):
+    def __init__(self, cog: "RPGEquipment", author: discord.Member | discord.User, weapon_id: int, mode: str, before_snapshot: dict[str, Any], before_row: Any, after_row: Any, cost: int, attempts: int, remaining: int) -> None:
+        super().__init__(timeout=120)
+        self.cog = cog
+        self.author = author
+        self.weapon_id = weapon_id
+        self.mode = mode
+        self.before_snapshot = before_snapshot
+        self.before_row = before_row
+        self.after_row = after_row
+        self.cost = cost
+        self.attempts = attempts
+        self.remaining = remaining
+        self.completed = False
+        self.notice: str | None = None
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user.id == self.author.id:
+            return True
+        await interaction.response.send_message("This reroll belongs to another hunter.", ephemeral=True)
+        return False
+
+    def _refresh_layout(self, *, filename: str = "abyssia_weapon_reroll.png", color: discord.Color | None = None) -> None:
+        self.clear_items()
+        accent = color or discord.Color.dark_gray()
+        mode_label = "Passive" if self.mode == "passive" else "Stats"
+        container = discord.ui.Container(accent_colour=accent)
+        container.add_item(
+            discord.ui.TextDisplay(
+                f"## Weapon {mode_label} Reroll\n"
+                f"{self.author.display_name} | Attempts `{self.attempts}` | Shards `{self.remaining:,}`"
+            )
+        )
+        container.add_item(
+            discord.ui.MediaGallery(
+                discord.MediaGalleryItem(
+                    f"attachment://{filename}",
+                    description=f"{self.author.display_name}'s rerolled weapon",
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay(f"**Before**\n{_weapon_reroll_summary(self.before_row)}"))
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay(f"**After**\n{_weapon_reroll_summary(self.after_row)}"))
+        footer = f"Cost `{self.cost}` {material_label(WEAPON_SHARD_KEY)}"
+        if self.notice:
+            footer += f" | {self.notice}"
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay(footer))
+        row = discord.ui.ActionRow()
+        row.add_item(WeaponRerollActionButton("confirm", disabled=self.completed))
+        row.add_item(WeaponRerollActionButton("reroll", disabled=self.completed))
+        row.add_item(WeaponRerollActionButton("cancel", disabled=self.completed))
+        container.add_item(row)
+        self.add_item(container)
+
+    async def _render(self, *, color: discord.Color | None = None) -> tuple[list[discord.File], "WeaponRerollView"]:
+        file = discord.File(
+            await run_render(render_weapon_detail_card, self.author.display_name, self.after_row),
+            filename="abyssia_weapon_reroll.png",
+        )
+        self._refresh_layout(filename=file.filename, color=color)
+        return [file], self
+
+    async def _edit(self, interaction: discord.Interaction, *, color: discord.Color | None = None) -> None:
+        await interaction.response.defer()
+        files, _ = await self._render(color=color)
+        if interaction.message is not None:
+            await interaction.message.edit(content=None, embed=None, attachments=files, view=self)
 
 
 class WeaponTypeFilterSelect(discord.ui.Select):
@@ -869,7 +1119,60 @@ class WeaponTierFilterSelect(discord.ui.Select):
         await self.parent_view._edit(interaction)
 
 
-class WeaponPageView(discord.ui.View):
+class WeaponSortSelect(discord.ui.Select):
+    def __init__(self, parent: "WeaponPageView") -> None:
+        options = [
+            discord.SelectOption(label="Best Quality", value="quality", description="Highest quality first.", default=parent.sort_filter == "quality"),
+            discord.SelectOption(label="Recently Added", value="recent", description="Newest weapon IDs first.", default=parent.sort_filter == "recent"),
+        ]
+        super().__init__(placeholder="Sort weapons...", min_values=1, max_values=1, options=options, row=3)
+        self.parent_view = parent
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        self.parent_view.sort_filter = self.values[0]
+        self.parent_view.page = 1
+        self.parent_view._update_buttons()
+        await self.parent_view._edit(interaction)
+
+
+class WeaponPageButton(discord.ui.Button):
+    def __init__(self, direction: int, *, disabled: bool = False) -> None:
+        super().__init__(
+            label="Prev" if direction < 0 else "Next",
+            style=discord.ButtonStyle.secondary,
+            emoji="\u25c0\ufe0f" if direction < 0 else "\u25b6\ufe0f",
+            disabled=disabled,
+        )
+        self.direction = direction
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        view = self.view
+        if not isinstance(view, WeaponPageView):
+            await interaction.response.send_message("This weapon vault expired.", ephemeral=True)
+            return
+        view.page = max(1, min(view._total_pages(), view.page + self.direction))
+        await view._edit(interaction)
+
+
+class WeaponFavoriteButton(discord.ui.Button):
+    def __init__(self, active: bool = False) -> None:
+        super().__init__(
+            label="Favorites",
+            style=discord.ButtonStyle.primary if active else discord.ButtonStyle.secondary,
+            emoji="\u2b50",
+        )
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        view = self.view
+        if not isinstance(view, WeaponPageView):
+            await interaction.response.send_message("This weapon vault expired.", ephemeral=True)
+            return
+        view.fav_only = not view.fav_only
+        view.page = 1
+        await view._edit(interaction)
+
+
+class WeaponPageView(discord.ui.LayoutView):
     def __init__(self, author_id: int, display_name: str, avatar_url: str, weps: list, page: int, creature_map: dict[int, tuple[str, str]] | None = None) -> None:
         super().__init__(timeout=120)
         self.author_id = author_id
@@ -880,10 +1183,8 @@ class WeaponPageView(discord.ui.View):
         self.creature_map = creature_map or {}
         self.type_filter = "all"
         self.tier_filter = "all"
+        self.sort_filter = "quality"
         self.fav_only = False
-        self.add_item(WeaponTypeFilterSelect(self))
-        self.add_item(WeaponTierFilterSelect(self))
-        self._update_buttons()
 
     def _filtered_weps(self) -> list:
         filtered = list(self.weps)
@@ -893,6 +1194,10 @@ class WeaponPageView(discord.ui.View):
             filtered = [weapon for weapon in filtered if _weapon_tier(weapon) == self.tier_filter]
         if self.fav_only:
             filtered = [weapon for weapon in filtered if _int(row_get(weapon, "is_favorite", 0))]
+        if self.sort_filter == "recent":
+            filtered = sorted(filtered, key=lambda row: (_int(row_get(row, "created_at", 0)), _int(row_get(row, "id", 0))), reverse=True)
+        else:
+            filtered = sorted(filtered, key=lambda row: (_weapon_quality_pct(row), _int(row_get(row, "id", 0))), reverse=True)
         return filtered
 
     def _total_pages(self) -> int:
@@ -900,53 +1205,63 @@ class WeaponPageView(discord.ui.View):
         return max(1, (total + WEAPON_CARD_PAGE_SIZE - 1) // WEAPON_CARD_PAGE_SIZE)
 
     def _update_buttons(self):
-        total_pages = self._total_pages()
-        self.page = max(1, min(self.page, total_pages))
-        self.prev_btn.disabled = self.page <= 1
-        self.next_btn.disabled = self.page >= total_pages
+        self.page = max(1, min(self.page, self._total_pages()))
 
-    def _render(self) -> tuple[discord.Embed, discord.File]:
+    def _refresh_layout(self, *, total_pages: int, filtered: list) -> None:
+        self.clear_items()
+        title_icon = weapon_emoji("sword") or ""
+        title = f"{title_icon} Weapon Vault".strip()
+        filter_text = _weapon_filter_text(self.type_filter, self.tier_filter, fav_only=self.fav_only, sort_filter=self.sort_filter)
+        container = discord.ui.Container(accent_colour=discord.Color.gold())
+        container.add_item(
+            discord.ui.TextDisplay(
+                f"## {title}\n"
+                f"{self.display_name} • Page `{self.page}/{total_pages}` • `{len(filtered)}` weapons"
+            )
+        )
+        container.add_item(
+            discord.ui.MediaGallery(
+                discord.MediaGalleryItem(
+                    "attachment://abyssia_weapons.png",
+                    description=f"{self.display_name}'s weapon vault page {self.page}",
+                )
+            )
+        )
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay(f"**Filters**\n{filter_text}"))
+        summary = "\n".join(_weapon_vault_summary_lines(filtered, self.page, creature_map=self.creature_map))
+        container.add_item(discord.ui.Separator(visible=True, spacing=discord.SeparatorSpacing.small))
+        container.add_item(discord.ui.TextDisplay(f"**Featured Weapons**\n{summary}"))
+        type_row = discord.ui.ActionRow()
+        type_row.add_item(WeaponTypeFilterSelect(self))
+        container.add_item(type_row)
+        tier_row = discord.ui.ActionRow()
+        tier_row.add_item(WeaponTierFilterSelect(self))
+        container.add_item(tier_row)
+        sort_row = discord.ui.ActionRow()
+        sort_row.add_item(WeaponSortSelect(self))
+        container.add_item(sort_row)
+        button_row = discord.ui.ActionRow()
+        button_row.add_item(WeaponPageButton(-1, disabled=self.page <= 1))
+        button_row.add_item(WeaponPageButton(1, disabled=self.page >= total_pages))
+        button_row.add_item(WeaponFavoriteButton(self.fav_only))
+        container.add_item(button_row)
+        self.add_item(container)
+
+    async def _render(self) -> tuple[list[discord.File], "WeaponPageView"]:
         filtered = self._filtered_weps()
         total_pages = self._total_pages()
         self.page = max(1, min(self.page, total_pages))
-        image = render_weapons_card(self.display_name, filtered, page=self.page, total_pages=total_pages)
+        image = await run_render(render_weapons_card, self.display_name, filtered, page=self.page, total_pages=total_pages)
         file = discord.File(image, filename="abyssia_weapons.png")
-        embed = discord.Embed(color=discord.Color.gold())
-        embed.set_author(name=f"{self.display_name}'s Weapons", icon_url=self.avatar_url)
-        embed.set_image(url="attachment://abyssia_weapons.png")
-        embed.set_footer(
-            text=(
-                f"Page {self.page}/{total_pages} | {len(filtered)} weapon(s) | "
-                f"{_weapon_filter_text(self.type_filter, self.tier_filter, fav_only=self.fav_only)}"
-            )
-        )
-        return embed, file
+        self._refresh_layout(total_pages=total_pages, filtered=filtered)
+        return [file], self
 
     async def _edit(self, interaction: discord.Interaction) -> None:
         await interaction.response.defer()
-        embed, file = self._render()
+        files, _ = await self._render()
         if interaction.message is not None:
-            await interaction.message.edit(embed=embed, attachments=[file], view=self)
-
-    @discord.ui.button(label="Prev", style=discord.ButtonStyle.secondary, row=0)
-    async def prev_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.page = max(1, self.page - 1)
-        self._update_buttons()
-        await self._edit(interaction)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary, row=0)
-    async def next_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.page = min(self._total_pages(), self.page + 1)
-        self._update_buttons()
-        await self._edit(interaction)
-
-    @discord.ui.button(label="\u2B50", style=discord.ButtonStyle.secondary, row=3)
-    async def fav_btn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.fav_only = not self.fav_only
-        button.style = discord.ButtonStyle.primary if self.fav_only else discord.ButtonStyle.secondary
-        self.page = 1
-        self._update_buttons()
-        await self._edit(interaction)
+            await interaction.message.edit(content=None, embed=None, attachments=files, view=self)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
         if interaction.user.id == self.author_id:
@@ -968,32 +1283,39 @@ class RPGEquipment(commands.Cog):
         asset_file: discord.File | None,
         weapon_id: int,
     ) -> None:
-        view = shortcut_view(
-            ctx.author.id,
-            [
+        filename = getattr(asset_file, "filename", "abyssia_weapon_detail.png") if asset_file else None
+        view = AbyssiaLayoutView(
+            owner_id=ctx.author.id,
+            title=str(embed.title or "Weapon Detail"),
+            subtitle="Inspect • equip • favorite",
+            image_filename=filename,
+            image_description=str(embed.title or "Weapon Detail"),
+            sections=[("Weapon", str(embed.description or "No details."))],
+            shortcuts=[
                 ("Equip Slot 1", f"b w {weapon_id} 1"),
                 ("Equip Slot 2", f"b w {weapon_id} 2"),
                 ("Equip Slot 3", f"b w {weapon_id} 3"),
                 ("Favorite", f"b favorite {weapon_id}"),
                 ("Vault", "b weapons"),
             ],
+            accent=embed.color or discord.Color.dark_gray(),
         )
         if asset_file:
-            await ctx.reply(embed=embed, file=asset_file, view=view, mention_author=False)
+            await ctx.reply(file=asset_file, view=view, mention_author=False)
         else:
-            await ctx.reply(embed=embed, view=view, mention_author=False)
+            await ctx.reply(view=view, mention_author=False)
 
     @commands.hybrid_command(name="weapons", aliases=["weps", "armory"])
     async def weapons(self, ctx: commands.Context, selector: str | None = None, filter_type: str = "all") -> None:
         """View your weapon vault, or inspect one weapon by ID. Use filter: recent, favorites"""
         assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
+        await ensure_application_emojis(self.bot, max_age=600.0)
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         if selector and selector.lstrip("#").isdigit():
             weapon_id = int(selector.lstrip("#"))
             row = await self.bot.db.fetchone("SELECT * FROM weapons WHERE id = ? AND user_id = ?", (weapon_id, ctx.author.id))
             if row is not None:
-                embed, asset_file = _weapon_detail_embed(ctx.author, row)
+                embed, asset_file = await _weapon_detail_embed(ctx.author, row)
                 await self._reply_weapon_detail(ctx, embed, asset_file, weapon_id)
                 return
         
@@ -1004,18 +1326,7 @@ class RPGEquipment(commands.Cog):
         if selector and not selector.lstrip("#").isdigit():
             requested_filter = selector.lower()
 
-        # Apply filter
-        if requested_filter in ("recent", "new"):
-            # Sort by created_at descending (most recent first)
-            weps = sorted(all_weps, key=lambda row: _int(row_get(row, "created_at", 0)), reverse=True)
-        elif requested_filter in ("favorites", "fav", "starred"):
-            # Filter to only favorited weapons
-            weps = [w for w in all_weps if _int(row_get(w, "is_favorite", 0)) == 1]
-            weps = sorted(weps, key=lambda row: (_weapon_quality_pct(row), _int(row_get(row, "id", 0))), reverse=True)
-        else:
-            # Default: sort by quality
-            weps = sorted(all_weps, key=lambda row: (_weapon_quality_pct(row), _int(row_get(row, "id", 0))), reverse=True)
-        
+        weps = list(all_weps)
         creature_ids = list({_int(row_get(w, "equipped_creature_id")) for w in weps if row_get(w, "equipped_creature_id")})
         creature_map: dict[int, tuple[str, str]] = {}
         if creature_ids:
@@ -1024,22 +1335,21 @@ class RPGEquipment(commands.Cog):
                 f"SELECT id, name, rarity FROM rpg_creatures WHERE id IN ({placeholders})", creature_ids,
             )
             creature_map = {int(r["id"]): (str(r["name"]), str(r["rarity"])) for r in cre_rows}
-        if not weps:
+        if not all_weps:
             msg = "No weapons yet. Open crates to find them."
-            if requested_filter in ("favorites", "fav", "starred"):
-                msg = "No favorited weapons. Use `b favorite <id>` to favorite a weapon."
-            elif requested_filter in ("recent", "new"):
-                msg = "No recent weapons found."
             await ctx.reply(embed=_embed("Weapon Vault", msg), mention_author=False)
             return
-        total_pages = max(1, (len(weps) + WEAPON_CARD_PAGE_SIZE - 1) // WEAPON_CARD_PAGE_SIZE)
         page = 1
         if selector and selector.isdigit():
             page = int(selector)
-        page = max(1, min(total_pages, page))
+        page = max(1, page)
         view = WeaponPageView(ctx.author.id, ctx.author.display_name, ctx.author.display_avatar.url, weps, page, creature_map)
-        embed, file = view._render()
-        await ctx.reply(embed=embed, file=file, view=view, mention_author=False)
+        if requested_filter in ("recent", "new"):
+            view.sort_filter = "recent"
+        elif requested_filter in ("favorites", "fav", "starred"):
+            view.fav_only = True
+        files, _ = await view._render()
+        await ctx.reply(files=files, view=view, mention_author=False)
         return
 
     @commands.hybrid_command(name="favorite", aliases=["fav", "star"])
@@ -1054,6 +1364,8 @@ class RPGEquipment(commands.Cog):
         
         current_fav = _int(row_get(row, "is_favorite", 0))
         new_fav = 1 if current_fav == 0 else 0
+        from core.rpg import invalidate_player_weapons_cache
+        invalidate_player_weapons_cache(ctx.author.id)
         await self.bot.db.execute("UPDATE weapons SET is_favorite = ? WHERE id = ?", (new_fav, weapon_id))
         
         wdisplay = weapon_display_name(row)
@@ -1118,7 +1430,7 @@ class RPGEquipment(commands.Cog):
     async def w_shortcut(self, ctx: commands.Context, weapon_id: Optional[int] = None, slot: Optional[int] = None) -> None:
         """Weapon vault, inspect, or equip. bw = vault, bw <id> = inspect, bw <id> <slot> = equip to team slot."""
         assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
+        await ensure_application_emojis(self.bot, max_age=600.0)
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         if weapon_id is None:
             await self.weapons(ctx, None)
@@ -1128,7 +1440,7 @@ class RPGEquipment(commands.Cog):
             await ctx.reply(embed=_embed("Weapon", f"No weapon with ID `{weapon_id}`."), mention_author=False, ephemeral=True)
             return
         if slot is None:
-            embed, asset_file = _weapon_detail_embed(ctx.author, row)
+            embed, asset_file = await _weapon_detail_embed(ctx.author, row)
             await self._reply_weapon_detail(ctx, embed, asset_file, weapon_id)
             return
         if slot not in {1, 2, 3}:
@@ -1175,12 +1487,18 @@ class RPGEquipment(commands.Cog):
     async def wdex(self, ctx: commands.Context, *, weapon: str | None = None) -> None:
         """Inspect weapon rules, passives, affixes, or one owned weapon by ID."""
         assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
+        await ensure_application_emojis(self.bot, max_age=600.0)
         if not weapon:
             embeds = _weapon_index_embeds()
-            await ctx.reply(embed=embeds[0], mention_author=False)
-            for embed in embeds[1:]:
-                await ctx.send(embed=embed)
+            view = AbyssiaLayoutView(
+                owner_id=ctx.author.id,
+                title="Weapon Dex",
+                subtitle="Base weapons | quality tiers | passives | affixes",
+                sections=_sections_from_embeds(embeds),
+                shortcuts=[("Vault", "b weapons")],
+                accent=discord.Color.gold(),
+            )
+            await ctx.reply(view=view, mention_author=False)
             return
         if not weapon.lstrip("#").isdigit():
             key = normalize_key(weapon)
@@ -1193,16 +1511,15 @@ class RPGEquipment(commands.Cog):
                 raise commands.BadArgument(f"Unknown weapon type: `{weapon}`")
             data = WEAPON_TYPES[matched_key]
             title = f"Weapon Dex - {weapon_label(matched_key, str(data.get('name', matched_key.title())))}"
-            embed = _embed(title, "\n".join(_weapon_type_lines(matched_key)), discord.Color.dark_gray())
-            embed.add_field(name="Passive Pool", value="\n".join(
-                f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']), show_rarity=False)} `{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` — {format_passive_description(key, 0, index_mode=True)}"
-                for key in data.get("passive_pool", [])
-            ) or "None", inline=False)
-            _, asset_file = embed_asset("weapons", matched_key)
-            if asset_file:
-                await ctx.reply(embed=embed, file=asset_file, mention_author=False)
-            else:
-                await ctx.reply(embed=embed, mention_author=False)
+            view = AbyssiaLayoutView(
+                owner_id=ctx.author.id,
+                title=title,
+                subtitle="Weapon rules and passive pool",
+                sections=_weapon_type_sections(matched_key),
+                shortcuts=[("Vault", "b weapons")],
+                accent=discord.Color.dark_gray(),
+            )
+            await ctx.reply(view=view, mention_author=False)
             return
 
         weapon_id = int(weapon.lstrip("#"))
@@ -1214,172 +1531,15 @@ class RPGEquipment(commands.Cog):
             await ctx.reply(embed=_embed("Weapon Dex", f"No weapon with ID `{weapon_id}`."), mention_author=False, ephemeral=True)
             return
         w = rows[0]
-        embed, asset_file = _weapon_detail_embed(ctx.author, w)
+        embed, asset_file = await _weapon_detail_embed(ctx.author, w)
         await self._reply_weapon_detail(ctx, embed, asset_file, weapon_id)
         return
-        ws = weapon_stats(w)
-        se = weapon_effects(w)
-        wdisplay = weapon_display_name(w)
-        wtype = str(row_get(w, "weapon_type", "sword"))
-        wq = str(row_get(w, "quality", "Normal"))
-        wr = str(row_get(w, "rarity", "Common"))
-        quality_pct = _int(row_get(w, "quality_pct", 50))
-        mana_cost = _int(row_get(w, "mana_cost", 3))
-        wear = str(row_get(w, "wear", "Unknown"))
-        st = ws.get("str_stat", 0)
-        pr = ws.get("pr_stat", 0)
-
-        equipped = row_get(w, "equipped_creature_id")
-        equipped_text = "Vault"
-        if equipped:
-            cr = await self.bot.db.fetchone("SELECT name, rarity, level FROM rpg_creatures WHERE id = ?", (int(equipped),))
-            if cr:
-                equipped_text = f"{creature_label(str(cr['name']), str(cr['rarity']))} Lv.{cr['level']}"
-
-        passive_lines: list[str] = []
-        passive = _json_obj(row_get(w, "passive"), {})
-        if isinstance(passive, dict) and passive.get("key"):
-            p_key = str(passive.get("key", ""))
-            p_name = str(passive.get("name") or p_key.replace("_", " ").title())
-            p_roll = min(100, max(0, _int(passive.get("roll", 50))))
-            p_chance = _int(passive.get("chance", 0))
-            p_desc = str(passive.get("desc") or "")
-            if p_desc:
-                passive_lines.append(p_desc)
-            passive_lines.append(f"{passive_label(p_key, p_name, p_roll)}")
-            if p_chance > 0:
-                passive_lines.append(f"  Trigger: {p_chance}%")
-        else:
-            passive_lines.append("This weapon has no active ability.")
-
-        affix_lines: list[str] = []
-        affixes = _json_obj(row_get(w, "affixes", "[]"), [])
-        if isinstance(affixes, list):
-            for affix in affixes:
-                if not isinstance(affix, dict):
-                    continue
-                key = str(affix.get("key", ""))
-                name = str(affix.get("name") or key.replace("_", " ").title())
-                fmt = str(affix.get("fmt") or "").strip()
-                if not fmt:
-                    continue
-                affix_lines.append(f"**{name}** - {fmt}")
-        if se:
-            for key, value in se.items():
-                if not value or key in STATUS_ICON_KEYS:
-                    continue
-                label = key.replace("_", " ").title()
-                affix_lines.append(f"**{label}** - +{value}%")
-
-        rarity = RARITY_BY_NAME.get(wr)
-        title = f"{ctx.author.display_name}'s {wdisplay}"
-        identity = [
-            f"**Name:** {wdisplay}",
-            f"**Owner:** {ctx.author.mention}",
-            f"**ID:** `{_weapon_id(w)}`",
-            f"**Sell Value:** {material_label(WEAPON_SHARD_KEY)} **{weapon_salvage_shards(w):,}**",
-            f"**Quality:** **{quality_pct}%**",
-            f"**Wear:** `{wear}`",
-            f"**Type:** {weapon_label(wtype)}",
-            f"**Weapon Cost:** **{mana_cost}** Mana",
-            f"**Equipped:** {equipped_text}",
-            f"**Stats:** STR **+{st}** | DEF **+{pr}**",
-        ]
-        embed = _embed(title, "\n".join(identity), discord.Color(rarity.color) if rarity else discord.Color.dark_gray())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.add_field(name="Description", value="\n\n".join(passive_lines[:3]), inline=False)
-        if affix_lines:
-            embed.add_field(name="Buff Stats", value="\n\n".join(affix_lines[:6]), inline=False)
-        embed.set_footer(text=f"Reroll: `wr stat {_weapon_id(w)}` or `wr passive {_weapon_id(w)}` — 100 shards each")
-        asset_url, asset_file = embed_asset("weapons", wtype)
-        if asset_url:
-            embed.set_thumbnail(url=asset_url)
-        if asset_file:
-            await ctx.reply(embed=embed, file=asset_file, mention_author=False)
-        else:
-            await ctx.reply(embed=embed, mention_author=False)
-        return
-
-        identity = [
-            f"**Name:** {wdisplay}",
-            f"**Owner:** {ctx.author.mention}",
-            f"**ID:** `#{weapon_id}`",
-            f"**Sell Value:** {material_label(WEAPON_SHARD_KEY)} **{weapon_salvage_shards(w)}**",
-            f"**Quality:** **{quality_pct}%** ({wq})",
-            f"**Wear:** `{wear}`",
-            f"**Type:** {weapon_label(wtype)}",
-            f"**Weapon Cost:** Mana **{mana_cost}**",
-            f"**Stats:** STR **+{st}** | DEF **+{pr}**",
-            f"**Equipped:** {equipped_text}",
-        ]
-
-        passive_lines: list[str] = []
-        passive_raw = row_get(w, "passive")
-        if passive_raw:
-            try:
-                passive = json.loads(str(passive_raw))
-                if isinstance(passive, dict) and passive.get("key"):
-                    p_key = str(passive.get("key", ""))
-                    p_name = str(passive.get("name", ""))
-                    p_roll = min(100, max(0, _int(passive.get("roll", 50))))
-                    p_chance = _int(passive.get("chance", 0))
-                    p_desc = passive.get("desc", "")
-                    passive_lines.append(f"{passive_label(p_key, p_name, p_roll)}")
-                    if p_chance > 0:
-                        passive_lines.append(f"  Trigger: {p_chance}%")
-                    if p_desc:
-                        passive_lines.append(str(p_desc))
-            except Exception:
-                pass
-
-        affix_lines: list[str] = []
-        try:
-            affixes = json.loads(str(row_get(w, "affixes", "[]")))
-        except Exception:
-            affixes = []
-        if isinstance(affixes, list):
-            for affix in affixes:
-                if not isinstance(affix, dict):
-                    continue
-                key = str(affix.get("key", ""))
-                name = str(affix.get("name") or key.replace("_", " ").title())
-                fmt = str(affix.get("fmt") or "").strip()
-                if not fmt:
-                    continue
-                affix_lines.append(f"**{name}** - {fmt}")
-
-        if se:
-            sparts = [f"{k.replace('_', ' ').title()}: +{v}%" for k, v in se.items() if v and k not in ("bleed", "burn", "poison", "stun", "shield", "heal", "crit")]
-            if sparts:
-                affix_lines.extend(f"**{part.split(':', 1)[0]}** - {part.split(':', 1)[1].strip()}" for part in sparts[:6])
-
-        rarity = RARITY_BY_NAME.get(wr)
-        icon = weapon_emoji(wtype)
-        title = f"{icon} {wdisplay}" if icon else wdisplay
-        embed = _embed(title, "\n".join(identity), discord.Color(rarity.color) if rarity else discord.Color.default())
-        embed.set_author(name=ctx.author.display_name, icon_url=ctx.author.display_avatar.url)
-        embed.add_field(
-            name="Description",
-            value="\n".join(passive_lines) if passive_lines else "This weapon has no passive ability.",
-            inline=False,
-        )
-        if affix_lines:
-            embed.add_field(name="Buff Stats", value="\n".join(affix_lines[:8]), inline=False)
-        embed.set_footer(text=f"Reroll: `wr stat {_weapon_id(w)}` or `wr passive {_weapon_id(w)}` — 100 shards each")
-
-        asset_url, asset_file = embed_asset("weapons", wtype)
-        if asset_url:
-            embed.set_thumbnail(url=asset_url)
-        if asset_file:
-            await ctx.reply(embed=embed, file=asset_file, mention_author=False)
-        else:
-            await ctx.reply(embed=embed, mention_author=False)
 
     @commands.hybrid_command(name="weaponinfo", aliases=["wi"])
     async def weaponinfo(self, ctx: commands.Context, *, weapon_type: str) -> None:
         """Show detailed info about a weapon type (base stats, scaling, active, passives)."""
         assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
+        await ensure_application_emojis(self.bot, max_age=600.0)
         key = normalize_key(weapon_type)
         matched_key = None
         for candidate, data in WEAPON_TYPES.items():
@@ -1390,16 +1550,15 @@ class RPGEquipment(commands.Cog):
             raise commands.BadArgument(f"Unknown weapon type: `{weapon_type}`")
         data = WEAPON_TYPES[matched_key]
         title = f"Weapon Info - {weapon_label(matched_key, str(data.get('name', matched_key.title())))}"
-        embed = _embed(title, "\n".join(_weapon_type_lines(matched_key)), discord.Color.dark_gray())
-        embed.add_field(name="Passive Pool", value="\n".join(
-            f"{passive_label(key, str(WEAPON_PASSIVES[key]['name']), show_rarity=False)} `{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['min']}-{WEAPON_PASSIVE_CHANCE.get(key, {'min': 0, 'max': 0})['max']}` — {format_passive_description(key, 0, index_mode=True)}"
-            for key in data.get("passive_pool", [])
-        ) or "None", inline=False)
-        _, asset_file = embed_asset("weapons", matched_key)
-        if asset_file:
-            await ctx.reply(embed=embed, file=asset_file, mention_author=False)
-        else:
-            await ctx.reply(embed=embed, mention_author=False)
+        view = AbyssiaLayoutView(
+            owner_id=ctx.author.id,
+            title=title,
+            subtitle="Weapon rules and passive pool",
+            sections=_weapon_type_sections(matched_key),
+            shortcuts=[("Vault", "b weapons")],
+            accent=discord.Color.dark_gray(),
+        )
+        await ctx.reply(view=view, mention_author=False)
 
     @commands.group(name="wr", aliases=["wreroll", "wrr"], invoke_without_command=True)
     async def wr_group(self, ctx: commands.Context) -> None:
@@ -1411,7 +1570,7 @@ class RPGEquipment(commands.Cog):
     async def wr_stat(self, ctx: commands.Context, weapon_id: int) -> None:
         """Reroll all stats on a weapon. Cost: 100 Weapon Shards."""
         assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
+        await ensure_application_emojis(self.bot, max_age=600.0)
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         before = await self.bot.db.fetchone(
             "SELECT * FROM weapons WHERE id = ? AND user_id = ?",
@@ -1439,17 +1598,14 @@ class RPGEquipment(commands.Cog):
             1,
             remaining,
         )
-        reroll_embed, reroll_file = _weapon_reroll_embed(ctx.author, before, updated, cost=OWO_REROLL_COST, mode="stat", attempts=1, remaining=remaining)
-        if reroll_file:
-            await ctx.reply(embed=reroll_embed, file=reroll_file, view=view, mention_author=False)
-        else:
-            await ctx.reply(embed=reroll_embed, view=view, mention_author=False)
+        files, _ = await view._render()
+        await ctx.reply(files=files, view=view, mention_author=False)
 
     @wr_group.command(name="passive", aliases=["pass", "p"])
     async def wr_passive(self, ctx: commands.Context, weapon_id: int) -> None:
         """Reroll the passive on a weapon. Cost: 100 Weapon Shards."""
         assert ctx.guild is not None
-        await ensure_application_emojis(self.bot, max_age=60.0)
+        await ensure_application_emojis(self.bot, max_age=600.0)
         await ensure_player(self.bot.db, ctx.author.id, ctx.author.display_name)
         before = await self.bot.db.fetchone(
             "SELECT * FROM weapons WHERE id = ? AND user_id = ?",
@@ -1477,11 +1633,8 @@ class RPGEquipment(commands.Cog):
             1,
             remaining,
         )
-        reroll_embed, reroll_file = _weapon_reroll_embed(ctx.author, before, updated, cost=OWO_REROLL_COST, mode="passive", attempts=1, remaining=remaining)
-        if reroll_file:
-            await ctx.reply(embed=reroll_embed, file=reroll_file, view=view, mention_author=False)
-        else:
-            await ctx.reply(embed=reroll_embed, view=view, mention_author=False)
+        files, _ = await view._render()
+        await ctx.reply(files=files, view=view, mention_author=False)
 
     @commands.hybrid_group(name="weaponshards", aliases=["wshards", "shards"], invoke_without_command=True)
     async def weapon_shards(self, ctx: commands.Context) -> None:

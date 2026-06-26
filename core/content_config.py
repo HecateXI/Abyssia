@@ -14,7 +14,7 @@ from typing import Any
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT_DIR / os.getenv("BOT_CONTENT_CONFIG_PATH", "data/content_config.json")
 ASSET_DIR = ROOT_DIR / os.getenv("BOT_ASSET_DIR", "data/assets")
-VALID_KINDS = {"creatures", "equipment", "materials", "zones", "bosses", "rarity", "currency", "crate", "ui", "buffs", "weapons", "passives", "status", "consumable", "stats"}
+VALID_KINDS = {"creatures", "equipment", "materials", "zones", "bosses", "rarity", "currency", "crate", "ui", "buffs", "weapons", "passives", "status", "consumable", "stats", "stats_battle"}
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 JPEG_SIGNATURE = b"\xff\xd8\xff"
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -34,16 +34,16 @@ DEFAULT_BALANCING: dict[str, Any] = {
         "base_cooldown_seconds": 15,
         "level_cooldown_reduction": 0.10,
         "min_cooldown_seconds": 10,
-        "base_crate_chance": 0.04,
-        "zone_level_crate_bonus": 0.003,
-        "luck_crate_bonus": 0.002,
-        "max_crate_chance": 0.20,
+        "base_crate_chance": 0.012,
+        "zone_level_crate_bonus": 0.0008,
+        "luck_crate_bonus": 0.00045,
+        "max_crate_chance": 0.06,
         "autohunt_rolls_per_hour": 3,
         "autohunt_max_rolls": 48,
         "hunt_sword_duration_seconds": 1200,
         "hunt_sword_extra_rolls": 1,
-        "checklist_hunt_lootbox_chance": 0.05,
-        "checklist_battle_crate_chance": 0.05,
+        "checklist_hunt_lootbox_chance": 0.025,
+        "checklist_battle_crate_chance": 0.025,
         "checklist_hunt_lootbox_target": 3,
         "checklist_battle_crate_target": 3,
     },
@@ -305,24 +305,11 @@ def get_asset_file_path(kind: str, key: str) -> Path | None:
     return None
 
 
-INFUSED_PREFIXES = ("Ruby", "Emerald", "Sapphire", "Diamond", "Abyssal")
-
-
 def get_creature_asset_path(key: str) -> Path | None:
-    """Look up a creature asset, falling back to base name for infused variants."""
+    """Look up a creature asset."""
     path = get_asset_file_path("creatures", key)
     if path:
         return path
-    for prefix in INFUSED_PREFIXES:
-        if key.startswith(prefix.lower() + "_"):
-            base_key = key[len(prefix) + 1:]
-            path = get_asset_file_path("creatures", base_key)
-            if path:
-                return path
-            base_file = ASSET_DIR / "creatures" / f"{base_key}.png"
-            if base_file.exists():
-                return base_file
-            break
     for ext in (".png", ".jpg", ".jpeg"):
         direct = ASSET_DIR / "creatures" / f"{key}{ext}"
         if direct.exists():

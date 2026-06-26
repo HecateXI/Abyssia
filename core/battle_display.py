@@ -55,7 +55,7 @@ def battle_overview_embed(
     right_team: list,
     *,
     color: discord.Color,
-    image_filename: str,
+    image_filename: str | None = None,
     footer: str | None = None,
     log_lines: list[str] | None = None,
 ) -> discord.Embed:
@@ -70,7 +70,8 @@ def battle_overview_embed(
         embed.add_field(name="Turn Log", value=f"```ini\n{log_text}```", inline=False)
     if footer:
         embed.set_footer(text=footer)
-    embed.set_image(url=f"attachment://{image_filename}")
+    if image_filename:
+        embed.set_image(url=f"attachment://{image_filename}")
     return embed
 
 

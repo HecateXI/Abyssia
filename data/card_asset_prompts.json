@@ -1,0 +1,1984 @@
+{
+  "version": 1,
+  "style": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark.",
+  "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+  "required_folders": [
+    "assets/ui/backgrounds",
+    "assets/ui/panels",
+    "assets/ui/frames",
+    "assets/ui/buttons",
+    "assets/ui/borders",
+    "assets/ui/bars",
+    "assets/ui/badges",
+    "assets/ui/dividers",
+    "assets/ui/overlays",
+    "assets/ui/effects",
+    "assets/ui/card_templates",
+    "assets/ui/zone_backdrops",
+    "assets/ui/rarity_frames",
+    "assets/ui/reward_pills",
+    "assets/ui/placeholders"
+  ],
+  "records": [
+    {
+      "key": "abyssia_dark_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_dark_base.png",
+      "purpose": "dark violet black base card backdrop with faint void particles",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Dark Base. Purpose: dark violet black base card backdrop with faint void particles. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/card_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "abyssia_void_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_void_base.png",
+      "purpose": "deep void magic base backdrop with abyssal fog",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Void Base. Purpose: deep void magic base backdrop with abyssal fog. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/card_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "abyssia_ruins_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_ruins_base.png",
+      "purpose": "ruined gothic stone hall backdrop with subtle fog",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Ruins Base. Purpose: ruined gothic stone hall backdrop with subtle fog. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "abyssia_forge_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_forge_base.png",
+      "purpose": "haunted forge backdrop with low ember glow",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Forge Base. Purpose: haunted forge backdrop with low ember glow. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "abyssia_battle_arena_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_battle_arena_base.png",
+      "purpose": "battle arena backdrop with distant dungeon architecture",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Battle Arena Base. Purpose: battle arena backdrop with distant dungeon architecture. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/battle_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "abyssia_hunt_forest_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_hunt_forest_base.png",
+      "purpose": "dark haunted forest hunt backdrop",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Hunt Forest Base. Purpose: dark haunted forest hunt backdrop. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "abyssia_crate_shop_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_crate_shop_base.png",
+      "purpose": "premium dark fantasy merchant relic shop backdrop with altar table, coins, shards, candlelight, and soft mist",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Crate Shop Base. Purpose: premium dark fantasy merchant relic shop backdrop with altar table, coins, shards, candlelight, and soft mist. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "abyssia_weapon_vault_base",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/abyssia_weapon_vault_base.png",
+      "purpose": "cursed weapon vault room backdrop with gothic stone arch, chains, candles, relic pedestal, and void mist",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssia Weapon Vault Base. Purpose: cursed weapon vault room backdrop with gothic stone arch, chains, candles, relic pedestal, and void mist. Full rectangular background, no text, no logo, no UI labels. Wide composition, subtle ruins, faint fog, particles, magical depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/weapon_vault_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "gothic_stone_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/gothic_stone_panel.png",
+      "purpose": "large raised black stone UI panel with carved depth and readable interior",
+      "size": [
+        900,
+        560
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Gothic Stone Panel. Purpose: large raised black stone UI panel with carved depth and readable interior. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "cursed_gold_frame",
+      "category": "frames",
+      "output_path": "assets/ui/frames/cursed_gold_frame.png",
+      "purpose": "ancient cursed gold card frame with engraved trim and premium RPG depth",
+      "size": [
+        900,
+        560
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Cursed Gold Frame. Purpose: ancient cursed gold card frame with engraved trim and premium RPG depth. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "bone_corner_ornaments",
+      "category": "frames",
+      "output_path": "assets/ui/frames/bone_corner_ornaments.png",
+      "purpose": "bone and aged gold corner ornament set for gothic reward cards",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Bone Corner Ornaments. Purpose: bone and aged gold corner ornament set for gothic reward cards. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "abyssal_mist_overlay",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/abyssal_mist_overlay.png",
+      "purpose": "layered abyssal mist and subtle drifting particles for foreground depth",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssal Mist Overlay. Purpose: layered abyssal mist and subtle drifting particles for foreground depth. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "relic_pedestal",
+      "category": "effects",
+      "output_path": "assets/ui/effects/relic_pedestal.png",
+      "purpose": "stone relic pedestal with soft upward void light for featured rewards",
+      "size": [
+        640,
+        320
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Relic Pedestal. Purpose: stone relic pedestal with soft upward void light for featured rewards. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "dark_altar_background",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/dark_altar_background.png",
+      "purpose": "dark altar background with black marble, candles, chains, and sacred ruin depth",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Dark Altar Background. Purpose: dark altar background with black marble, candles, chains, and sacred ruin depth. Full rectangular background, no text, no logo, no UI labels. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "rune_divider",
+      "category": "dividers",
+      "output_path": "assets/ui/dividers/rune_divider.png",
+      "purpose": "carved ancient rune divider in muted gold and void purple",
+      "size": [
+        900,
+        42
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Rune Divider. Purpose: carved ancient rune divider in muted gold and void purple. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "rarity_gem_badges",
+      "category": "badges",
+      "output_path": "assets/ui/badges/rarity_gem_badges.png",
+      "purpose": "large readable rarity gem badge row for crate rewards",
+      "size": [
+        640,
+        128
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Rarity Gem Badges. Purpose: large readable rarity gem badge row for crate rewards. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "fantasy_shop_table",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/fantasy_shop_table.png",
+      "purpose": "dark fantasy merchant shop table with coins, shards, candle dust, and premium relic display lighting",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Fantasy Shop Table. Purpose: dark fantasy merchant shop table with coins, shards, candle dust, and premium relic display lighting. Full rectangular background, no text, no logo, no UI labels. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "cursed_vault_arch",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/cursed_vault_arch.png",
+      "purpose": "cursed vault arch backdrop with gothic stone, chains, candles, and abyssal mist",
+      "size": [
+        1600,
+        1000
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Cursed Vault Arch. Purpose: cursed vault arch backdrop with gothic stone, chains, candles, and abyssal mist. Full rectangular background, no text, no logo, no UI labels. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "boss_arena_backdrop",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/boss_arena_backdrop.png",
+      "purpose": "dark fantasy boss arena backdrop with readable left/right staging and dramatic depth",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Boss Arena Backdrop. Purpose: dark fantasy boss arena backdrop with readable left/right staging and dramatic depth. Full rectangular background, no text, no logo, no UI labels. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "creature_display_pedestal",
+      "category": "effects",
+      "output_path": "assets/ui/effects/creature_display_pedestal.png",
+      "purpose": "collectible creature display pedestal with bone trim and rarity glow",
+      "size": [
+        560,
+        300
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Display Pedestal. Purpose: collectible creature display pedestal with bone trim and rarity glow. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "weapon_display_pedestal",
+      "category": "effects",
+      "output_path": "assets/ui/effects/weapon_display_pedestal.png",
+      "purpose": "weapon display pedestal with black stone, cursed metal, and upward relic glow",
+      "size": [
+        560,
+        300
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Display Pedestal. Purpose: weapon display pedestal with black stone, cursed metal, and upward relic glow. Transparent background where useful; keep useful alpha and transparent corners. Prioritize carved ancient fantasy materials, strong depth, premium reward-card readability, large focal object support, no sci-fi paneling, no circuit lines, no tiny HUD details.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "forgotten_woods",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/forgotten_woods.png",
+      "purpose": "Forgotten Woods zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Forgotten Woods. Purpose: Forgotten Woods zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Forgotten Woods; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "grave_marsh",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/grave_marsh.png",
+      "purpose": "Grave Marsh zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Grave Marsh. Purpose: Grave Marsh zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Grave Marsh; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "bloodmoon_forest",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/bloodmoon_forest.png",
+      "purpose": "Bloodmoon Forest zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Bloodmoon Forest. Purpose: Bloodmoon Forest zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Bloodmoon Forest; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "ashen_wastes",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/ashen_wastes.png",
+      "purpose": "Ashen Wastes zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Ashen Wastes. Purpose: Ashen Wastes zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Ashen Wastes; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "infernal_catacombs",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/infernal_catacombs.png",
+      "purpose": "Infernal Catacombs zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Infernal Catacombs. Purpose: Infernal Catacombs zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Infernal Catacombs; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "abyssal_depths",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/abyssal_depths.png",
+      "purpose": "Abyssal Depths zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssal Depths. Purpose: Abyssal Depths zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Abyssal Depths; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "void_realm",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/void_realm.png",
+      "purpose": "Void Realm zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Void Realm. Purpose: Void Realm zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Void Realm; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "cursed_sanctum",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/cursed_sanctum.png",
+      "purpose": "Cursed Sanctum zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Cursed Sanctum. Purpose: Cursed Sanctum zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Cursed Sanctum; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "starless_menagerie",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/starless_menagerie.png",
+      "purpose": "Starless Menagerie zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Starless Menagerie. Purpose: Starless Menagerie zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Starless Menagerie; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "throne_of_teeth",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/throne_of_teeth.png",
+      "purpose": "Throne of Teeth zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Throne Of Teeth. Purpose: Throne of Teeth zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Throne of Teeth; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "black_sun_gate",
+      "category": "zone_backdrops",
+      "output_path": "assets/ui/zone_backdrops/black_sun_gate.png",
+      "purpose": "Black Sun Gate zone backdrop for hunt and bestiary cards",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Black Sun Gate. Purpose: Black Sun Gate zone backdrop for hunt and bestiary cards. Full rectangular background, no text, no logo, no UI labels. Environmental dark fantasy scene evoking Black Sun Gate; no characters, no UI text.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "main_panel_dark",
+      "category": "panels",
+      "output_path": "assets/ui/panels/main_panel_dark.png",
+      "purpose": "large dark stone/glass content panel",
+      "size": [
+        900,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Main Panel Dark. Purpose: large dark stone/glass content panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_window_abyssia_pixel.png"
+    },
+    {
+      "key": "main_panel_glass",
+      "category": "panels",
+      "output_path": "assets/ui/panels/main_panel_glass.png",
+      "purpose": "large translucent dark glass content panel",
+      "size": [
+        900,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Main Panel Glass. Purpose: large translucent dark glass content panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_window_abyssia_pixel.png"
+    },
+    {
+      "key": "small_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/small_panel.png",
+      "purpose": "compact beveled UI panel",
+      "size": [
+        420,
+        220
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Small Panel. Purpose: compact beveled UI panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "stat_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/stat_panel.png",
+      "purpose": "compact stat block panel",
+      "size": [
+        320,
+        160
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Stat Panel. Purpose: compact stat block panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "item_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/item_panel.png",
+      "purpose": "item tile panel",
+      "size": [
+        520,
+        320
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Item Panel. Purpose: item tile panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "tooltip_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/tooltip_panel.png",
+      "purpose": "tooltip information panel",
+      "size": [
+        620,
+        360
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Tooltip Panel. Purpose: tooltip information panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_window_abyssia_pixel.png"
+    },
+    {
+      "key": "card_slot_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/card_slot_panel.png",
+      "purpose": "vertical card slot panel",
+      "size": [
+        360,
+        480
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Card Slot Panel. Purpose: vertical card slot panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "list_row_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/list_row_panel.png",
+      "purpose": "horizontal list row panel",
+      "size": [
+        900,
+        120
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: List Row Panel. Purpose: horizontal list row panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "selected_row_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/selected_row_panel.png",
+      "purpose": "selected list row panel with stronger glow",
+      "size": [
+        900,
+        120
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Selected Row Panel. Purpose: selected list row panel with stronger glow. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "modal_panel",
+      "category": "panels",
+      "output_path": "assets/ui/panels/modal_panel.png",
+      "purpose": "large modal dialog panel",
+      "size": [
+        960,
+        620
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Modal Panel. Purpose: large modal dialog panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_window_abyssia_pixel.png"
+    },
+    {
+      "key": "common",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/common.png",
+      "purpose": "Common rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Common. Purpose: Common rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Common rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_common",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_common.png",
+      "purpose": "Common creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Common. Purpose: Common creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "uncommon",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/uncommon.png",
+      "purpose": "Uncommon rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Uncommon. Purpose: Uncommon rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Uncommon rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_uncommon",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_uncommon.png",
+      "purpose": "Uncommon creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Uncommon. Purpose: Uncommon creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "rare",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/rare.png",
+      "purpose": "Rare rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Rare. Purpose: Rare rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Rare rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_rare",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_rare.png",
+      "purpose": "Rare creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Rare. Purpose: Rare creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "epic",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/epic.png",
+      "purpose": "Epic rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Epic. Purpose: Epic rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Epic rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_epic",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_epic.png",
+      "purpose": "Epic creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Epic. Purpose: Epic creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "legendary",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/legendary.png",
+      "purpose": "Legendary rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Legendary. Purpose: Legendary rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Legendary rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_legendary",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_legendary.png",
+      "purpose": "Legendary creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Legendary. Purpose: Legendary creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "mythic",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/mythic.png",
+      "purpose": "Mythic rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Mythic. Purpose: Mythic rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Mythic rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_mythic",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_mythic.png",
+      "purpose": "Mythic creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Mythic. Purpose: Mythic creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "ancient",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/ancient.png",
+      "purpose": "Ancient rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Ancient. Purpose: Ancient rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Ancient rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_ancient",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_ancient.png",
+      "purpose": "Ancient creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Ancient. Purpose: Ancient creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "patreon",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/patreon.png",
+      "purpose": "Patreon rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Patreon. Purpose: Patreon rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Patreon rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_patreon",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_patreon.png",
+      "purpose": "Patreon creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Patreon. Purpose: Patreon creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "divine",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/divine.png",
+      "purpose": "Divine rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Divine. Purpose: Divine rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Divine rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_divine",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_divine.png",
+      "purpose": "Divine creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Divine. Purpose: Divine creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "eldritch",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/eldritch.png",
+      "purpose": "Eldritch rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Eldritch. Purpose: Eldritch rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Eldritch rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_eldritch",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_eldritch.png",
+      "purpose": "Eldritch creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Eldritch. Purpose: Eldritch creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "abyssal",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/abyssal.png",
+      "purpose": "Abyssal rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Abyssal. Purpose: Abyssal rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Abyssal rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_abyssal",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_abyssal.png",
+      "purpose": "Abyssal creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Abyssal. Purpose: Abyssal creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "prismatic",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/prismatic.png",
+      "purpose": "Prismatic rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Prismatic. Purpose: Prismatic rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Prismatic rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_prismatic",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_prismatic.png",
+      "purpose": "Prismatic creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Prismatic. Purpose: Prismatic creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "ethereal",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/ethereal.png",
+      "purpose": "Ethereal rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Ethereal. Purpose: Ethereal rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Ethereal rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_ethereal",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_ethereal.png",
+      "purpose": "Ethereal creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Ethereal. Purpose: Ethereal creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "void_lord",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/void_lord.png",
+      "purpose": "Void Lord rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Void Lord. Purpose: Void Lord rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Void Lord rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_void_lord",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_void_lord.png",
+      "purpose": "Void Lord creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Void Lord. Purpose: Void Lord creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "hidden",
+      "category": "rarity_frames",
+      "output_path": "assets/ui/rarity_frames/hidden.png",
+      "purpose": "Hidden rarity frame for creature, weapon, and item tiles",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hidden. Purpose: Hidden rarity frame for creature, weapon, and item tiles. Transparent background where useful; keep useful alpha and transparent corners. Consistent frame shape; material and glow should clearly signal Hidden rarity.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    },
+    {
+      "key": "creature_tile_hidden",
+      "category": "frames",
+      "output_path": "assets/ui/frames/creature_tile_hidden.png",
+      "purpose": "Hidden creature tile frame with portrait/name/badge zones",
+      "size": [
+        420,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Creature Tile Hidden. Purpose: Hidden creature tile frame with portrait/name/badge zones. Transparent background where useful; keep useful alpha and transparent corners. Supports portrait area, name area, rarity badge area, duplicate/new tag area, subtle 3D depth.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_slot_frame",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_slot_frame.png",
+      "purpose": "weapon slot frame for grid cards",
+      "size": [
+        360,
+        460
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Slot Frame. Purpose: weapon slot frame for grid cards. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_feature_frame",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_feature_frame.png",
+      "purpose": "featured weapon display frame",
+      "size": [
+        620,
+        520
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Feature Frame. Purpose: featured weapon display frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_relic_large_frame",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_relic_large_frame.png",
+      "purpose": "large relic tooltip weapon frame",
+      "size": [
+        520,
+        600
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Relic Large Frame. Purpose: large relic tooltip weapon frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_side_slot",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_vault_side_slot.png",
+      "purpose": "weapon vault side slot frame",
+      "size": [
+        300,
+        320
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Side Slot. Purpose: weapon vault side slot frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_center_display",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_vault_center_display.png",
+      "purpose": "weapon vault center information display",
+      "size": [
+        760,
+        360
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Center Display. Purpose: weapon vault center information display. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "crate_shop_panel",
+      "category": "card_templates",
+      "output_path": "assets/ui/card_templates/crate_shop_panel.png",
+      "purpose": "full crate shop card base panel",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Shop Panel. Purpose: full crate shop card base panel. Full rectangular background, no text, no logo, no UI labels.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/card_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "crate_shop_card_void_cache",
+      "category": "card_templates",
+      "output_path": "assets/ui/card_templates/crate_shop_card_void_cache.png",
+      "purpose": "void cache shop card frame",
+      "size": [
+        360,
+        480
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Shop Card Void Cache. Purpose: void cache shop card frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "crate_shop_card_eldritch_relic",
+      "category": "card_templates",
+      "output_path": "assets/ui/card_templates/crate_shop_card_eldritch_relic.png",
+      "purpose": "eldritch relic shop card frame",
+      "size": [
+        360,
+        480
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Shop Card Eldritch Relic. Purpose: eldritch relic shop card frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "crate_shop_card_abyssal_treasure",
+      "category": "card_templates",
+      "output_path": "assets/ui/card_templates/crate_shop_card_abyssal_treasure.png",
+      "purpose": "abyssal treasure shop card frame",
+      "size": [
+        360,
+        480
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Shop Card Abyssal Treasure. Purpose: abyssal treasure shop card frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "price_button",
+      "category": "buttons",
+      "output_path": "assets/ui/buttons/price_button.png",
+      "purpose": "readable price button frame",
+      "size": [
+        320,
+        96
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Price Button. Purpose: readable price button frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "buy_dropdown_frame",
+      "category": "frames",
+      "output_path": "assets/ui/frames/buy_dropdown_frame.png",
+      "purpose": "buy dropdown frame",
+      "size": [
+        520,
+        240
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Buy Dropdown Frame. Purpose: buy dropdown frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_window_abyssia_pixel.png"
+    },
+    {
+      "key": "crate_glow_cyan",
+      "category": "effects",
+      "output_path": "assets/ui/effects/crate_glow_cyan.png",
+      "purpose": "cyan crate glow effect",
+      "size": [
+        420,
+        420
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Glow Cyan. Purpose: cyan crate glow effect. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "crate_glow_green",
+      "category": "effects",
+      "output_path": "assets/ui/effects/crate_glow_green.png",
+      "purpose": "green crate glow effect",
+      "size": [
+        420,
+        420
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Glow Green. Purpose: green crate glow effect. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "crate_glow_purple",
+      "category": "effects",
+      "output_path": "assets/ui/effects/crate_glow_purple.png",
+      "purpose": "purple crate glow effect",
+      "size": [
+        420,
+        420
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Glow Purple. Purpose: purple crate glow effect. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "battle_arena_backdrop",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/battle_arena_backdrop.png",
+      "purpose": "battle arena backdrop",
+      "size": [
+        1600,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Battle Arena Backdrop. Purpose: battle arena backdrop. Full rectangular background, no text, no logo, no UI labels.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/battle_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "battle_team_panel_left",
+      "category": "panels",
+      "output_path": "assets/ui/panels/battle_team_panel_left.png",
+      "purpose": "left battle team panel",
+      "size": [
+        620,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Battle Team Panel Left. Purpose: left battle team panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/battle_panel_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "battle_team_panel_right",
+      "category": "panels",
+      "output_path": "assets/ui/panels/battle_team_panel_right.png",
+      "purpose": "right battle team panel",
+      "size": [
+        620,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Battle Team Panel Right. Purpose: right battle team panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/battle_panel_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "battle_creature_slot",
+      "category": "frames",
+      "output_path": "assets/ui/frames/battle_creature_slot.png",
+      "purpose": "battle creature slot frame",
+      "size": [
+        360,
+        260
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Battle Creature Slot. Purpose: battle creature slot frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "battle_center_plaque",
+      "category": "badges",
+      "output_path": "assets/ui/badges/battle_center_plaque.png",
+      "purpose": "battle result center plaque",
+      "size": [
+        520,
+        180
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Battle Center Plaque. Purpose: battle result center plaque. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "hp_bar_frame",
+      "category": "bars",
+      "output_path": "assets/ui/bars/hp_bar_frame.png",
+      "purpose": "HP bar frame",
+      "size": [
+        520,
+        64
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hp Bar Frame. Purpose: HP bar frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "mana_bar_frame",
+      "category": "bars",
+      "output_path": "assets/ui/bars/mana_bar_frame.png",
+      "purpose": "mana bar frame",
+      "size": [
+        520,
+        64
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Mana Bar Frame. Purpose: mana bar frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "boss_hp_bar_frame",
+      "category": "bars",
+      "output_path": "assets/ui/bars/boss_hp_bar_frame.png",
+      "purpose": "boss HP bar frame",
+      "size": [
+        900,
+        80
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Boss Hp Bar Frame. Purpose: boss HP bar frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "victory_banner",
+      "category": "badges",
+      "output_path": "assets/ui/badges/victory_banner.png",
+      "purpose": "victory banner frame",
+      "size": [
+        700,
+        160
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Victory Banner. Purpose: victory banner frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "defeat_banner",
+      "category": "badges",
+      "output_path": "assets/ui/badges/defeat_banner.png",
+      "purpose": "defeat banner frame",
+      "size": [
+        700,
+        160
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Defeat Banner. Purpose: defeat banner frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "tie_banner",
+      "category": "badges",
+      "output_path": "assets/ui/badges/tie_banner.png",
+      "purpose": "tie banner frame",
+      "size": [
+        700,
+        160
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Tie Banner. Purpose: tie banner frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "hunt_header_plate",
+      "category": "badges",
+      "output_path": "assets/ui/badges/hunt_header_plate.png",
+      "purpose": "hunt card header plate",
+      "size": [
+        900,
+        120
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hunt Header Plate. Purpose: hunt card header plate. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "hunt_result_tile",
+      "category": "frames",
+      "output_path": "assets/ui/frames/hunt_result_tile.png",
+      "purpose": "hunt result creature tile",
+      "size": [
+        340,
+        380
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hunt Result Tile. Purpose: hunt result creature tile. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "hunt_result_tile_selected",
+      "category": "frames",
+      "output_path": "assets/ui/frames/hunt_result_tile_selected.png",
+      "purpose": "selected hunt result creature tile",
+      "size": [
+        340,
+        380
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hunt Result Tile Selected. Purpose: selected hunt result creature tile. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "hunt_dense_row",
+      "category": "panels",
+      "output_path": "assets/ui/panels/hunt_dense_row.png",
+      "purpose": "dense hunt row panel",
+      "size": [
+        900,
+        96
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hunt Dense Row. Purpose: dense hunt row panel. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "duplicate_tag",
+      "category": "badges",
+      "output_path": "assets/ui/badges/duplicate_tag.png",
+      "purpose": "duplicate result tag",
+      "size": [
+        220,
+        64
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Duplicate Tag. Purpose: duplicate result tag. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "new_tag",
+      "category": "badges",
+      "output_path": "assets/ui/badges/new_tag.png",
+      "purpose": "new discovery tag",
+      "size": [
+        220,
+        64
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: New Tag. Purpose: new discovery tag. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "souls_pill",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/souls_pill.png",
+      "purpose": "souls reward pill",
+      "size": [
+        320,
+        88
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Souls Pill. Purpose: souls reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "xp_pill",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/xp_pill.png",
+      "purpose": "XP reward pill",
+      "size": [
+        320,
+        88
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Xp Pill. Purpose: XP reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "crate_reward_pill",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/crate_reward_pill.png",
+      "purpose": "crate reward pill",
+      "size": [
+        360,
+        88
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Crate Reward Pill. Purpose: crate reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_room_background",
+      "category": "backgrounds",
+      "output_path": "assets/ui/backgrounds/weapon_vault_room_background.png",
+      "purpose": "weapon vault room background",
+      "size": [
+        1200,
+        900
+      ],
+      "transparent": false,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Room Background. Purpose: weapon vault room background. Full rectangular background, no text, no logo, no UI labels.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/weapon_vault_bg_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_center_pedestal",
+      "category": "effects",
+      "output_path": "assets/ui/effects/weapon_vault_center_pedestal.png",
+      "purpose": "center weapon pedestal",
+      "size": [
+        520,
+        220
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Center Pedestal. Purpose: center weapon pedestal. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "weapon_vault_glow",
+      "category": "effects",
+      "output_path": "assets/ui/effects/weapon_vault_glow.png",
+      "purpose": "weapon vault central glow",
+      "size": [
+        640,
+        640
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Glow. Purpose: weapon vault central glow. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "weapon_vault_side_slot_left",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_vault_side_slot_left.png",
+      "purpose": "left side weapon slot",
+      "size": [
+        300,
+        340
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Side Slot Left. Purpose: left side weapon slot. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_side_slot_right",
+      "category": "frames",
+      "output_path": "assets/ui/frames/weapon_vault_side_slot_right.png",
+      "purpose": "right side weapon slot",
+      "size": [
+        300,
+        340
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Side Slot Right. Purpose: right side weapon slot. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_card_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_page_bar",
+      "category": "bars",
+      "output_path": "assets/ui/bars/weapon_vault_page_bar.png",
+      "purpose": "weapon vault page bar",
+      "size": [
+        900,
+        64
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Page Bar. Purpose: weapon vault page bar. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "weapon_vault_filter_button",
+      "category": "buttons",
+      "output_path": "assets/ui/buttons/weapon_vault_filter_button.png",
+      "purpose": "weapon vault filter button",
+      "size": [
+        220,
+        72
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Weapon Vault Filter Button. Purpose: weapon vault filter button. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "hp_bar_fill",
+      "category": "bars",
+      "output_path": "assets/ui/bars/hp_bar_fill.png",
+      "purpose": "HP bar fill",
+      "size": [
+        520,
+        36
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Hp Bar Fill. Purpose: HP bar fill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "mana_bar_fill",
+      "category": "bars",
+      "output_path": "assets/ui/bars/mana_bar_fill.png",
+      "purpose": "mana bar fill",
+      "size": [
+        520,
+        36
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Mana Bar Fill. Purpose: mana bar fill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "xp_bar_fill",
+      "category": "bars",
+      "output_path": "assets/ui/bars/xp_bar_fill.png",
+      "purpose": "XP bar fill",
+      "size": [
+        520,
+        36
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Xp Bar Fill. Purpose: XP bar fill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "quality_bar_fill",
+      "category": "bars",
+      "output_path": "assets/ui/bars/quality_bar_fill.png",
+      "purpose": "quality bar fill",
+      "size": [
+        520,
+        36
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Quality Bar Fill. Purpose: quality bar fill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "progress_bar_frame",
+      "category": "bars",
+      "output_path": "assets/ui/bars/progress_bar_frame.png",
+      "purpose": "progress bar frame",
+      "size": [
+        620,
+        64
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Progress Bar Frame. Purpose: progress bar frame. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "thin_gold_divider",
+      "category": "dividers",
+      "output_path": "assets/ui/dividers/thin_gold_divider.png",
+      "purpose": "thin gold divider",
+      "size": [
+        760,
+        18
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Thin Gold Divider. Purpose: thin gold divider. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "cyan_divider",
+      "category": "dividers",
+      "output_path": "assets/ui/dividers/cyan_divider.png",
+      "purpose": "cyan divider",
+      "size": [
+        760,
+        24
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Cyan Divider. Purpose: cyan divider. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "purple_divider",
+      "category": "dividers",
+      "output_path": "assets/ui/dividers/purple_divider.png",
+      "purpose": "purple divider",
+      "size": [
+        760,
+        24
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Purple Divider. Purpose: purple divider. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "reward_pill_souls",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/reward_pill_souls.png",
+      "purpose": "souls reward pill",
+      "size": [
+        360,
+        90
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Reward Pill Souls. Purpose: souls reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "reward_pill_xp",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/reward_pill_xp.png",
+      "purpose": "XP reward pill",
+      "size": [
+        360,
+        90
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Reward Pill Xp. Purpose: XP reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "reward_pill_weapon_shards",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/reward_pill_weapon_shards.png",
+      "purpose": "weapon shards reward pill",
+      "size": [
+        360,
+        90
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Reward Pill Weapon Shards. Purpose: weapon shards reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "reward_pill_crate",
+      "category": "reward_pills",
+      "output_path": "assets/ui/reward_pills/reward_pill_crate.png",
+      "purpose": "crate reward pill",
+      "size": [
+        360,
+        90
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Reward Pill Crate. Purpose: crate reward pill. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "quality_badge",
+      "category": "badges",
+      "output_path": "assets/ui/badges/quality_badge.png",
+      "purpose": "quality badge",
+      "size": [
+        260,
+        76
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Quality Badge. Purpose: quality badge. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "mana_badge",
+      "category": "badges",
+      "output_path": "assets/ui/badges/mana_badge.png",
+      "purpose": "mana badge",
+      "size": [
+        260,
+        76
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Mana Badge. Purpose: mana badge. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "level_badge",
+      "category": "badges",
+      "output_path": "assets/ui/badges/level_badge.png",
+      "purpose": "level badge",
+      "size": [
+        260,
+        76
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Level Badge. Purpose: level badge. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "owned_badge",
+      "category": "badges",
+      "output_path": "assets/ui/badges/owned_badge.png",
+      "purpose": "owned badge",
+      "size": [
+        260,
+        76
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Owned Badge. Purpose: owned badge. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "locked_badge",
+      "category": "badges",
+      "output_path": "assets/ui/badges/locked_badge.png",
+      "purpose": "locked badge",
+      "size": [
+        260,
+        76
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Locked Badge. Purpose: locked badge. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_badge_abyssia_pixel.png"
+    },
+    {
+      "key": "foreground_fog",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/foreground_fog.png",
+      "purpose": "foreground fog overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Foreground Fog. Purpose: foreground fog overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "void_particles",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/void_particles.png",
+      "purpose": "void particles overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Void Particles. Purpose: void particles overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "gold_sparkles",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/gold_sparkles.png",
+      "purpose": "gold sparkles overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Gold Sparkles. Purpose: gold sparkles overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "cyan_magic_motes",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/cyan_magic_motes.png",
+      "purpose": "cyan magic motes overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Cyan Magic Motes. Purpose: cyan magic motes overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "purple_magic_motes",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/purple_magic_motes.png",
+      "purpose": "purple magic motes overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Purple Magic Motes. Purpose: purple magic motes overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "bloodmoon_particles",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/bloodmoon_particles.png",
+      "purpose": "bloodmoon particles overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Bloodmoon Particles. Purpose: bloodmoon particles overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "stone_grain_texture",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/stone_grain_texture.png",
+      "purpose": "subtle black marble and carved stone grain overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Stone Grain Texture. Purpose: subtle black marble and carved stone grain overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "vignette_overlay",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/vignette_overlay.png",
+      "purpose": "vignette overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Vignette Overlay. Purpose: vignette overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "radial_spotlight",
+      "category": "overlays",
+      "output_path": "assets/ui/overlays/radial_spotlight.png",
+      "purpose": "radial spotlight overlay",
+      "size": [
+        1200,
+        720
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Radial Spotlight. Purpose: radial spotlight overlay. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": ""
+    },
+    {
+      "key": "missing_card_asset",
+      "category": "placeholders",
+      "output_path": "assets/ui/placeholders/missing_card_asset.png",
+      "purpose": "fallback placeholder for missing card assets",
+      "size": [
+        512,
+        512
+      ],
+      "transparent": true,
+      "prompt": "Premium gothic dark fantasy RPG UI asset for Abyssia, black stone, cursed metal, bone ornamentation, abyssal mist, relic pedestal lighting, engraved ancient gold trim, subtle void glow, purple abyss glow, 3D layered game card depth, readable Discord card scale, carved, ancient, mystical, cursed, dimensional, not sci-fi, not cyberpunk, no circuit board lines, no tiny HUD text, no text, no letters, no watermark. Asset: Missing Card Asset. Purpose: fallback placeholder for missing card assets. Transparent background where useful; keep useful alpha and transparent corners.",
+      "negative_prompt": "cyberpunk, sci-fi HUD, circuit lines, terminal UI, robotic, spaceship, flat neon rectangle, tiny text, microtext, cluttered interface, low readability, text, letters, numbers, watermark, logo, blurry, cheap flat UI, plain rectangle, overexposed glow, cropped edges, photorealistic object, cartoon sticker, low-resolution artifact.",
+      "source_path": "data/assets/ui/frame_icon_abyssia_pixel.png"
+    }
+  ]
+}

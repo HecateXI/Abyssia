@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import json
 import math
 import random
@@ -11,7 +12,7 @@ from typing import Any
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from core import card_ui as cui
-from core.content_config import ASSET_DIR, get_asset_file_path, get_creature_asset_path
+from core.content_config import ASSET_DIR, ROOT_DIR, get_asset_file_path, get_creature_asset_path
 from core.rpg_data import normalize_key
 
 
@@ -57,6 +58,9 @@ _PURPLE = (170, 95, 245)
 _CYAN = (55, 225, 210)
 _ORANGE = (245, 145, 45)
 
+_HUNT_SCENE_BG = ROOT_DIR / "assets" / "ui" / "backgrounds" / "hunt_gothic_wilds.png"
+_GENERATED_ZONE_BACKDROP_DIR = ROOT_DIR / "assets" / "ui" / "generated_zone_backdrops"
+
 _ZONE_BG_COLORS: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {
     "forgotten_woods": ((20, 28, 18), (8, 14, 10)),
     "grave_marsh": ((22, 26, 18), (10, 12, 8)),
@@ -87,14 +91,19 @@ def _font(size: int, *, bold: bool = False, fantasy: bool = False) -> ImageFont.
     candidates = []
     if fantasy:
         candidates.extend([
-            "OLDENGL.TTF", "GOUDYSTO.TTF", "AGENCYB.TTF",
-            "ALGER.TTF", "FORTE.TTF",
+            str(ROOT_DIR / "assets" / "fonts" / "alagard.ttf"),
+            "AGENCYB.TTF",
+            "CascadiaMono.ttf",
+            "consolab.ttf",
         ])
     candidates.extend([
-        "segoeuib.ttf" if bold else "segoeui.ttf",
-        "arialbd.ttf" if bold else "arial.ttf",
+        str(ROOT_DIR / "assets" / "fonts" / "alagard.ttf"),
+        "CascadiaMono.ttf",
         "consolab.ttf" if bold else "consola.ttf",
+        "AGENCYB.TTF" if bold else "AGENCYR.TTF",
+        "bahnschrift.ttf",
         "courbd.ttf" if bold else "cour.ttf",
+        "arialbd.ttf" if bold else "arial.ttf",
     ])
     if fantasy and not bold:
         candidates.insert(0, "AGENCYR.TTF")
@@ -118,7 +127,7 @@ def _tw(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont) -> int:
 
 
 def _fit_text(draw: ImageDraw.ImageDraw, text: str, max_w: int, font: ImageFont.ImageFont) -> str:
-    s = str(text)
+    s = str(text).upper()
     if _tw(draw, s, font) <= max_w:
         return s
     for i in range(len(s), 0, -1):
@@ -144,8 +153,111 @@ def _lerp_color(a: tuple[int, int, int], b: tuple[int, int, int], t: float) -> t
 def _shadow_text(draw: ImageDraw.ImageDraw, x: int, y: int, text: str, font: ImageFont.ImageFont,
                  color: tuple[int, int, int], shadow_color: tuple[int, int, int] = (0, 0, 0),
                  offset: int = 2) -> None:
+    text = str(text).upper()
     draw.text((x + offset, y + offset), text, font=font, fill=shadow_color)
     draw.text((x, y), text, font=font, fill=color)
+
+
+def _hunt_relic_background(width: int, height: int, accent: tuple[int, int, int], zone_key: str) -> Image.Image:
+    colors = _ZONE_BG_COLORS.get(zone_key, ((16, 11, 24), (5, 4, 10)))
+    top, bottom = colors
+    top = _lerp_color(top, (34, 24, 34), 0.42)
+    bottom = _lerp_color(bottom, (3, 3, 7), 0.72)
+    img = Image.new("RGBA", (width, height), (*bottom, 255))
+    draw = ImageDraw.Draw(img)
+    for y in range(height):
+        t = y / max(1, height - 1)
+        draw.line((0, y, width, y), fill=(*_lerp_color(top, bottom, t), 255))
+
+    noise = Image.effect_noise((width, height), 32).convert("L")
+    grain = Image.new("RGBA", (width, height), (170, 150, 120, 0))
+    grain.putalpha(noise.point(lambda p: 16 if p > 136 else 0))
+    img.alpha_composite(grain)
+
+    scene = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(scene)
+    if zone_key == "void_realm":
+        cx, cy = width // 2, int(height * 0.43)
+        for i in range(9):
+            pad = i * 18
+            sd.ellipse((cx - 280 - pad, cy - 190 - pad, cx + 280 + pad, cy + 190 + pad), outline=cui.rgba(accent, max(15, 100 - i * 9)), width=4)
+        sd.ellipse((cx - 210, cy - 150, cx + 210, cy + 150), fill=(10, 6, 22, 150), outline=cui.rgba(cui.PURPLE, 125), width=4)
+    elif zone_key == "cursed_sanctum":
+        for x in range(150, width, 250):
+            sd.rounded_rectangle((x, 150, x + 110, height + 80), radius=88, outline=(82, 66, 54, 94), width=12)
+        sd.polygon([(0, height), (width // 2, int(height * 0.56)), (width, height)], fill=(20, 12, 18, 132))
+    else:
+        for x in range(80, width, 180):
+            h = random.Random(x + width).randint(180, 380)
+            sd.rectangle((x, height - h, x + 42, height), fill=(10, 9, 12, 90))
+    img.alpha_composite(scene)
+
+    mist = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    md = ImageDraw.Draw(mist)
+    for idx, alpha in enumerate((34, 24, 18)):
+        y = int(height * (0.50 + idx * 0.11))
+        md.ellipse((-120, y, width + 140, y + 220), fill=(116, 104, 132, alpha))
+    img.alpha_composite(mist.filter(ImageFilter.GaussianBlur(16)))
+    cui.draw_vignette(img, 0.92)
+    return img
+
+
+def _hunt_scene_background(width: int, height: int, accent: tuple[int, int, int], zone_key: str) -> Image.Image:
+    return _hunt_scene_background_cached(width, height, accent, zone_key).copy()
+
+
+@functools.lru_cache(maxsize=24)
+def _hunt_scene_background_cached(width: int, height: int, accent: tuple[int, int, int], zone_key: str) -> Image.Image:
+    safe_zone = normalize_key(str(zone_key or "forgotten_woods"))
+    for candidate in (
+        _GENERATED_ZONE_BACKDROP_DIR / f"{safe_zone}.png",
+        ROOT_DIR / "assets" / "ui" / "zone_backdrops" / f"{safe_zone}.png",
+        ASSET_DIR / "zones" / f"{safe_zone}.png",
+    ):
+        if candidate.exists():
+            try:
+                img = cui.cover_resize(Image.open(candidate).convert("RGBA"), (width, height)).convert("RGBA")
+                shade = Image.new("RGBA", (width, height), (0, 0, 0, 58))
+                img.alpha_composite(shade)
+                cui.draw_vignette(img, 0.84)
+                return img
+            except OSError:
+                pass
+    if _HUNT_SCENE_BG.exists():
+        try:
+            img = cui.cover_resize(Image.open(_HUNT_SCENE_BG).convert("RGBA"), (width, height)).convert("RGBA")
+            shade = Image.new("RGBA", (width, height), (0, 0, 0, 58))
+            img.alpha_composite(shade)
+            cui.draw_vignette(img, 0.84)
+            return img
+        except OSError:
+            pass
+    return _hunt_relic_background(width, height, accent, zone_key)
+
+
+def _hunt_relic_panel(
+    img: Image.Image,
+    box: tuple[int, int, int, int],
+    border: tuple[int, int, int],
+    *,
+    fill: tuple[int, int, int, int] = (10, 8, 14, 218),
+    glow: bool = False,
+) -> None:
+    cui.draw_pixel_plaque(img, box, fill=fill, border=border, radius=10, shadow=True, glow=border if glow else False)
+
+
+def _hunt_relic_header(img: Image.Image, zone_name: str, subtitle: str, accent: tuple[int, int, int]) -> int:
+    draw = ImageDraw.Draw(img)
+    width, _ = img.size
+    box = (46, 28, min(width - 46, 930), 122)
+    _hunt_relic_panel(img, box, cui.lerp_color(accent, cui.GOLD, 0.22), fill=(6, 5, 9, 185))
+    cui.draw_text_fit(draw, zone_name.upper(), (box[0] + 28, box[1] + 8, box[2] - 28, box[1] + 66), cui.get_font(56, bold=True), cui.TEXT_BRIGHT, 34, "left", True)
+    cui.draw_text_fit(draw, subtitle, (box[0] + 30, box[1] + 66, box[2] - 30, box[3] - 12), cui.get_font(25), cui.TEXT_MUTED, 18)
+    right = (width - 190, 44, width - 54, 92)
+    _hunt_relic_panel(img, right, accent, fill=(8, 6, 10, 165), glow=True)
+    cui.draw_text_fit(draw, "HUNT", (right[0] + 16, right[1], right[2] - 16, right[3]), cui.get_font(24, bold=True), cui.GOLD, 16, "center", True)
+    draw.line((70, 144, width - 70, 144), fill=cui.rgba(cui.GOLD, 100), width=2)
+    return 170
 
 
 # ── Rarity ordering for priority comparisons ──────────────────
@@ -257,7 +369,7 @@ class HuntCardRenderer:
         if count <= 0:
             # Fallback: render single hunt if no monsters list
             return self.render_hunt_card(data)
-        if count <= 9:
+        if count <= 15:
             return self.render_hunt_grid_card(data)
         return self.render_dense_hunt_card(data)
 
@@ -265,117 +377,222 @@ class HuntCardRenderer:
         return self._render_premium_hunt_grid(data)
 
     def render_dense_hunt_card(self, data: dict[str, Any]) -> BytesIO:
-        return self._render_premium_hunt_list(data)
+        return self._render_premium_hunt_grid(data)
 
     def _hunt_asset(self, kind: str, key: str, size: int) -> Image.Image:
         return cui.load_asset_icon(kind, key, (size, size), pixel=kind in {"creatures", "weapons", "passives"})
 
-    def _render_premium_failed_hunt(self, data: dict[str, Any]) -> BytesIO:
-        W, H = 1200, 720
-        img = cui.new_card(W, H, cui.PURPLE)
+    def _hunt_scene_monsters(self, data: dict[str, Any]) -> list[dict[str, Any]]:
+        monsters = data.get("monsters")
+        if isinstance(monsters, list) and monsters:
+            return [m for m in monsters if isinstance(m, dict)]
+        monster = data.get("monster")
+        if isinstance(monster, dict) and monster:
+            merged = dict(monster)
+            if data.get("collection_status"):
+                merged["collection_status"] = data.get("collection_status")
+            return [merged]
+        return []
+
+    def _hunt_scene_slots(self, count: int) -> list[tuple[int, int, int]]:
+        if count <= 1:
+            return [(800, 642, 430)]
+        if count == 2:
+            return [(610, 650, 330), (1010, 650, 330)]
+        if count == 3:
+            return [(800, 598, 350), (515, 700, 280), (1085, 700, 280)]
+        if count == 4:
+            return [(800, 575, 315), (510, 690, 255), (1090, 690, 255), (800, 760, 230)]
+        if count == 5:
+            return [(800, 555, 300), (510, 685, 245), (1090, 685, 245), (325, 752, 205), (1275, 752, 205)]
+        return [
+            (800, 550, 290),
+            (510, 668, 238),
+            (1090, 668, 238),
+            (320, 748, 198),
+            (1280, 748, 198),
+            (800, 770, 210),
+        ][:count]
+
+    def _hunt_creature_art(self, name: str, size: int) -> Image.Image:
+        key = normalize_key(name)
+        path = get_creature_asset_path(key)
+        if path and path.exists():
+            return self._hunt_asset("creatures", key, size)
+        art = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        layer = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        ld = ImageDraw.Draw(layer)
+        cx, cy = size // 2, int(size * 0.52)
+        ld.ellipse((cx - int(size * 0.23), cy - int(size * 0.31), cx + int(size * 0.23), cy + int(size * 0.20)), fill=(10, 8, 16, 210))
+        ld.polygon(
+            [
+                (cx - int(size * 0.30), cy + int(size * 0.22)),
+                (cx - int(size * 0.12), cy - int(size * 0.03)),
+                (cx + int(size * 0.10), cy - int(size * 0.02)),
+                (cx + int(size * 0.31), cy + int(size * 0.22)),
+            ],
+            fill=(5, 4, 10, 220),
+        )
+        ld.ellipse((cx - 7, cy - int(size * 0.08), cx - 1, cy - int(size * 0.08) + 6), fill=(*cui.CYAN, 210))
+        ld.ellipse((cx + 1, cy - int(size * 0.08), cx + 7, cy - int(size * 0.08) + 6), fill=(*cui.CYAN, 210))
+        art.alpha_composite(layer.filter(ImageFilter.GaussianBlur(1)))
+        return art
+
+    def _draw_hunt_scene_header(
+        self,
+        img: Image.Image,
+        data: dict[str, Any],
+        accent: tuple[int, int, int],
+        found_count: int,
+    ) -> None:
         draw = ImageDraw.Draw(img)
         zone_name = str(data.get("zone_name", "Unknown Zone"))
-        top = cui.draw_header(img, "Hunt Result", zone_name, right_label="ABYSSIA", accent=cui.PURPLE)
-        panel = (110, top + 80, W - 110, H - 130)
-        cui.draw_panel(img, panel, fill=cui.PANEL, border=cui.PURPLE, radius=22, glow=True)
-        cui.draw_text_fit(
-            draw,
-            "Nothing was found in the shadows.",
-            (panel[0] + 40, panel[1] + 110, panel[2] - 40, panel[1] + 170),
-            cui.get_font(42, bold=True),
-            cui.TEXT_BRIGHT,
-            24,
-            "center",
-            True,
-        )
         hunter = str(data.get("hunter_name", "Hunter"))
         rank = str(data.get("hunter_rank", "Hunter"))
-        cui.draw_tag(
-            img,
-            (panel[0] + 260, panel[1] + 210, panel[2] - 260, panel[1] + 250),
-            f"{hunter} | {rank}",
-            cui.GOLD,
-        )
-        cui.draw_footer(img, "Try another hunt or move deeper into Abyssia.", cui.PURPLE)
-        return self._save(img)
-
-    def _render_premium_single_hunt(self, data: dict[str, Any]) -> BytesIO:
-        monster = data.get("monster", {})
-        rarity = str(monster.get("rarity", "Common"))
-        rc = cui.rarity_color(rarity)
-        W, H = 1200, 720
-        img = cui.new_card(W, H, rc)
+        streak = int(data.get("hunt_streak", 0) or 0)
+        left = (44, 28, 930, 124)
+        _hunt_relic_panel(img, left, cui.lerp_color(accent, cui.GOLD, 0.18), fill=(4, 4, 8, 180), glow=True)
         draw = ImageDraw.Draw(img)
-        zone_name = str(data.get("zone_name", "Unknown Zone"))
-        top = cui.draw_header(img, "Hunt Result", zone_name, right_label=rarity.upper(), accent=rc)
-        left = (58, top + 10, 508, H - 86)
-        right = (538, top + 10, W - 58, H - 86)
-        cui.draw_floating_frame(img, left, rc, rc)
-        name = str(monster.get("name", "Unknown Spirit"))
-        art = self._hunt_asset("creatures", normalize_key(name), 330)
-        cui.paste_icon_3d(img, art, ((left[0] + left[2]) // 2, left[1] + 220), 340, rc)
-        cui.draw_text_fit(
-            draw,
-            name,
-            (left[0] + 28, left[3] - 142, left[2] - 28, left[3] - 96),
-            cui.get_font(38, bold=True),
-            cui.TEXT_BRIGHT,
-            22,
-            "center",
-            True,
-        )
-        status = str(data.get("collection_status", monster.get("collection_status", "DUPLICATE"))).replace(" DISCOVERY", "")
-        cui.draw_rarity_badge(img, (left[0] + 84, left[3] - 88, left[2] - 84, left[3] - 50), rarity)
-        cui.draw_tag(
-            img,
-            (left[0] + 106, left[3] - 42, left[2] - 106, left[3] - 10),
-            status,
-            cui.GREEN if "NEW" in status else cui.TEXT_MUTED,
-        )
-        cui.draw_panel(img, right, fill=cui.PANEL, border=rc, radius=20)
-        draw.text((right[0] + 32, right[1] + 34), "Rewards", font=cui.get_font(26, bold=True), fill=cui.TEXT_MUTED)
-        rewards = list(data.get("rewards", []))
+        cui.draw_text_fit(draw, zone_name.upper(), (left[0] + 28, left[1] + 8, left[2] - 28, left[1] + 58), cui.get_font(46, bold=True), cui.TEXT_BRIGHT, 28, "left", True)
+        subtitle = f"{found_count} creature{'s' if found_count != 1 else ''} tracked | {hunter} | {rank}"
+        if streak:
+            subtitle += f" | Streak {streak}"
+        cui.draw_text_fit(draw, subtitle, (left[0] + 30, left[1] + 58, left[2] - 30, left[3] - 12), cui.get_font(21), cui.TEXT_MUTED, 16)
+
+        right = (1018, 28, 1556, 222)
+        _hunt_relic_panel(img, right, accent, fill=(5, 4, 8, 176), glow=True)
+        draw = ImageDraw.Draw(img)
+        draw.text((right[0] + 24, right[1] + 14), "HUNT SPOILS", font=cui.get_font(24, bold=True), fill=cui.GOLD)
+        rewards = list(data.get("rewards", []) or [])
         if not rewards:
-            rewards = [
-                {
-                    "label": "Souls",
-                    "amount": monster.get("value", 0),
-                    "kind": "currency",
-                    "icon_key": "souls",
-                    "color": cui.GOLD,
-                }
-            ]
-        y = right[1] + 82
-        for reward in rewards[:6]:
+            rewards = [{"label": "Souls", "amount": data.get("total_souls", 0), "kind": "currency", "icon_key": "souls", "color": cui.GOLD}]
+        drop = data.get("special_drop")
+        max_rewards = 4 if not isinstance(drop, dict) else 3
+        chip_gap = 10
+        chip_w = (right[2] - right[0] - 48 - chip_gap) // 2
+        chip_h = 42
+        chip_y = right[1] + 52
+        for idx, reward in enumerate(rewards[:max_rewards]):
             label = str(reward.get("label", "Reward"))
             amount = reward.get("amount", 0)
-            color = tuple(reward.get("color", cui.GOLD))
             kind = str(reward.get("kind", "currency"))
             key = str(reward.get("icon_key", "souls"))
-            value = f"+{int(amount):,}" if isinstance(amount, int) and amount else str(label)
-            display_label = label if amount else "Effect"
-            cui.draw_reward_pill(
-                img,
-                (right[0] + 32, y, right[2] - 32, y + 68),
-                display_label,
-                value,
-                color,
-                self._hunt_asset(kind, key, 42),
-            )
-            y += 82
-        drop = data.get("special_drop")
-        if drop:
-            drop_name = str(drop.get("name", "Special Drop"))
-            drop_rarity = str(drop.get("rarity", rarity))
-            drop_color = cui.rarity_color(drop_rarity)
-            cui.draw_tag(
-                img,
-                (right[0] + 32, right[3] - 58, right[2] - 32, right[3] - 20),
-                f"Special Drop: {drop_name}",
-                drop_color,
-            )
-        cui.draw_footer(img, f"{data.get('hunter_name', 'Hunter')} | {data.get('hunter_rank', 'Hunter')}", rc)
+            lowered = label.lower()
+            if lowered == "xp":
+                kind, key = "passives", "xp_boost"
+            elif "lootbox" in lowered:
+                kind, key = "crate", "cache"
+            try:
+                color = tuple(reward.get("color", cui.GOLD))  # type: ignore[arg-type]
+            except TypeError:
+                color = cui.GOLD
+            col = idx % 2
+            row = idx // 2
+            x = right[0] + 24 + col * (chip_w + chip_gap)
+            y = chip_y + row * (chip_h + 10)
+            chip = (x, y, x + chip_w, y + chip_h)
+            _hunt_relic_panel(img, chip, color, fill=(5, 5, 9, 156), glow=False)
+            icon = self._hunt_asset(kind, key, 30)
+            img.alpha_composite(icon, (chip[0] + 10, chip[1] + 6))
+            value = f"+{int(amount):,}" if isinstance(amount, int) and amount else ""
+            if "lootbox" in lowered and "[" in label:
+                progress = label[label.find("["):].strip()
+                value = f"{value} {progress}".strip()
+            elif not value:
+                value = label.replace("Hunt Sword Active", "ACTIVE")
+            cui.draw_text_fit(draw, value, (chip[0] + 48, chip[1] + 4, chip[2] - 10, chip[3] - 4), cui.get_font(20, bold=True), color, 12, "left", True)
+        if isinstance(drop, dict):
+            name = str(drop.get("name", "Special Drop"))
+            drop_icon = self._hunt_asset("crate", str(drop.get("key", "cache")), 28)
+            img.alpha_composite(drop_icon, (right[0] + 26, right[3] - 38))
+            cui.draw_text_fit(draw, name, (right[0] + 62, right[3] - 39, right[2] - 24, right[3] - 8), cui.get_font(18, bold=True), cui.TEXT_BRIGHT, 12, "left", True)
+
+    def _draw_hunt_creature_actor(
+        self,
+        img: Image.Image,
+        monster: dict[str, Any],
+        slot: tuple[int, int, int],
+        *,
+        scene_center_x: int,
+        index: int,
+        plaque_only: bool = False,
+        body_only: bool = False,
+    ) -> None:
+        cx, base_y, size = slot
+        name = str(monster.get("name", "Unknown"))
+        rarity = str(monster.get("rarity", "Common"))
+        value = int(monster.get("value", 0) or 0)
+        rc = cui.rarity_color(rarity)
+        draw = ImageDraw.Draw(img)
+
+        if not plaque_only:
+            cui.draw_pixel_platform(img, (cx, base_y + 6), int(size * 0.92), 50, rc, alpha=120)
+
+            art = self._hunt_creature_art(name, size)
+            if cx < scene_center_x:
+                art = art.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+            phase = ((index * 2) % 5) - 2
+            cui.paste_icon_3d(img, art, (cx + int(phase * 3), base_y - size // 2), size, rc, glow_alpha=0, rim_light=False)
+        if body_only:
+            return
+
+        plaque_w = min(318, max(220, int(size * 0.96)))
+        plaque_h = 82 if size >= 230 else 68
+        plaque = (cx - plaque_w // 2, base_y + 34, cx + plaque_w // 2, base_y + 34 + plaque_h)
+        _hunt_relic_panel(img, plaque, rc, fill=(5, 4, 8, 194), glow=False)
+        draw = ImageDraw.Draw(img)
+        cui.draw_text_fit(draw, name, (plaque[0] + 12, plaque[1] + 6, plaque[2] - 12, plaque[1] + 34), cui.get_font(19, bold=True), cui.TEXT_BRIGHT, 12, "center", True)
+        detail_y = plaque[1] + 42
+        cui.draw_text_fit(draw, rarity, (plaque[0] + 16, detail_y, plaque[0] + plaque_w // 2 - 4, plaque[3] - 8), cui.get_font(15, bold=True), cui.lerp_color(rc, cui.TEXT_BRIGHT, 0.35), 10, "center", True)
+        if value:
+            souls_icon = self._hunt_asset("currency", "souls", 22)
+            sx = plaque[0] + plaque_w // 2 + 10
+            img.alpha_composite(souls_icon, (sx, detail_y + 1))
+            cui.draw_text_fit(draw, f"{value:,}", (sx + 30, detail_y - 1, plaque[2] - 14, plaque[3] - 8), cui.get_font(17, bold=True), cui.GOLD, 10, "left", True)
+
+    def _render_hunt_scene(self, data: dict[str, Any]) -> BytesIO:
+        monsters = self._hunt_scene_monsters(data)
+        found_count = len(monsters)
+        best_rarity = "Common"
+        if monsters:
+            best_rarity = max((str(m.get("rarity", "Common")) for m in monsters), key=lambda r: _RARITY_ORDER.get(r, 0))
+        accent = cui.rarity_color(best_rarity) if monsters else cui.PURPLE
+        W, H = 1600, 900
+        zone_key = str(data.get("zone_key", "forgotten_woods"))
+        img = _hunt_scene_background(W, H, accent, zone_key)
+        draw = ImageDraw.Draw(img)
+        draw.fontmode = "1"
+        self._draw_hunt_scene_header(img, data, accent, found_count)
+
+        if not monsters:
+            panel = (360, 372, 1240, 520)
+            _hunt_relic_panel(img, panel, cui.PURPLE, fill=(5, 4, 8, 184), glow=True)
+            draw = ImageDraw.Draw(img)
+            cui.draw_text_fit(draw, "NOTHING ANSWERED THE HUNT", (panel[0] + 30, panel[1] + 26, panel[2] - 30, panel[1] + 86), cui.get_font(44, bold=True), cui.TEXT_BRIGHT, 24, "center", True)
+            cui.draw_text_fit(draw, "The path stayed cold. The dark kept its creature.", (panel[0] + 40, panel[1] + 88, panel[2] - 40, panel[3] - 24), cui.get_font(24), cui.TEXT_MUTED, 16, "center")
+            return self._save(img)
+
+        ordered = sorted(monsters, key=lambda m: (_RARITY_ORDER.get(str(m.get("rarity", "Common")), 0), int(m.get("value", 0) or 0)), reverse=True)
+        displayed = min(len(ordered), 5)
+        slots = self._hunt_scene_slots(displayed)
+        entries = sorted(zip(slots, ordered[:displayed]), key=lambda item: item[0][1])
+        for idx, (slot, monster) in enumerate(entries):
+            self._draw_hunt_creature_actor(img, monster, slot, scene_center_x=W // 2, index=idx, body_only=True)
+        for idx, (slot, monster) in enumerate(entries):
+            self._draw_hunt_creature_actor(img, monster, slot, scene_center_x=W // 2, index=idx, plaque_only=True)
+        if len(ordered) > displayed:
+            remaining = f"+{len(ordered) - displayed} more tracked in the fog"
+            badge = (560, H - 68, 1040, H - 22)
+            _hunt_relic_panel(img, badge, accent, fill=(5, 4, 8, 188), glow=True)
+            draw = ImageDraw.Draw(img)
+            cui.draw_text_fit(draw, remaining.upper(), (badge[0] + 18, badge[1], badge[2] - 18, badge[3]), cui.get_font(22, bold=True), cui.GOLD, 14, "center", True)
         return self._save(img)
+
+    def _render_premium_failed_hunt(self, data: dict[str, Any]) -> BytesIO:
+        return self._render_hunt_scene(data)
+
+    def _render_premium_single_hunt(self, data: dict[str, Any]) -> BytesIO:
+        return self._render_hunt_scene(data)
 
     def _draw_premium_hunt_tile(self, img: Image.Image, mon: dict[str, Any], box: tuple[int, int, int, int]) -> None:
         draw = ImageDraw.Draw(img)
@@ -386,167 +603,46 @@ class HuntCardRenderer:
         x1, y1, x2, y2 = box
         w, h = x2 - x1, y2 - y1
 
-        shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
-        sd = ImageDraw.Draw(shadow)
-        cui.draw_pixel_box(sd, (x1 + 4, y1 + 5, x2 + 4, y2 + 5), (0, 0, 0, 78), None, cut=12)
-        img.alpha_composite(shadow)
-
-        fill = cui.rgba(cui.lerp_color((9, 8, 16), rc, 0.055), 226)
-        cui.draw_generated_panel_fill(img, box, fill, cui.rgba(rc, 170), cut=12, texture_alpha=48)
-        if not cui.paste_ai_frame(img, box, cui.PIXEL_FRAME_CARD, rc, strength=0.12, opacity=245):
-            cui.draw_pixel_box(draw, box, (0, 0, 0, 0), cui.rgba(rc, 158), cut=12, width=2)
+        _hunt_relic_panel(img, box, rc, fill=cui.rgba(cui.lerp_color((9, 7, 12), rc, 0.035), 218), glow=False)
         draw = ImageDraw.Draw(img)
-        draw.fontmode = "1"
+        portrait_size = min(154, max(132, h - 112))
+        px = x1 + 26
+        py = y1 + 32
+        icon = self._hunt_asset("creatures", normalize_key(name), portrait_size)
+        cui.paste_icon_3d_clipped(img, icon, (px + portrait_size // 2, py + portrait_size // 2 + 12), portrait_size, rc, box, 8)
 
-        icon_box = (x1 + 18, y1 + 24, x1 + 118, y1 + 124)
-        cui.draw_pixel_box(draw, icon_box, (4, 4, 10, 174), cui.rgba(rc, 118), cut=10, width=1)
-        icon = self._hunt_asset("creatures", normalize_key(name), 96)
-        img.alpha_composite(icon, (icon_box[0] + 2, icon_box[1] + 2))
-
-        name_box = (x1 + 136, y1 + 24, x2 - 20, y1 + 56)
+        name_box = (x1 + portrait_size + 56, y1 + 32, x2 - 24, y1 + 78)
         cui.draw_text_fit(
             draw,
             name,
             name_box,
-            cui.get_font(24, bold=True),
+            cui.get_font(31, bold=True),
             cui.TEXT_BRIGHT,
-            16,
+            22,
             "left",
             True,
         )
 
         def chip(chip_box: tuple[int, int, int, int], label: str, color: tuple[int, int, int]) -> None:
-            cui.draw_pixel_box(draw, chip_box, cui.rgba(color, 42), cui.rgba(color, 145), cut=6, width=1)
-            cui.draw_text_fit(
-                draw,
-                label.upper(),
-                (chip_box[0] + 8, chip_box[1], chip_box[2] - 8, chip_box[3]),
-                cui.get_font(14, bold=True),
-                cui.lerp_color(color, cui.TEXT_BRIGHT, 0.45),
-                10,
-                "center",
-                True,
-            )
+            _hunt_relic_panel(img, chip_box, color, fill=cui.rgba(color, 46), glow=False)
+            cd = ImageDraw.Draw(img)
+            cui.draw_text_fit(cd, label.upper(), (chip_box[0] + 8, chip_box[1], chip_box[2] - 8, chip_box[3]), cui.get_font(18, bold=True), cui.lerp_color(color, cui.TEXT_BRIGHT, 0.45), 12, "center", True)
 
-        chip((x1 + 136, y1 + 66, x1 + 238, y1 + 92), rarity, rc)
-        status = str(mon.get("collection_status", "DUPLICATE")).replace(" DISCOVERY", "")
-        if status.upper() == "DUPLICATE":
-            status = "OWNED"
-        chip((x1 + 248, y1 + 66, x2 - 20, y1 + 92), status, cui.GREEN if "NEW" in status else cui.TEXT_MUTED)
+        chip((x1 + portrait_size + 58, y1 + 88, x1 + portrait_size + 210, y1 + 126), rarity, rc)
         value = int(mon.get("value", 0) or 0)
-        souls = f"{value:,} Souls"
-        draw.text((x1 + 137, y1 + h - 42), souls, font=cui.get_font(23, bold=True), fill=(0, 0, 0, 180))
-        draw.text((x1 + 136, y1 + h - 44), souls, font=cui.get_font(23, bold=True), fill=cui.GOLD)
+        souls = f"{value:,}"
+        draw = ImageDraw.Draw(img)
+        souls_icon = self._hunt_asset("currency", "souls", 38)
+        sx = x1 + portrait_size + 58
+        img.alpha_composite(souls_icon, (sx, y2 - 70))
+        draw.text((sx + 49, y2 - 60), souls, font=cui.get_font(31, bold=True), fill=(0, 0, 0, 190))
+        draw.text((sx + 46, y2 - 63), souls, font=cui.get_font(31, bold=True), fill=cui.GOLD)
 
     def _render_premium_hunt_grid(self, data: dict[str, Any]) -> BytesIO:
-        monsters = list(data.get("monsters", []))
-        total_found = len(monsters)
-        displayed = min(total_found, 9)
-        W, H = 1200, 720
-        has_rare = any(_RARITY_ORDER.get(str(m.get("rarity", "Common")), 0) >= 4 for m in monsters)
-        accent = cui.GOLD if has_rare else cui.CYAN
-        img = cui.new_card(W, H, accent)
-        draw = ImageDraw.Draw(img)
-        draw.fontmode = "1"
-        if cui.PIXEL_CARD_BG.exists():
-            try:
-                bg = cui.cover_resize(Image.open(cui.PIXEL_CARD_BG), (W, H)).convert("RGBA")
-                img.alpha_composite(bg)
-                draw.rectangle((0, 0, W, H), fill=(0, 0, 0, 34))
-            except OSError:
-                pass
-        draw.rectangle((0, H - 34, W, H), fill=(7, 7, 10, 214))
-        zone_name = str(data.get("zone_name", "Unknown Zone"))
-        subtitle = f"{total_found} monster{'s' if total_found != 1 else ''} found"
-        if displayed < total_found:
-            subtitle += f" | Showing {displayed} of {total_found}"
-
-        title_font = cui.get_font(40, bold=True)
-        sub_font = cui.get_font(19)
-        draw.text((43, 29), zone_name.upper(), font=title_font, fill=(0, 0, 0, 190))
-        draw.text((40, 26), zone_name.upper(), font=title_font, fill=cui.TEXT_BRIGHT)
-        draw.text((42, 74), subtitle, font=sub_font, fill=cui.TEXT_MUTED)
-        hunt_w = 78
-        cui.draw_pixel_box(draw, (W - hunt_w - 42, 33, W - 42, 63), (0, 0, 0, 112), cui.rgba(accent, 135), cut=7, width=1)
-        cui.draw_text_fit(draw, "HUNT", (W - hunt_w - 34, 33, W - 50, 63), cui.get_font(16, bold=True), accent, 11, "center", True)
-        draw.rectangle((40, 100, W - 40, 102), fill=cui.rgba(accent, 135))
-
-        cols, gap = 3, 18
-        tile_w = (W - 88 - gap * 2) // 3
-        tile_h = 156
-        start_x, start_y = 44, 126
-        for idx, mon in enumerate(monsters[:displayed]):
-            col, row = idx % cols, idx // cols
-            x = start_x + col * (tile_w + gap)
-            y = start_y + row * (tile_h + gap)
-            self._draw_premium_hunt_tile(img, mon, (x, y, x + tile_w, y + tile_h))
-        if displayed < total_found:
-            remaining = total_found - displayed
-            footer = f"{remaining} more monsters"
-        else:
-            footer = f"{data.get('hunter_name', 'Hunter')} | {data.get('hunter_rank', 'Hunter')}"
-        footer_font = cui.get_font(18)
-        fw = cui.text_width(draw, footer, footer_font)
-        draw.text(((W - fw) // 2, H - 58), footer, font=footer_font, fill=cui.TEXT_MUTED)
-        return self._save(img)
+        return self._render_hunt_scene(data)
 
     def _render_premium_hunt_list(self, data: dict[str, Any]) -> BytesIO:
-        monsters = list(data.get("monsters", []))
-        total_found = len(monsters)
-        max_rows = 9
-        displayed = min(total_found, max_rows)
-        W, H = 1200, 900
-        accent = cui.CYAN
-        img = cui.new_card(W, H, accent)
-        draw = ImageDraw.Draw(img)
-        zone_name = str(data.get("zone_name", "Unknown Zone"))
-        subtitle = f"{total_found} monsters found"
-        if displayed < total_found:
-            subtitle += f" | Showing {displayed} of {total_found}"
-        top = cui.draw_header(img, zone_name, subtitle, right_label="LOOT LIST", accent=accent)
-        panel = (48, top + 6, W - 48, H - 82)
-        cui.draw_panel(img, panel, fill=cui.PANEL, border=accent, radius=20)
-        sorted_monsters = self._sort_by_rarity(monsters)
-        row_h = 62
-        y = panel[1] + 24
-        for idx, mon in enumerate(sorted_monsters[:displayed]):
-            rarity = str(mon.get("rarity", "Common"))
-            rc = cui.rarity_color(rarity)
-            row = (panel[0] + 24, y, panel[2] - 24, y + row_h)
-            fill = cui.rgba(cui.lerp_color((13, 10, 22), rc, 0.045 if idx % 2 else 0.075), 222)
-            cui.draw_panel(img, row, fill=fill, border=cui.lerp_color(rc, cui.BORDER, 0.38), radius=14)
-            draw.rounded_rectangle((row[0], row[1] + 8, row[0] + 7, row[3] - 8), radius=3, fill=rc)
-            name = str(mon.get("name", "Unknown"))
-            icon = self._hunt_asset("creatures", normalize_key(name), 50)
-            img.alpha_composite(icon, (row[0] + 20, row[1] + 6))
-            cui.draw_text_fit(
-                draw,
-                name,
-                (row[0] + 86, row[1], row[0] + 430, row[3]),
-                cui.get_font(24, bold=True),
-                cui.TEXT_BRIGHT,
-                18,
-                "left",
-                True,
-            )
-            cui.draw_rarity_badge(img, (row[0] + 450, row[1] + 14, row[0] + 592, row[1] + 48), rarity)
-            status = str(mon.get("collection_status", "DUPLICATE")).replace(" DISCOVERY", "")
-            cui.draw_tag(
-                img,
-                (row[0] + 612, row[1] + 14, row[0] + 760, row[1] + 48),
-                status,
-                cui.GREEN if "NEW" in status else cui.TEXT_MUTED,
-            )
-            souls = f"{int(mon.get('value', 0) or 0):,} Souls"
-            souls_font = cui.get_font(24, bold=True)
-            draw.text((row[2] - cui.text_width(draw, souls, souls_font) - 22, row[1] + 17), souls, font=souls_font, fill=cui.GOLD)
-            y += row_h + 8
-        if displayed < total_found:
-            remaining = total_found - displayed
-            cui.draw_tag(img, (W // 2 - 170, H - 72, W // 2 + 170, H - 34), f"... and {remaining} more monsters", cui.TEXT_MUTED)
-        else:
-            cui.draw_footer(img, f"{data.get('hunter_name', 'Hunter')} | {data.get('hunter_rank', 'Hunter')}", accent)
-        return self._save(img)
+        return self._render_premium_hunt_grid(data)
 
     # ── Background ─────────────────────────────────────────────
 
@@ -577,6 +673,17 @@ class HuntCardRenderer:
         return bg
 
     def _get_zone_background(self, zone_key: str, W: int, H: int) -> Image.Image:
+        generated_path = _GENERATED_ZONE_BACKDROP_DIR / f"{zone_key}.png"
+        if generated_path.exists():
+            try:
+                with Image.open(generated_path) as raw:
+                    img = raw.convert("RGB")
+                return cui.cover_resize(img, (W, H)).convert("RGB")
+            except OSError:
+                pass
+        manifest_bg = cui.get_asset(f"zone_backdrops/{zone_key}", (W, H))
+        if manifest_bg is not None:
+            return manifest_bg.convert("RGB")
         path = get_asset_file_path("zones", zone_key)
         if path and path.exists():
             try:
@@ -797,10 +904,7 @@ class HuntCardRenderer:
         item_h = cfg["line_spacing"]
         header_h = 42
         total_h = header_h + len(rewards) * item_h + pad * 2
-        panel = Image.new("RGBA", (w, total_h), (0, 0, 0, 0))
-        pd = ImageDraw.Draw(panel)
-        pd.rounded_rectangle((0, 0, w - 1, total_h - 1), radius=r, fill=(*_PANEL, 220), outline=_BORDER, width=2)
-        img.paste(panel, (x, y), panel)
+        cui.draw_pixel_plaque(img, (x, y, x + w, y + total_h), fill=(*_PANEL, 220), border=_BORDER, radius=r, shadow=True)
         font_header = _font(cfg["header_font_size"], bold=True)
         draw.text((x + pad, y + pad), "REWARDS", font=font_header, fill=_GOLD)
         cy = y + pad + header_h
@@ -840,11 +944,14 @@ class HuntCardRenderer:
         drop_name = str(drop.get("name", ""))
         drop_rarity = str(drop.get("rarity", "Legendary"))
         rc = _col(drop_rarity)
-        panel = Image.new("RGBA", (w, h), (0, 0, 0, 0))
-        pd = ImageDraw.Draw(panel)
-        pd.rounded_rectangle((0, 0, w - 1, h - 1), radius=cfg["panel_radius"],
-                            fill=(*_PANEL2, 240), outline=rc, width=cfg["border_width"])
-        img.paste(panel, (x, y), panel)
+        cui.draw_pixel_plaque(
+            img,
+            (x, y, x + w, y + h),
+            fill=(*_PANEL2, 240),
+            border=rc,
+            radius=cfg["panel_radius"],
+            shadow=True,
+        )
         font_h = _font(cfg["header_font_size"], bold=True)
         font_n = _font(cfg["item_font_size"], bold=True, fantasy=False)
         if drop_type == "weapon":
@@ -892,14 +999,7 @@ class HuntCardRenderer:
         bw = tw + pad * 2 + 6
         bh = fsize + pad + 8
         rr = cfg.get("panel_radius", 8)
-        shadow = Image.new("RGBA", (bw + 6, bh + 6), (0, 0, 0, 0))
-        sd = ImageDraw.Draw(shadow)
-        sd.rounded_rectangle((3, 3, bw + 3, bh + 3), radius=rr, fill=(0, 0, 0, 90))
-        img.paste(shadow, (x - 3, y - 3), shadow)
-        badge = Image.new("RGBA", (bw, bh), (0, 0, 0, 0))
-        bd = ImageDraw.Draw(badge)
-        bd.rounded_rectangle((0, 0, bw - 1, bh - 1), radius=rr, fill=(*bg, 220), outline=border, width=2)
-        img.paste(badge, (x, y), badge)
+        cui.draw_pixel_plaque(img, (x, y, x + bw, y + bh), fill=(*bg, 220), border=border, radius=rr, shadow=True)
         draw.text((x + pad, y + pad // 2), text, font=font, fill=fg)
 
     # ── Drop Info ──────────────────────────────────────────────
@@ -1107,17 +1207,6 @@ class HuntCardRenderer:
         art_size = 580 if ultra or _RARITY_ORDER.get(rarity, 0) >= 5 else 520
         art_x = W // 2 - art_size // 2
         art_y = 170 if ultra else 190
-        glow = Image.new("RGBA", (art_size + 200, art_size + 200), (0, 0, 0, 0))
-        gd = ImageDraw.Draw(glow)
-        max_r = (art_size + 170) // 2
-        for r in range(max_r, 40, -24):
-            t = r / max(1, max_r)
-            a = int((38 if ultra else 28) * (1 - t))
-            gd.ellipse(((art_size + 200) // 2 - r, (art_size + 200) // 2 - r,
-                        (art_size + 200) // 2 + r, (art_size + 200) // 2 + r),
-                       fill=(*rc, max(0, a)))
-        glow = glow.filter(ImageFilter.GaussianBlur(20))
-        img.paste(glow, (W // 2 - glow.width // 2, art_y - 80), glow)
         portrait = self._load_creature_asset(normalize_key(str(monster.get("name", ""))), art_size)
         if portrait:
             img.paste(portrait, (art_x, art_y), portrait)
@@ -1292,32 +1381,25 @@ class HuntCardRenderer:
         rarity_rank = _RARITY_ORDER.get(rarity, 0)
 
         # ── Glow behind cell for Epic+ ──
-        if rarity_rank >= 3:  # Epic+
-            glow_size = cell_w + 40 + (rarity_rank - 3) * 16
-            glow_img = Image.new("RGBA", (glow_size, glow_size), (0, 0, 0, 0))
-            gd = ImageDraw.Draw(glow_img)
-            for r in range(glow_size // 2, 0, -8):
-                t = r / (glow_size // 2)
-                a = int(max(1, (30 + (rarity_rank - 3) * 8) * (1 - t * t)))
-                gd.ellipse((glow_size // 2 - r, glow_size // 2 - r,
-                           glow_size // 2 + r, glow_size // 2 + r),
-                          fill=(*gc, a))
-            glow_img = glow_img.filter(ImageFilter.GaussianBlur(radius=12))
-            img.paste(glow_img, (cx - glow_size // 2, cy - glow_size // 2), glow_img)
-
         # ── Cell background panel ──
         border_w = 2 if rarity_rank < 4 else 3 if rarity_rank < 7 else 4
         cell = Image.new("RGBA", (cell_w, cell_h), (0, 0, 0, 0))
         cd = ImageDraw.Draw(cell)
         # Fill with lighter tinted panel for better visibility
         fill_r = _lerp_color(_PANEL, rc, 0.12)  # More tinting for visibility
-        cd.rounded_rectangle((0, 0, cell_w - 1, cell_h - 1), radius=12,
-                            fill=(*fill_r, 230), outline=rc, width=border_w)  # Higher alpha
+        cui.draw_pixel_plaque(
+            cell,
+            (0, 0, cell_w - 1, cell_h - 1),
+            fill=(*fill_r, 226),
+            border=rc,
+            radius=12,
+            shadow=False,
+        )
 
         # Inner highlight at top
-        for i in range(min(20, cell_h // 4)):
+        for i in range(min(12, cell_h // 5)):
             a = max(0, 35 - i * 2)
-            cd.line((4, i, cell_w - 4, i), fill=(*rc, a))
+            cd.line((14, 8 + i, cell_w - 14, 8 + i), fill=(*rc, a))
 
         img.paste(cell, (cx - cell_w // 2, cy - cell_h // 2), cell)
 
@@ -1781,6 +1863,7 @@ class HuntCardRenderer:
     # ── Asset Loading ──────────────────────────────────────────
 
     def _load_asset(self, kind: str, key: str, size: tuple[int, int]) -> Image.Image | None:
+        return cui.load_asset_icon(kind, key, size, pixel=kind in {"creatures", "weapons", "passives"}).copy()
         path = get_asset_file_path(kind, key)
         if path and path.exists():
             try:
@@ -1794,6 +1877,7 @@ class HuntCardRenderer:
         return None
 
     def _load_creature_asset(self, key: str, target_size: int) -> Image.Image | None:
+        return cui.load_asset_icon("creatures", key, (target_size, target_size), pixel=True).copy()
         path = get_creature_asset_path(key)
         if path and path.exists():
             try:
@@ -1828,13 +1912,35 @@ class HuntCardRenderer:
 
     # ── Output ─────────────────────────────────────────────────
 
+    def _portrait_embed_wrap(self, img: Image.Image) -> Image.Image:
+        if img.height >= img.width:
+            return img
+        W, H = 900, 1100
+        source = img.convert("RGBA")
+        bg = cui.cover_resize(source, (W, H)).convert("RGBA").filter(ImageFilter.GaussianBlur(10))
+        bg.alpha_composite(Image.new("RGBA", (W, H), (0, 0, 0, 136)))
+        cui.draw_vignette(bg, 0.86)
+        draw = ImageDraw.Draw(bg)
+        draw.fontmode = "1"
+
+        title_box = (34, 28, W - 34, 104)
+        cui.draw_pixel_plaque(bg, title_box, fill=(5, 4, 8, 205), border=cui.GOLD, radius=8, shadow=True)
+        cui.draw_text_fit(draw, "HUNT COMPLETE", (title_box[0] + 24, title_box[1] + 8, title_box[2] - 24, title_box[1] + 54), cui.get_font(40, bold=True), cui.TEXT_BRIGHT, 24, "center", True)
+        cui.draw_text_fit(draw, "ABYSSIA FIELD LEDGER", (title_box[0] + 24, title_box[1] + 52, title_box[2] - 24, title_box[3] - 8), cui.get_font(18, bold=True), cui.TEXT_MUTED, 11, "center", True)
+
+        framed = source.copy()
+        framed.thumbnail((842, 590), Image.Resampling.LANCZOS)
+        scene_box = (29, 124, W - 29, 124 + framed.height + 26)
+        cui.draw_pixel_plaque(bg, scene_box, fill=(3, 3, 7, 218), border=cui.BORDER, radius=8, shadow=True)
+        bg.alpha_composite(framed, ((W - framed.width) // 2, scene_box[1] + 13))
+
+        bottom = (44, scene_box[3] + 28, W - 44, min(H - 42, scene_box[3] + 252))
+        cui.draw_pixel_plaque(bg, bottom, fill=(5, 4, 8, 202), border=cui.GOLD, radius=8, shadow=True)
+        draw.text((bottom[0] + 28, bottom[1] + 24), "FIELD NOTES", font=cui.get_font(25, bold=True), fill=cui.GOLD)
+        draw.text((bottom[0] + 28, bottom[1] + 68), "SPOILS CLAIMED BY THE LEDGER", font=cui.get_font(18, bold=True), fill=cui.TEXT_MUTED)
+        draw.line((bottom[0] + 28, bottom[1] + 112, bottom[2] - 28, bottom[1] + 112), fill=cui.rgba(cui.GOLD, 92), width=2)
+        draw.text((bottom[0] + 28, bottom[1] + 138), "EXPLORE  |  INVENTORY  |  PROFILE", font=cui.get_font(22, bold=True), fill=cui.TEXT_BRIGHT)
+        return bg
+
     def _save(self, img: Image.Image) -> BytesIO:
-        b = BytesIO()
-        if img.width > 1600 or img.height > 1200:
-            scale = min(1600 / img.width, 1200 / img.height)
-            new_w = max(1, int(img.width * scale))
-            new_h = max(1, int(img.height * scale))
-            img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
-        img.save(b, format="PNG", optimize=True)
-        b.seek(0)
-        return b
+        return cui.save_png(img)
